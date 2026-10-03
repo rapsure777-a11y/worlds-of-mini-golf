@@ -6,6 +6,8 @@
 
 TEXTURE2D(_BaseMap);    SAMPLER(sampler_BaseMap);
 TEXTURE2D(_DetailTex);  SAMPLER(sampler_DetailTex);
+TEXTURE2D(_BumpMap);    SAMPLER(sampler_BumpMap);
+TEXTURE2D(_MaskMap);    SAMPLER(sampler_MaskMap);
 
 CBUFFER_START(UnityPerMaterial)
     float4 _BaseMap_ST;
@@ -21,6 +23,11 @@ CBUFFER_START(UnityPerMaterial)
     float  _WindSpeed;
     half4  _EmissionColor;
     float  _Cull;
+    half   _BumpScale;
+    half   _Cutoff;
+    half   _Translucency;
+    half4  _TranslucencyColor;
+    half   _OcclusionStrength;
 CBUFFER_END
 
 // Gentle two-frequency sway. weight comes from vertex colour alpha (0 = rigid, 1 = full sway).
@@ -30,8 +37,10 @@ float3 ApplyWind(float3 positionWS, float weight)
     float phase = dot(positionWS.xz, float2(0.37, 0.23));
     float s = sin(t + phase) * 0.65 + sin(t * 2.3 + phase * 1.9) * 0.35;
     float lift = sin(t * 1.7 + phase * 1.3);
-    positionWS.xz += float2(s, s * 0.55) * (_WindStrength * weight);
-    positionWS.y += lift * (_WindStrength * weight) * 0.25;
+    // A faster flutter on top for leaves.
+    float flutter = sin(t * 7.0 + dot(positionWS, float3(3.1, 2.3, 2.7))) * 0.25;
+    positionWS.xz += float2(s + flutter, s * 0.55 - flutter) * (_WindStrength * weight);
+    positionWS.y += (lift + flutter) * (_WindStrength * weight) * 0.25;
     return positionWS;
 }
 

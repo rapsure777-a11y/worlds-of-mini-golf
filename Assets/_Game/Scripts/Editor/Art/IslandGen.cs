@@ -122,6 +122,34 @@ namespace Gamebreak.MiniGolf.Editor.Art
             return (Palette.UV(R.Grass, Mathf.Clamp01(0.12f + 0.55f * patch + 0.3f * jitter - steep * 0.8f)), Color.white);
         }
 
+        /// <summary>When true, terrain vertex colours carry TerrainSplat weights instead of palette UVs.</summary>
+        public bool splat;
+
+        /// <summary>
+        /// Splat weights for Gamebreak/TerrainSplat: R sand, G lawn, B rock, A path. Soft, noisy transitions;
+        /// steep slopes become exposed sandstone; underwater stays sand (the shader tints the seabed).
+        /// </summary>
+        Color Splat(float x, float z, float h, Vector3 n)
+        {
+            float jitter = Noise.Fbm(x * 0.35f, z * 0.35f, seed + 9, 2);
+            float s = CoastParam(x, z);
+            float hole = HoleZone(x, z);
+            float sandLine = 0.32f + (jitter - 0.5f) * 0.35f;
+            float sand = h < 0f ? 1f : Mathf.Clamp01((sandLine + 0.12f - h) / 0.24f) * Mathf.Clamp01((s - 0.58f) / 0.08f);
+            sand *= 1f - Mathf.Clamp01((hole - (0.1f + jitter * 0.5f)) / 0.15f);
+            float pathW = 0f;
+            foreach (var zn in zones) if (zn.path) pathW = Mathf.Max(pathW, ZoneWeight(zn, x, z));
+            float path = Mathf.Clamp01((pathW - 0.35f + (jitter - 0.5f) * 0.3f) / 0.3f);
+            float rock = Mathf.Clamp01((0.86f - n.y) / 0.12f + (Noise.Fbm(x * 0.2f, z * 0.2f, seed + 31, 2) - 0.5f) * 0.6f);
+            rock *= 1f - hole;
+            // Priority: rock, then path, then sand; lawn takes the remainder.
+            float rest = 1f;
+            rock = Mathf.Min(rock, rest); rest -= rock;
+            path = Mathf.Min(path, rest); rest -= path;
+            sand = Mathf.Min(sand, rest); rest -= sand;
+            return new Color(sand, Mathf.Max(0f, rest), rock, path);
+        }
+
         public Mesh BuildTerrain()
         {
             int n = Mathf.CeilToInt(extent * 2f / cell);
@@ -137,8 +165,13 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 float hx = heights[Mathf.Min(i + 1, n), j] - heights[Mathf.Max(i - 1, 0), j];
                 float hz = heights[i, Mathf.Min(j + 1, n)] - heights[i, Mathf.Max(j - 1, 0)];
                 var nrm = new Vector3(-hx, 2f * cell, -hz).normalized;
-                var (uv, c) = Paint(x, z, heights[i, j], nrm);
-                mb.Vertex(new Vector3(x, heights[i, j], z), nrm, uv, c);
+                if (splat)
+                    mb.Vertex(new Vector3(x, heights[i, j], z), nrm, new Vector2(x, z), Splat(x, z, heights[i, j], nrm));
+                else
+                {
+                    var (uv, c) = Paint(x, z, heights[i, j], nrm);
+                    mb.Vertex(new Vector3(x, heights[i, j], z), nrm, uv, c);
+                }
             }
             for (int j = 0; j < n; j++)
             for (int i = 0; i < n; i++)

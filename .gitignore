@@ -46,3 +46,7 @@ Tools/**/bin/
 Tools/**/obj/
 /Screenshots/
 
+
+# Python bytecode (Blender tool scripts)
+__pycache__/
+*.pyc
