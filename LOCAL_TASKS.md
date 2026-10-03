@@ -68,10 +68,9 @@ Repo: `C:\Users\fence\Projects\WorldsOfMiniGolf`. Unity: `C:\Program Files\Unity
 Cleanup when finished: delete `Mods\WalkaboutProbe.dll`. Note that `Mods\sinai-dev-UnityExplorer` is left over from the earlier experiment (UnityExplorer crashed the game) and is probably safe to delete. To return the game to vanilla, verify files in Steam and remove `version.dll`, `MelonLoader\`, `Mods\`, `UserLibs\`, `UserData\`.
 
 ## L3: GitHub remote, OPEN
-**Who:** Andrew, about 2 minutes. `gh` is not installed.
-1. `winget install --id GitHub.cli` (or let Claude install it).
-2. `gh auth login` (browser sign-in).
-3. Tell Claude to create the repo: suggested name `worlds-of-mini-golf`, **private**.
+**Who:** Andrew, about 2 minutes. `gh` 2.102 is installed but not signed in.
+1. In the Claude Code prompt type `! gh auth login` (GitHub.com, HTTPS, browser sign-in).
+2. Claude then creates the **private** repo `worlds-of-mini-golf` and pushes `main`.
 
 ## L4: Blender, OPEN
 Blender was downloading on 2026-10-03. When installed, tell Claude its path (Microsoft Store builds are found with `Get-AppxPackage *Blender*`). Needed for Milestone 4 (World Forge trial assets).
