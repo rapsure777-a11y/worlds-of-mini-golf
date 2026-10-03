@@ -1,5 +1,7 @@
 # Art iteration: rebuild the generated world (kit, island, dressing) and capture review screenshots.
-# Usage: powershell -File Tools\art-shots.ps1      Output: Screenshots\*.png, log in Logs\art.log
+# Usage: powershell -File Tools\art-shots.ps1 [-Quality lean|balanced|rich]   Output: Screenshots\*.png, log in Logs\art.log
+param([string]$Quality = "balanced")
+$env:GB_QUALITY = $Quality
 $root = Split-Path $PSScriptRoot -Parent
 $unity = "C:\Program Files\Unity\Hub\Editor\6000.3.9f1\Editor\Unity.exe"
 $log = Join-Path $root "Logs\art.log"

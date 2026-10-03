@@ -48,6 +48,7 @@ namespace Gamebreak.MiniGolf
             W($"Worlds of Mini Golf session {DateTime.Now:yyyy-MM-dd HH:mm:ss}  build {Application.version}  Unity {Application.unityVersion}");
             W($"GPU {SystemInfo.graphicsDeviceName} ({SystemInfo.graphicsDeviceType})  CPU {SystemInfo.processorType}");
             W($"XR active {XRSettings.isDeviceActive}  device '{XRSettings.loadedDeviceName}'  stereo {XRSettings.stereoRenderingMode}  eye {XRSettings.eyeTextureWidth}x{XRSettings.eyeTextureHeight}  refresh {RefreshRate():F1} Hz");
+            W($"Quality preset {QualityPreset.CurrentName}");
             LogDevices();
             InputSystem.onDeviceChange += OnDeviceChange;
 
