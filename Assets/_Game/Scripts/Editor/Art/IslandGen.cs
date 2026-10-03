@@ -30,6 +30,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
         public readonly List<Zone> zones = new List<Zone>();
         /// <summary>Extra raised mounds (world XZ, radius, height) for backdrops.</summary>
         public readonly List<(Vector2 c, float r, float h)> mounds = new List<(Vector2, float, float)>();
+        /// <summary>Carved depressions (world XZ, radius, depth) for pools; applied after the mounds.</summary>
+        public readonly List<(Vector2 c, float r, float depth)> basins = new List<(Vector2, float, float)>();
 
         /// <summary>Normalised distance to the coast (1 at the shoreline), with a noisy outline.</summary>
         public float CoastParam(float x, float z)
@@ -57,6 +59,11 @@ namespace Gamebreak.MiniGolf.Editor.Art
             {
                 float t = 1f - Mathf.Clamp01(Vector2.Distance(new Vector2(x, z), m.c) / m.r);
                 h += m.h * t * t * (3f - 2f * t);
+            }
+            foreach (var b in basins)
+            {
+                float t = 1f - Mathf.Clamp01(Vector2.Distance(new Vector2(x, z), b.c) / b.r);
+                h -= b.depth * t * t * (3f - 2f * t);
             }
             return h;
         }
@@ -142,6 +149,11 @@ namespace Gamebreak.MiniGolf.Editor.Art
             float path = Mathf.Clamp01((pathW - 0.35f + (jitter - 0.5f) * 0.3f) / 0.3f);
             float rock = Mathf.Clamp01((0.86f - n.y) / 0.12f + (Noise.Fbm(x * 0.2f, z * 0.2f, seed + 31, 2) - 0.5f) * 0.6f);
             rock *= 1f - hole;
+            // Pool basins: sandy bed under the water, no rock or path.
+            float pool = 0f;
+            foreach (var b in basins) pool = Mathf.Max(pool, 1f - Mathf.Clamp01(Vector2.Distance(new Vector2(x, z), b.c) / (b.r * 1.2f)));
+            pool = Mathf.Clamp01(pool * 2.5f);
+            rock *= 1f - pool; path *= 1f - pool; sand = Mathf.Max(sand, pool);
             // Priority: rock, then path, then sand; lawn takes the remainder.
             float rest = 1f;
             rock = Mathf.Min(rock, rest); rest -= rock;

@@ -59,8 +59,10 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         // ------------------------------------------------------------------ materials
 
+        static Shader Sh(string name) => Shader.Find(name) ?? throw new FileNotFoundException($"Shader '{name}' not found or failed to compile. Check the Console / Logs for shader errors under Assets/_Game/Art/Shaders.");
+
         static Texture2D T(string name) => AssetDatabase.LoadAssetAtPath<Texture2D>($"{TexDir}/{name}.png")
-                                           ?? throw new FileNotFoundException($"Missing generated texture {name}. Run Tools/blender-assets.ps1.");
+                                           ?? throw new FileNotFoundException($"Missing generated texture {name}. Regenerate with the scripts in Tools/Blender (see Docs/CLOUD_HANDOFF_PASS2.md, section B1).");
 
         static Material LoadOrCreate(string name, Shader shader)
         {
@@ -73,7 +75,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         Material Surface(string name, string tex, Color tint, float smooth, float spec, float normal = 1f, Vector2? tiling = null)
         {
-            var m = LoadOrCreate(name, Shader.Find("Gamebreak/StylizedLit"));
+            var m = LoadOrCreate(name, Sh("Gamebreak/StylizedLit"));
             m.SetTexture("_BaseMap", T($"{tex}_albedo"));
             m.SetTextureScale("_BaseMap", tiling ?? Vector2.one);
             m.SetColor("_BaseColor", tint);
@@ -101,7 +103,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
         {
             var grain = AssetDatabase.LoadAssetAtPath<Texture2D>(TextureGen.Dir + "/Grain.png");
 
-            Terrain = LoadOrCreate("Hero_Terrain", Shader.Find("Gamebreak/TerrainSplat"));
+            Terrain = LoadOrCreate("Hero_Terrain", Sh("Gamebreak/TerrainSplat"));
             Terrain.SetTexture("_SandAlb", T("sand_albedo")); Terrain.SetTexture("_SandNrm", T("sand_normal"));
             Terrain.SetTexture("_LawnAlb", T("lawn_albedo")); Terrain.SetTexture("_LawnNrm", T("lawn_normal"));
             Terrain.SetTexture("_RockAlb", T("sandstone_albedo")); Terrain.SetTexture("_RockNrm", T("sandstone_normal"));
@@ -116,7 +118,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Terrain.SetFloat("_MacroScale", 0.03f);
             EditorUtility.SetDirty(Terrain);
 
-            Rock = LoadOrCreate("Hero_Rock", Shader.Find("Gamebreak/RockTriplanar"));
+            Rock = LoadOrCreate("Hero_Rock", Sh("Gamebreak/RockTriplanar"));
             Rock.SetTexture("_RockAlb", T("sandstone_albedo")); Rock.SetTexture("_RockNrm", T("sandstone_normal"));
             Rock.SetTexture("_TopAlb", T("lawn_albedo")); Rock.SetTexture("_TopNrm", T("lawn_normal"));
             Rock.SetFloat("_RockTile", 3.5f); Rock.SetFloat("_TopTile", 2.2f);
@@ -132,17 +134,18 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Bamboo = Surface("Hero_Bamboo", "bamboo", Color.white, 0.6f, 0.2f);
             Bark = Surface("Hero_Bark", "bark", new Color(1f, 0.95f, 0.9f), 0.25f, 0.06f, 1.4f);
             Totem = Surface("Hero_Totem", "wood", new Color(0.82f, 0.62f, 0.48f), 0.4f, 0.1f, 1.2f, new Vector2(0.8f, 0.8f));
-            Turf = Surface("Hero_Turf", "turf", new Color(1f, 1.05f, 1f), 0.1f, 0.03f, 0.8f, new Vector2(1.2f, 1.2f));
+            // Low bump strength and smoothness: this is the putting surface, so it must not shimmer or hide the ball line.
+            Turf = Surface("Hero_Turf", "turf", new Color(1f, 1.05f, 1f), 0.08f, 0.02f, 0.5f, new Vector2(1.2f, 1.2f));
             Rail = Surface("Hero_Rail", "wood", new Color(1.05f, 0.95f, 0.85f), 0.5f, 0.12f, 1f, new Vector2(0.7f, 0.9f));
 
-            Paint = LoadOrCreate("Hero_Paint", Shader.Find("Gamebreak/StylizedLit"));
+            Paint = LoadOrCreate("Hero_Paint", Sh("Gamebreak/StylizedLit"));
             Paint.SetTexture("_BaseMap", Texture2D.whiteTexture);
             Paint.SetColor("_BaseColor", Color.white);
             Paint.SetFloat("_Smoothness", 0.55f); Paint.SetFloat("_Specular", 0.2f); Paint.SetFloat("_DetailStrength", 0f);
             Paint.SetFloat("_Cull", 2f);
             EditorUtility.SetDirty(Paint);
 
-            Lantern = LoadOrCreate("Hero_Lantern", Shader.Find("Gamebreak/StylizedLit"));
+            Lantern = LoadOrCreate("Hero_Lantern", Sh("Gamebreak/StylizedLit"));
             Lantern.SetTexture("_BaseMap", Texture2D.whiteTexture);
             Lantern.SetColor("_BaseColor", new Color(1f, 0.85f, 0.6f));
             Lantern.SetColor("_EmissionColor", new Color(2.4f, 1.3f, 0.45f));
@@ -150,7 +153,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Lantern.SetFloat("_WindStrength", 0.05f);
             EditorUtility.SetDirty(Lantern);
 
-            Leaves = LoadOrCreate("Hero_Leaves", Shader.Find("Gamebreak/StylizedLit"));
+            Leaves = LoadOrCreate("Hero_Leaves", Sh("Gamebreak/StylizedLit"));
             Leaves.SetTexture("_BaseMap", T("leaves_albedo"));
             Leaves.SetColor("_BaseColor", new Color(1.05f, 1.08f, 1f));
             Leaves.SetTexture("_BumpMap", T("leaves_normal"));
@@ -169,28 +172,22 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Leaves.enableInstancing = true;
             EditorUtility.SetDirty(Leaves);
 
-            Waterfall = LoadOrCreate("Hero_Waterfall", Shader.Find("Gamebreak/Waterfall"));
+            Waterfall = LoadOrCreate("Hero_Waterfall", Sh("Gamebreak/Waterfall"));
             Waterfall.SetTexture("_NoiseTex", AssetDatabase.LoadAssetAtPath<Texture2D>(TextureGen.Dir + "/FoamNoise.png"));
             EditorUtility.SetDirty(Waterfall);
 
-            PoolWater = LoadOrCreate("Hero_PoolWater", Shader.Find("Gamebreak/StylizedWater"));
+            PoolWater = LoadOrCreate("Hero_PoolWater", Sh("Gamebreak/StylizedWater"));
             PoolWater.CopyPropertiesFromMaterial(kit.Water);
             PoolWater.SetFloat("_Absorption", 0.9f);
             PoolWater.SetFloat("_WaveHeight", 0f);
             PoolWater.SetFloat("_IntersectFoam", 0.5f);
             EditorUtility.SetDirty(PoolWater);
 
-            Mist = LoadOrCreate("Hero_Mist", Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+            // Custom soft-particle shader instead of hand-configuring URP's particle shader keywords.
+            Mist = LoadOrCreate("Hero_Mist", Sh("Gamebreak/Mist"));
             Mist.SetTexture("_BaseMap", SoftDot());
             Mist.SetColor("_BaseColor", new Color(1f, 1f, 1f, 0.35f));
-            Mist.SetFloat("_Surface", 1f);
-            Mist.SetFloat("_Blend", 0f);
-            Mist.SetOverrideTag("RenderType", "Transparent");
-            Mist.renderQueue = (int)RenderQueue.Transparent;
-            Mist.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-            Mist.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
-            Mist.SetInt("_ZWrite", 0);
-            Mist.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            Mist.SetFloat("_SoftDistance", 0.6f);
             EditorUtility.SetDirty(Mist);
 
             m_BySuffix["Bark"] = Bark; m_BySuffix["Leaves"] = Leaves; m_BySuffix["Rock"] = Rock;
@@ -225,7 +222,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             bool colliders = false, bool outOfBounds = false, bool shadows = true)
         {
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelDir}/{model}.fbx")
-                        ?? throw new FileNotFoundException($"Missing generated model {model}. Run Tools/blender-assets.ps1.");
+                        ?? throw new FileNotFoundException($"Missing generated model {model}. Regenerate with the scripts in Tools/Blender (see Docs/CLOUD_HANDOFF_PASS2.md, section B1).");
             var go = (GameObject)PrefabUtility.InstantiatePrefab(asset, parent);
             PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
             go.name = model;

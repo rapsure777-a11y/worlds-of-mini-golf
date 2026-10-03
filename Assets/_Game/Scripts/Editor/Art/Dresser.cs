@@ -13,13 +13,15 @@ namespace Gamebreak.MiniGolf.Editor.Art
     public class Dresser
     {
         public readonly TropicalKit Kit;
+        /// <summary>Blender-generated hero models, PBR materials and leaf-card foliage.</summary>
+        public readonly HeroKit Hero;
         public readonly IslandGen Island;
         public readonly Transform Root;
         readonly List<(Vector2 c, Vector2 half, float yaw, float margin)> m_Keepout = new List<(Vector2, Vector2, float, float)>();
 
-        public Dresser(TropicalKit kit, IslandGen island, Transform root)
+        public Dresser(TropicalKit kit, HeroKit hero, IslandGen island, Transform root)
         {
-            Kit = kit; Island = island; Root = root;
+            Kit = kit; Hero = hero; Island = island; Root = root;
         }
 
         /// <summary>Keep scatter away from an oriented rectangle (greens, paths, decks).</summary>
@@ -42,14 +44,32 @@ namespace Gamebreak.MiniGolf.Editor.Art
         public GameObject Place(string mesh, Material mat, Vector3 pos, float yaw = 0f, float scale = 1f,
             bool snap = true, float sink = 0.04f, bool shadows = true, bool collider = false, bool outOfBounds = false,
             Transform parent = null, Vector3? tilt = null)
+            => PlaceMesh(Kit[mesh], mesh, mat, pos, yaw, scale, snap, sink, shadows, collider, outOfBounds, parent, tilt);
+
+        /// <summary>Place a leaf-card foliage mesh from the hero kit (LeafBush*, FlowerShrub*, BigLeaf*, Banana0, Fern0, GrassClump*).</summary>
+        public GameObject Leaf(string heroMesh, Vector3 pos, float yaw = 0f, float scale = 1f, bool shadows = true,
+            float sink = 0.03f, Transform parent = null)
+            => PlaceMesh(Hero.Foliage(heroMesh), heroMesh, Hero.Leaves, pos, yaw, scale, true, sink, shadows, false, false, parent, null);
+
+        /// <summary>Place a Blender hero model, snapped to the ground unless <paramref name="snap"/> is false.</summary>
+        public GameObject Model(string model, Vector3 pos, float yaw = 0f, float scale = 1f, bool snap = true, float sink = 0.05f,
+            bool colliders = false, bool outOfBounds = false, bool shadows = true, Transform parent = null)
         {
-            var go = new GameObject(mesh);
+            if (snap) pos.y = Ground(pos.x, pos.z) - sink * scale;
+            return Hero.Instantiate(model, parent ? parent : Root, pos, yaw, scale, colliders, outOfBounds, shadows);
+        }
+
+        public GameObject PlaceMesh(Mesh mesh, string name, Material mat, Vector3 pos, float yaw = 0f, float scale = 1f,
+            bool snap = true, float sink = 0.04f, bool shadows = true, bool collider = false, bool outOfBounds = false,
+            Transform parent = null, Vector3? tilt = null)
+        {
+            var go = new GameObject(name);
             go.transform.SetParent(parent ? parent : Root, false);
             if (snap) pos.y = Ground(pos.x, pos.z) - sink * scale;
             go.transform.position = pos;
             go.transform.rotation = Quaternion.Euler(tilt ?? Vector3.zero) * Quaternion.Euler(0f, yaw, 0f);
             go.transform.localScale = Vector3.one * scale;
-            go.AddComponent<MeshFilter>().sharedMesh = Kit[mesh];
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterial = mat;
             r.shadowCastingMode = shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
@@ -58,7 +78,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             if (collider)
             {
                 var mc = go.AddComponent<MeshCollider>();
-                mc.sharedMesh = Kit[mesh];
+                mc.sharedMesh = mesh;
                 if (outOfBounds) go.AddComponent<OutOfBoundsSurface>();
             }
             GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
