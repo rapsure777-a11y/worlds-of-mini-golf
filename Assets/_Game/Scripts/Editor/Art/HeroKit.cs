@@ -218,6 +218,15 @@ namespace Gamebreak.MiniGolf.Editor.Art
         // ------------------------------------------------------------------ hero models
 
         /// <summary>Instantiate a generated FBX and assign materials by child-name suffix.</summary>
+        static string Suffix(string name)
+        {
+            int k = name.LastIndexOf("__");
+            if (k < 0) return "";
+            string s = name.Substring(k + 2);
+            int dot = s.IndexOf('.');
+            return dot >= 0 ? s.Substring(0, dot) : s;
+        }
+
         public GameObject Instantiate(string model, Transform parent, Vector3 pos, float yaw, float scale = 1f,
             bool colliders = false, bool outOfBounds = false, bool shadows = true)
         {
@@ -230,11 +239,16 @@ namespace Gamebreak.MiniGolf.Editor.Art
             go.transform.localScale = Vector3.one * scale;
             foreach (var r in go.GetComponentsInChildren<MeshRenderer>())
             {
-                string n = r.gameObject.name;
-                int k = n.LastIndexOf("__");
-                string suffix = k >= 0 ? n.Substring(k + 2) : "";
-                if (suffix.Contains(".")) suffix = suffix.Substring(0, suffix.IndexOf('.'));
-                r.sharedMaterial = m_BySuffix.TryGetValue(suffix, out var mat) ? mat : Paint;
+                // A single-object FBX is collapsed onto a root named after the file, so the
+                // "__Suffix" may only survive on the mesh name.
+                string suffix = Suffix(r.gameObject.name);
+                if (suffix == "") suffix = Suffix(r.GetComponent<MeshFilter>().sharedMesh.name);
+                if (!m_BySuffix.TryGetValue(suffix, out var mat))
+                {
+                    Debug.LogWarning($"[Gamebreak] {model}/{r.gameObject.name}: no material suffix, using Paint.");
+                    mat = Paint;
+                }
+                r.sharedMaterial = mat;
                 r.shadowCastingMode = shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
                 r.lightProbeUsage = LightProbeUsage.Off;
                 r.reflectionProbeUsage = ReflectionProbeUsage.Off;

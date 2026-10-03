@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Gamebreak.MiniGolf::Gamebreak.MiniGolf.WorldTheme
   worldName: Tropical Adventure
   inspiration: 'Crash Bandicoot 4: It''s About Time (style reference only).'
-  green: {fileID: 2100000, guid: 1b6e3c05a35e73240b95ea8bc83ee092, type: 2}
-  wall: {fileID: 2100000, guid: c33578f194539ed49af6f65d27a23bcc, type: 2}
+  green: {fileID: 2100000, guid: 00ff2acbe73614c488558767c225f03d, type: 2}
+  wall: {fileID: 2100000, guid: a5af6daa9ab188141bf8bb0f74f5b39a, type: 2}
   cup: {fileID: 2100000, guid: 00a02ee572fdca84290c425bb3515e89, type: 2}
   flag: {fileID: 2100000, guid: 49408e720db6ec443a4373ebe3a6ff16, type: 2}
   tee: {fileID: 2100000, guid: fe9d30e398dfd0c42afe064e2857cd85, type: 2}
