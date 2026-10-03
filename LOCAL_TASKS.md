@@ -6,7 +6,7 @@ Repo: `C:\Users\fence\Projects\WorldsOfMiniGolf`. Unity: `C:\Program Files\Unity
 
 ---
 
-## L1: First physical putt in the Steam Frame (Milestone 1 acceptance), OPEN
+## L1: First physical putt in the Steam Frame (Milestone 1 acceptance), DONE (2026-10-03: physics, controls and performance confirmed by Andrew)
 **Who:** Andrew (headset). About 15–20 minutes. The two holes are greybox: plain colours and primitive palms. Judge the feel, not the art.
 
 **Before you put the headset on (2 min)**
@@ -91,3 +91,14 @@ Cleanup when finished: delete `Mods\WalkaboutProbe.dll`. Note that `Mods\sinai-d
 
 ## L4: Blender, OPEN
 Blender was downloading on 2026-10-03. When installed, tell Claude its path (Microsoft Store builds are found with `Get-AppxPackage *Blender*`). Needed for Milestone 4 (World Forge trial assets).
+
+## L5: Consolidated VR playtest of the nine-hole Tropical Adventure, PENDING
+**Who:** Andrew, once Holes 1–9 are built (after HQ approves the Hole 1 showcase). No headset session is needed before then.
+
+Items accumulated so far for that session:
+- Custom shaders (stylized terrain/props, water, sky) render correctly in **both eyes** (no pink, no missing geometry in one eye).
+- VR frame rate with the new world: smooth 120 Hz? (the session log records GPU time).
+- Auto putter length: stand tall for a second; does the putter reach the floor comfortably without bending?
+- Wrist watch: raise your free wrist; readable? Does it move to the other wrist when you swap hands (hold Y)?
+- Scale and comfort of the tiki hut, pier, cliffs and palms; anything too close or too large in VR.
+- Teleporting onto beach, pier and lawn; nothing blocks movement between holes.

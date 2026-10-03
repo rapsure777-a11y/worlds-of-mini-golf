@@ -370,6 +370,38 @@ namespace Gamebreak.MiniGolf.Tests
             Time.timeScale = 1f;
         }
 
+        /// <summary>No scenery collider may sit on any green (it would block the ball or count it out of bounds).</summary>
+        [UnityTest]
+        public IEnumerator TropicalScene_NoSceneryOnGreens()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            yield return new WaitForFixedUpdate();
+            int blocked = 0;
+            var report = new System.Text.StringBuilder();
+            foreach (var green in Object.FindObjectsByType<PlayableSurface>(FindObjectsSortMode.None))
+            {
+                var col = green.GetComponent<Collider>();
+                var b = col.bounds;
+                for (float x = b.min.x; x <= b.max.x; x += 0.2f)
+                for (float z = b.min.z; z <= b.max.z; z += 0.2f)
+                {
+                    var hits = Physics.RaycastAll(new Vector3(x, b.max.y + 30f, z), Vector3.down, 60f, ~0, QueryTriggerInteraction.Ignore);
+                    float greenY = float.NaN;
+                    foreach (var h in hits) if (h.collider == col) greenY = h.point.y;
+                    if (float.IsNaN(greenY)) continue;
+                    foreach (var h in hits)
+                    {
+                        if (h.collider == col || h.point.y <= greenY - 0.02f) continue;
+                        if (h.collider.GetComponentInParent<HoleController>() || h.collider.GetComponentInParent<GolfBall>()) continue; // rails, cup, ball
+                        blocked++;
+                        if (blocked < 5) report.AppendLine($"{h.collider.name} over green at ({x:F1}, {z:F1})");
+                    }
+                }
+            }
+            Assert.AreEqual(0, blocked, "scenery on greens:\n" + report);
+        }
+
         [UnityTest]
         public IEnumerator TropicalScene_ProgressesToHoleTwoAndFinishes()
         {

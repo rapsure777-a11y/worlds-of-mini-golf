@@ -56,7 +56,7 @@ namespace Gamebreak.MiniGolf
                 par = 3,
                 layout = l,
                 tee = new Vector2(0f, 0.6f),
-                origin = new Vector3(-4.2f, GreenElevation, 0.5f),
+                origin = new Vector3(5.5f, 0.75f, -22f),
                 yaw = 0f,
             };
         }
@@ -78,8 +78,9 @@ namespace Gamebreak.MiniGolf
                 par = 2,
                 layout = l,
                 tee = new Vector2(0f, 0.6f),
-                origin = new Vector3(0f, GreenElevation, 0f),
-                yaw = 0f,
+                // Runs along the south beach (lagoon on the right, cliffs on the left).
+                origin = new Vector3(-3.5f, 0.5f, -27f),
+                yaw = 90f,
             };
         }
     }

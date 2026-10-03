@@ -95,6 +95,46 @@ namespace Gamebreak.MiniGolf.Editor
             BuildPlayer();
         }
 
+        /// <summary>Art iteration loop: rebuild the world and capture review screenshots in one editor run.</summary>
+        public static void SetupAndCapture()
+        {
+            Setup();
+            CaptureScreenshots();
+            SceneStats();
+        }
+
+        /// <summary>Rendering budget summary of the built scene, written to the log and Logs/scene-stats.txt.</summary>
+        [MenuItem("Gamebreak/Scene Stats")]
+        public static void SceneStats()
+        {
+            var path = EditorBuildSettings.scenes[0].path;
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(path);
+            long verts = 0, tris = 0, shadowTris = 0;
+            int renderers = 0, staticRenderers = 0;
+            var materials = new System.Collections.Generic.HashSet<Material>();
+            var meshes = new System.Collections.Generic.HashSet<Mesh>();
+            foreach (var r in Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+            {
+                var mf = r.GetComponent<MeshFilter>();
+                if (!mf || !mf.sharedMesh || !r.enabled) continue;
+                renderers++;
+                if (GameObjectUtility.AreStaticEditorFlagsSet(r.gameObject, StaticEditorFlags.BatchingStatic)) staticRenderers++;
+                var m = mf.sharedMesh;
+                meshes.Add(m);
+                verts += m.vertexCount;
+                long t = 0;
+                for (int s = 0; s < m.subMeshCount; s++) t += m.GetIndexCount(s) / 3;
+                tris += t;
+                if (r.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.Off) shadowTris += t;
+                foreach (var mat in r.sharedMaterials) if (mat) materials.Add(mat);
+            }
+            string report = $"Scene stats: {renderers} mesh renderers ({staticRenderers} static-batched), {meshes.Count} unique meshes, " +
+                            $"{materials.Count} materials, {verts / 1000}k vertices, {tris / 1000}k triangles ({shadowTris / 1000}k shadow-casting)";
+            System.IO.Directory.CreateDirectory("Logs");
+            System.IO.File.WriteAllText("Logs/scene-stats.txt", report + "\n");
+            Debug.Log("[Gamebreak] " + report);
+        }
+
         public static void SetupAndBuildAll()
         {
             Setup();
@@ -109,25 +149,26 @@ namespace Gamebreak.MiniGolf.Editor
             var path = EditorBuildSettings.scenes[0].path;
             UnityEditor.SceneManagement.EditorSceneManager.OpenScene(path);
             System.IO.Directory.CreateDirectory("Screenshots");
-            var shots = new System.Collections.Generic.List<(string name, Vector3 pos, Vector3 look)>
-            {
-                ("overview", new Vector3(5.5f, 7f, -5.5f), new Vector3(-2f, 0f, 3.5f)),
-            };
-            var holes = Object.FindObjectsByType<HoleController>(FindObjectsSortMode.None).OrderBy(h => h.HoleNumber);
-            var sign = GameObject.Find("ControlsSign");
-            if (sign)
-            {
-                var start = holes.First().PlayerStart.position + Vector3.up * 1.6f;
-                shots.Add(("controls_sign", start, sign.transform.position + Vector3.up * 1.35f));
-            }
+            var shots = new System.Collections.Generic.List<(string name, Vector3 pos, Vector3 look)>();
+            var holes = Object.FindObjectsByType<HoleController>(FindObjectsSortMode.None).OrderBy(h => h.HoleNumber).ToList();
+            Vector3 centroid = Vector3.zero;
+            foreach (var h in holes) centroid += (h.Tee.position + h.Cup.transform.position) * 0.5f;
+            centroid /= Mathf.Max(1, holes.Count);
+            shots.Add(("world_overview", centroid + new Vector3(-26f, 22f, -30f), centroid));
             foreach (var h in holes)
             {
                 var cupPos = h.Cup.transform.position;
                 var tee = h.Tee.position;
                 Vector3 line = cupPos - tee; line.y = 0f; line.Normalize();
-                shots.Add(($"hole{h.HoleNumber:00}_tee", tee - line * 1.0f + Vector3.up * 1.6f, tee + line * 3f));
-                shots.Add(($"hole{h.HoleNumber:00}_above", (tee + cupPos) * 0.5f + new Vector3(0f, 6f, -2.5f), (tee + cupPos) * 0.5f));
-                shots.Add(($"hole{h.HoleNumber:00}_cup", cupPos + new Vector3(0.25f, 0.25f, -0.35f), cupPos));
+                Vector3 right = Vector3.Cross(Vector3.up, line);
+                Vector3 mid = (tee + cupPos) * 0.5f;
+                string n = $"hole{h.HoleNumber:00}";
+                shots.Add(($"{n}_a_tee", h.PlayerStart.position + Vector3.up * 1.65f, tee + line * 4f + Vector3.down * 0.3f));
+                shots.Add(($"{n}_b_aerial", mid - line * 7f + right * 5f + Vector3.up * 8f, mid));
+                shots.Add(($"{n}_c_side_right", mid + right * 7f + Vector3.up * 2.2f - line * 1f, mid + Vector3.up * 0.4f));
+                shots.Add(($"{n}_d_side_left", mid - right * 6f + Vector3.up * 2.4f + line * 1f, mid + Vector3.up * 0.4f));
+                shots.Add(($"{n}_e_from_cup", cupPos + line * 1.6f + Vector3.up * 1.5f, tee + Vector3.up * 0.3f));
+                shots.Add(($"{n}_f_cup", cupPos + new Vector3(0.25f, 0.25f, -0.35f), cupPos));
             }
             var go = new GameObject("ReviewCamera");
             var cam = go.AddComponent<Camera>();

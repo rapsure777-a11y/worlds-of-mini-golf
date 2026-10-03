@@ -22,7 +22,12 @@ namespace Gamebreak.MiniGolf.Editor
         public static void BuildTropicalScene()
         {
             var tuning = LoadOrCreate<GolfTuning>(TuningPath);
+            var kit = Art.TropicalKit.Build();
             var theme = CreateTropicalTheme();
+            // Course surfaces come from the shared stylized kit.
+            theme.green = kit.Turf; theme.wall = kit.Rail; theme.cup = kit.Cup; theme.flag = kit.Flag; theme.tee = kit.Tee;
+            theme.water = kit.Water;
+            EditorUtility.SetDirty(theme);
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -66,8 +71,7 @@ namespace Gamebreak.MiniGolf.Editor
                 holes[i] = HoleFactory.Build(defs[i], theme, tuning, courseRoot, ball);
             if (holes.Length > 0) ballGo.transform.position = holes[0].TeePosition;
 
-            BuildEnvironment(theme);
-            if (holes.Length > 0) BuildControlsSign(holes[0], theme);
+            Art.TropicalWorld.Build(kit, defs, null);
 
             // Player rig.
             var rigGo = new GameObject("PlayerRig");
@@ -134,46 +138,6 @@ namespace Gamebreak.MiniGolf.Editor
             Debug.Log($"[Gamebreak] Built {ScenePath} with {holes.Length} hole(s).");
         }
 
-        const string ControlsText =
-            "<b>CONTROLS</b>  (Steam Frame;  Touch/Index in brackets)\n\n" +
-            "<b>Putt:</b> swing the putter through the ball\n" +
-            "<b>A:</b> stand beside the ball\n" +
-            "<b>B:</b> ball back to where you last hit it from\n" +
-            "<b>X</b> or left D-pad down (left X): scorecard\n" +
-            "<b>Y</b> or left D-pad up, hold 1 s (left Y): swap putter hand\n" +
-            "<b>Stick forward + release:</b> teleport     <b>Stick left/right:</b> turn\n" +
-            "<b>Left grip + pull:</b> drag yourself around\n" +
-            "<b>Right grip + stick:</b> putter length / angle (+trigger: rotate head)\n" +
-            "<b>Menu, hold:</b> restart hole\n" +
-            "<b>Look at your free wrist:</b> hole, par and strokes";
-
-        /// <summary>World-space sign beside the first tee listing the controls.</summary>
-        static void BuildControlsSign(HoleController firstHole, WorldTheme theme)
-        {
-            var start = firstHole.PlayerStart;
-            var sign = new GameObject("ControlsSign").transform;
-            // Just left of where the player starts (clear of the palms), angled toward them.
-            Vector3 pos = start.position + start.forward * 0.3f - start.right * 1.25f;
-            pos.y = 0f;
-            sign.position = pos;
-            Vector3 toPlayer = start.position - pos; toPlayer.y = 0f;
-            sign.rotation = Quaternion.LookRotation(-toPlayer.normalized);
-
-            var post = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            post.name = "Post";
-            Object.DestroyImmediate(post.GetComponent<Collider>());
-            post.transform.SetParent(sign, false);
-            post.transform.localPosition = new Vector3(0f, 0.6f, 0.03f);
-            post.transform.localScale = new Vector3(0.06f, 0.6f, 0.06f);
-            post.GetComponent<MeshRenderer>().sharedMaterial = theme.wall;
-
-            var canvas = WorldText.CreateCanvas("Canvas", sign, new Vector2(980, 560), new Color(0.12f, 0.2f, 0.28f, 0.92f));
-            canvas.transform.localPosition = new Vector3(0f, 1.35f, 0f);
-            var text = WorldText.CreateText(canvas.transform, "Text", 34, TextAnchor.MiddleLeft, Color.white);
-            text.text = ControlsText;
-            text.lineSpacing = 1.1f;
-        }
-
         static Transform MakeHand(string name, Transform parent, Material mat)
         {
             var hand = new GameObject(name).transform;
@@ -185,95 +149,6 @@ namespace Gamebreak.MiniGolf.Editor
             marker.transform.localScale = Vector3.one * 0.03f;
             marker.GetComponent<MeshRenderer>().sharedMaterial = mat;
             return hand;
-        }
-
-        /// <summary>Greybox island: sand, sea, a few primitive palms and rocks. Real art replaces this in Milestone 4.</summary>
-        static void BuildEnvironment(WorldTheme theme)
-        {
-            var env = new GameObject("Environment").transform;
-
-            var island = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            island.name = "Island";
-            island.transform.SetParent(env, false);
-            island.transform.localPosition = new Vector3(0f, -0.5f, 3.5f);
-            island.transform.localScale = new Vector3(22f, 0.5f, 22f);
-            island.GetComponent<MeshRenderer>().sharedMaterial = theme.ground;
-            // Replace the capsule-ish cylinder collider with a box whose top sits at y = 0.
-            Object.DestroyImmediate(island.GetComponent<Collider>());
-            var islandCol = island.AddComponent<BoxCollider>();
-            islandCol.size = new Vector3(0.71f, 2f, 0.71f);
-
-            var sea = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            sea.name = "Sea";
-            Object.DestroyImmediate(sea.GetComponent<Collider>());
-            sea.transform.SetParent(env, false);
-            sea.transform.localPosition = new Vector3(0f, -0.12f, 3.5f);
-            sea.transform.localScale = new Vector3(40f, 1f, 40f);
-            sea.GetComponent<MeshRenderer>().sharedMaterial = theme.water;
-
-            // Any ball that leaves the green lands in this trigger (sand or sea) and is returned.
-            var oob = new GameObject("OutOfBounds");
-            oob.transform.SetParent(env, false);
-            oob.transform.localPosition = new Vector3(0f, -0.45f, 3.5f);
-            var oobCol = oob.AddComponent<BoxCollider>();
-            oobCol.isTrigger = true;
-            oobCol.size = new Vector3(400f, 1f, 400f); // top at y = 0.05, below the green surface
-            oob.AddComponent<OutOfBoundsZone>();
-
-            var trunk = Mat("PalmTrunk", new Color(0.55f, 0.38f, 0.22f), 0.2f);
-            var leaf = Mat("PalmLeaf", new Color(0.18f, 0.62f, 0.2f), 0.35f);
-            var rock = Mat("Rock", new Color(0.55f, 0.5f, 0.45f), 0.15f);
-            Vector3[] palms = { new Vector3(-2.2f, 0f, 1.5f), new Vector3(2.5f, 0f, 4f), new Vector3(-2.8f, 0f, 6.5f), new Vector3(1.8f, 0f, 8.5f) };
-            for (int i = 0; i < palms.Length; i++) Palm(env, palms[i], i * 77f, trunk, leaf);
-            Rock(env, new Vector3(1.7f, 0f, 1.2f), 0.6f, rock);
-            Rock(env, new Vector3(-1.6f, 0f, 4.2f), 0.9f, rock);
-            Rock(env, new Vector3(-1.2f, 0f, 8.8f), 1.3f, rock);
-        }
-
-        static void Palm(Transform parent, Vector3 pos, float yaw, Material trunk, Material leaf)
-        {
-            var root = new GameObject("PalmPlaceholder").transform;
-            root.SetParent(parent, false);
-            root.localPosition = pos;
-            root.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            Vector3 p = Vector3.zero;
-            float lean = 0f;
-            for (int s = 0; s < 6; s++)
-            {
-                var seg = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                Object.DestroyImmediate(seg.GetComponent<Collider>());
-                seg.transform.SetParent(root, false);
-                lean += 4f;
-                var rot = Quaternion.Euler(lean, 0f, 0f);
-                seg.transform.localRotation = rot;
-                seg.transform.localPosition = p + rot * Vector3.up * 0.3f;
-                float w = 0.22f - s * 0.015f;
-                seg.transform.localScale = new Vector3(w, 0.32f, w);
-                seg.GetComponent<MeshRenderer>().sharedMaterial = trunk;
-                p += rot * Vector3.up * 0.6f;
-            }
-            for (int f = 0; f < 7; f++)
-            {
-                var frond = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Object.DestroyImmediate(frond.GetComponent<Collider>());
-                frond.transform.SetParent(root, false);
-                var rot = Quaternion.Euler(0f, f * 360f / 7f, 0f) * Quaternion.Euler(25f, 0f, 0f);
-                frond.transform.localRotation = rot;
-                frond.transform.localPosition = p + rot * new Vector3(0f, 0f, 0.7f);
-                frond.transform.localScale = new Vector3(0.45f, 0.06f, 1.6f);
-                frond.GetComponent<MeshRenderer>().sharedMaterial = leaf;
-            }
-        }
-
-        static void Rock(Transform parent, Vector3 pos, float size, Material mat)
-        {
-            var r = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            r.name = "RockPlaceholder";
-            r.transform.SetParent(parent, false);
-            r.transform.localPosition = pos + Vector3.up * size * 0.2f;
-            r.transform.localRotation = Quaternion.Euler(10f * size, 40f * size, 5f);
-            r.transform.localScale = new Vector3(size, size * 0.7f, size * 0.85f);
-            r.GetComponent<MeshRenderer>().sharedMaterial = mat;
         }
 
         static WorldTheme CreateTropicalTheme()

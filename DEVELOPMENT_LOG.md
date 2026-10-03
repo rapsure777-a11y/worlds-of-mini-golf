@@ -1,5 +1,18 @@
 # Development log
 
+## 2026-10-03 (evening): Tropical Adventure production begins, Hole 1 visual showcase (checkpoint)
+
+- Baseline tagged `v0.1-prototype` (`afdf464`) before any art work.
+- Built a reusable, code-generated tropical art kit (52 meshes), a shared palette texture, generated textures and three URP/SPI shaders (StylizedLit, StylizedWater, GradientSky).
+- Generated island terrain with automatic hole-site levelling and paths, an ocean with baked shore distance, distant islands, clouds, gradient sky and warm lighting (no post-processing).
+- Hole 1 now runs along the south beach (layout unchanged) and is fully dressed: tiki clubhouse, welcome/controls board, hole sign, torches, flower beds, pier, palms, sandstone backdrop. Hole 2 moved to its new site with basic dressing.
+- Terrain and rocks count as out of bounds on contact (`OutOfBoundsSurface`).
+- Iterated four times on desktop screenshots. Fixed crowded palms, grey pads, egg-shaped flames, noisy faceted cliffs, a green horizon (replaced Unity's procedural sky), washed-out sand, hidden blossoms and monotone greens.
+- **Regression caught by the scene test:** after rotating Hole 1, two of its backdrop cliffs landed on Hole 2's green (their out-of-bounds colliders sent the ball back). Moved them; added an automatic obstruction scan in the world builder and the test `TropicalScene_NoSceneryOnGreens`.
+- Tests 41/41; both builds succeed (118 MB); smoke test passes on the new Hole 1. Scene budget: 585k triangles, 13 materials, 532/566 renderers static-batched.
+- **Not headset-verified:** custom shaders in SPI, VR frame time with the new world, auto putter length, wrist watch.
+- Checkpoint write-up: `Docs/CHECKPOINT_HOLE1.md`. Holes 3–9 are on hold pending visual approval.
+
 ## 2026-10-03 (afternoon, test 4-5): Frame profile works; auto putter length
 
 - Native Steam Frame profile accepted once XR_VALVE_frame_controller_interaction was requested. First build read hand pose from wrong bytes (offsets copied from the Index layout), so the putter swung erratically. Fixed with correct offsets (33/36/40/52/100/112) and layout tests. Andrew: 'worked perfectly', 'really, really smooth'.

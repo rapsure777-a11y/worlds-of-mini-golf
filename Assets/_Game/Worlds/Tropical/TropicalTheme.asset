@@ -14,17 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Gamebreak.MiniGolf::Gamebreak.MiniGolf.WorldTheme
   worldName: Tropical Adventure
   inspiration: 'Crash Bandicoot 4: It''s About Time (style reference only).'
-  green: {fileID: 2100000, guid: b0702f4ca7b6f7d4b95aa1a6bfc709fc, type: 2}
-  wall: {fileID: 2100000, guid: 962c12d5693e4a048824b91c9bed56e0, type: 2}
-  cup: {fileID: 2100000, guid: 655513c2c1cf4504d819ff2188a935d8, type: 2}
-  flag: {fileID: 2100000, guid: 3e4dba8c124270846bbd9d1ee6a6c484, type: 2}
-  tee: {fileID: 2100000, guid: 622036c989ee1a345bc9b2859718b903, type: 2}
+  green: {fileID: 2100000, guid: 1b6e3c05a35e73240b95ea8bc83ee092, type: 2}
+  wall: {fileID: 2100000, guid: c33578f194539ed49af6f65d27a23bcc, type: 2}
+  cup: {fileID: 2100000, guid: 00a02ee572fdca84290c425bb3515e89, type: 2}
+  flag: {fileID: 2100000, guid: 49408e720db6ec443a4373ebe3a6ff16, type: 2}
+  tee: {fileID: 2100000, guid: fe9d30e398dfd0c42afe064e2857cd85, type: 2}
   ball: {fileID: 2100000, guid: 3edb15d90867a2a4fa1b68c6572e8095, type: 2}
   putterShaft: {fileID: 2100000, guid: fd49e39cab3a55446a920ff9d4182ce9, type: 2}
   putterHead: {fileID: 2100000, guid: 506ea77d9e2575545a82db173eea7b94, type: 2}
   putterGrip: {fileID: 2100000, guid: 253e84a519f00084f80de9a3cb13004c, type: 2}
   ground: {fileID: 2100000, guid: 1ad4671e1dd31fe41b221118eef0d0af, type: 2}
-  water: {fileID: 2100000, guid: 3ae122644a000ed408c4b8a0394f229f, type: 2}
+  water: {fileID: 2100000, guid: 329fa43f1ee237040bfa28e754e8ad55, type: 2}
   skybox: {fileID: 2100000, guid: d0db859e78166bf4595919a34817efc1, type: 2}
   sunColor: {r: 1, g: 0.95, b: 0.85, a: 1}
   sunIntensity: 1.4
