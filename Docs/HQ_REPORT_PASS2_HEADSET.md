@@ -25,8 +25,8 @@
 
 ## Open issues (not fixed)
 - **The waterfall clips into the tiki clubhouse**, seen from Hole 2. The clubhouse sits almost on top of the cliff, pool and waterfall, and its surfboards crowd Hole 2's tee. It needs relocating.
-- **Distant plants look white** in the headset. Not reproduced yet; likely leaf-card mip or lighting at range.
-- **The tee view is plainer than the first checkpoint:** the lane-side flower beds were replaced and the layered jungle isn't visible from the tee.
+- ~~Distant plants look white~~ **Resolved** by the foliage file-name fix (Andrew: "The plants aren't white anymore").
+- ~~Tee view plainer than the first checkpoint~~ **Accepted by Andrew** ("The tee area is fine"); no change needed.
 - **Hero boulders read as flat slabs, and the cliff wall floats** above the ground in places.
 - **Old kit palms, rocks and mesas still sit beside the new hero assets**, mixing two styles.
 
@@ -69,7 +69,7 @@ Desktop offscreen benchmark (4320×2160, 4× MSAA), GPU median / p95:
 - 120 Hz stays available as a performance mode, but no preset currently reaches it.
 
 ## Recommended instruction for Cloud Claude
-> Use **HeroSeaArch as the fidelity standard** for every rock, cliff and landform visible from Hole 1. Replace the remaining old kit rocks, cliffs and mesas. Make the boulders and the cliff wall sit naturally on the terrain. Move the tiki clubhouse so it does not clip into the waterfall or crowd Hole 2. Restore lush flowering planting along the Hole 1 lane, and make the layered jungle visible from the tee. Investigate the white distant plants. Add simpler distant versions (LODs) of hero palms and rocks. Add a real VR GPU timing measurement to the session log. Target a stable 90 Hz on the rich preset (Andrew sets SteamVR to 90 Hz), with 120 Hz as an optional performance mode. Scope stays Hole 1 only (Holes 2–9 still need visual approval).
+> Use **HeroSeaArch as the fidelity standard** for every rock, cliff and landform visible from Hole 1. Replace the remaining old kit rocks, cliffs and mesas. Make the boulders and the cliff wall sit naturally on the terrain. Move the tiki clubhouse so it does not clip into the waterfall or crowd Hole 2. Add simpler distant versions (LODs) of hero palms and rocks. Add a real VR GPU timing measurement to the session log. Target a stable 90 Hz on the rich preset (Andrew sets SteamVR to 90 Hz), with 120 Hz as an optional performance mode. Scope stays Hole 1 only (Holes 2–9 still need visual approval).
 
 Cloud Claude cannot run Unity, Blender or the headset. Each iteration needs a local round trip on Andrew's PC: compile, screenshots, tests, build and a headset check.
 
