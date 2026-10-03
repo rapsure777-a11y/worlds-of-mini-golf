@@ -1,5 +1,11 @@
 # Development log
 
+## 2026-10-03 (afternoon, test 3): smooth at 120 Hz; Frame profile needs its extension
+
+- **Performance fixed:** frame delta flat 8.33 ms (120 Hz) for the whole session, Unity GPU timer 1.6-7 ms. Earlier sessions spent about half their frames at 60 Hz. The VR render-settings change worked. Andrew: 'totally smooth'.
+- **Steam Frame profile was rejected** (XR_ERROR_PATH_UNSUPPORTED). SteamVR fell back to Touch emulation, so right X/Y still merged into B. Cause: the profile is gated behind the OpenXR extension XR_VALVE_frame_controller_interaction, which SteamVR advertises but the feature did not request. Fixed by declaring the extension on the feature. Needs a headset check: the session log should list 'SteamFrameController' devices instead of 'OculusTouchController'.
+- Left controller only connected 163 s into the session; left buttons worked once it did.
+
 ## 2026-10-03 (afternoon): first Steam Frame playtest feedback
 
 **Andrew's verdict:** physics "absolutely great"; teleport, snap turn and grab-move great. Problems: B didn't return the ball, scorecard not seen, Y didn't swap hands.

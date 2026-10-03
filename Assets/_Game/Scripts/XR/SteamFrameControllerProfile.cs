@@ -28,6 +28,7 @@ namespace Gamebreak.MiniGolf.XR
     ///   right A = PrimaryButton, right B = SecondaryButton, right X = FrameX, right Y = FrameY
     ///   left D-pad down = PrimaryButton, left D-pad up = SecondaryButton,
     ///   left D-pad left/right = DpadLeft/DpadRight, right Menu / left View = MenuButton.
+    /// Requires the OpenXR extension XR_VALVE_frame_controller_interaction (SteamVR advertises it).
     /// Paths were taken from SteamVR's frame_controller input profile and runtime. If the runtime ever
     /// rejects them, SteamVR falls back to the Touch profile and the game still works.
     /// </summary>
@@ -36,7 +37,9 @@ namespace Gamebreak.MiniGolf.XR
         BuildTargetGroups = new[] { BuildTargetGroup.Standalone },
         Company = "Gamebreak Labs",
         Desc = "Native input for Steam Frame controllers through SteamVR.",
-        OpenxrExtensionStrings = "",
+        // The profile path is only valid once this extension is enabled; without it SteamVR rejects
+        // the bindings with XR_ERROR_PATH_UNSUPPORTED (seen in the first Frame test).
+        OpenxrExtensionStrings = "XR_VALVE_frame_controller_interaction",
         Version = "0.1.0",
         Category = UnityEditor.XR.OpenXR.Features.FeatureCategory.Interaction,
         FeatureId = featureId)]
