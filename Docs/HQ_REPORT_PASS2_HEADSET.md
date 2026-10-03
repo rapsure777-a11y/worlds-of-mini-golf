@@ -16,7 +16,7 @@
 | PCVR + desktop builds | Pass, 0 errors (167 / 164 MB) |
 | Desktop smoke test | PASS (scripted putt, hole in one, advances to Hole 2) |
 | Headset play, Holes 1–2 | **Played and confirmed by Andrew.** Putting, tracking and progression normal. |
-| PlayMode tests (42 incl. the new one) | **Not run yet.** The editor test run starts OpenXR, and SteamVR was in use all session. Run them with SteamVR closed. |
+| PlayMode tests | **42/42 pass** (incl. new `TropicalScene_CourseSurfacesDoNotSway`; run with SteamVR closed) |
 
 ## Bugs found and fixed this session (local)
 1. **All hero rocks rendered white.** A single-object FBX loses its `__Rock` suffix on the root, so the white fallback material was used. `HeroKit` now reads the suffix from the mesh name.
