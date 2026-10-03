@@ -11,6 +11,7 @@ namespace Gamebreak.MiniGolf
     /// real putter through it (scripted hand motion, same strike code as VR), waits for the result,
     /// saves screenshots and a report to SmokeTest/ next to the exe, then quits (exit 0 = pass).
     /// </summary>
+    [DefaultExecutionOrder(150)] // after the rig (-100), before the putter samples the hand (200)
     public class SmokeTest : MonoBehaviour
     {
         const float HeadSpeed = 2.4f;
@@ -49,10 +50,21 @@ namespace Gamebreak.MiniGolf
             }
         }
 
+        Putter m_Putter;
+        Transform m_Hand;
+        Vector3 m_Face, m_Ground;
+        float m_S;
+        bool m_Swinging;
+
         void Update()
         {
             m_FrameMsSum += Time.unscaledDeltaTime * 1000.0;
             m_Frames++;
+            if (!m_Swinging) return;
+            m_S += HeadSpeed * Time.deltaTime;
+            bool done = m_S >= 0.25f;
+            VRRig.PlaceHead(m_Putter, m_Hand, m_Ground + m_Face * m_S + Vector3.up * (done ? 0.15f : 0.003f), m_Face);
+            if (done) m_Swinging = false;
         }
 
         IEnumerator Start()
@@ -75,21 +87,18 @@ namespace Gamebreak.MiniGolf
             yield return new WaitForSecondsRealtime(0.5f);
             yield return Shot("02_at_ball");
 
-            // Swing: lower the head 30 cm behind the ball, sweep through toward the cup.
-            Vector3 face = hole.Cup.transform.position - ball.Position; face.y = 0f; face.Normalize();
-            Vector3 ground = ball.Position - Vector3.up * ball.Radius;
-            Transform hand = rig.DominantHand;
-            float s = -0.3f;
-            VRRig.PlaceHead(putter, hand, ground + face * s + Vector3.up * 0.12f, face);
+            // Swing: lower the head 30 cm behind the ball, sweep through toward the cup. The hand is moved
+            // in Update (which runs before the putter samples it), like real tracking data each frame.
+            m_Face = hole.Cup.transform.position - ball.Position; m_Face.y = 0f; m_Face.Normalize();
+            m_Ground = ball.Position - Vector3.up * ball.Radius;
+            m_Putter = putter;
+            m_Hand = rig.DominantHand;
+            m_S = -0.3f;
+            VRRig.PlaceHead(putter, m_Hand, m_Ground + m_Face * m_S + Vector3.up * 0.003f, m_Face);
             putter.ResetTracking();
-            for (int i = 0; i < 10; i++) { VRRig.PlaceHead(putter, hand, ground + face * s + Vector3.up * 0.003f, face); yield return null; }
-            while (s < 0.25f)
-            {
-                s += HeadSpeed * Time.deltaTime;
-                VRRig.PlaceHead(putter, hand, ground + face * s + Vector3.up * 0.003f, face);
-                yield return null;
-            }
-            VRRig.PlaceHead(putter, hand, ground + face * s + Vector3.up * 0.15f, face);
+            for (int i = 0; i < 10; i++) yield return null;
+            m_Swinging = true;
+            while (m_Swinging) yield return null;
             Line($"Strike: {(m_StrikeSpeed > 0 ? $"{m_StrikeSpeed:F2} m/s" : "NONE")}  strokes {hole.Strokes}");
 
             float end = Time.realtimeSinceStartup + 12f;
@@ -100,7 +109,7 @@ namespace Gamebreak.MiniGolf
             Vector3 rest = ball.Position;
             Line($"Holed: {hole.IsComplete}  strokes {hole.Strokes}  ball {rest:F3}  cup {hole.Cup.transform.position:F3}");
             Line($"Average frame {m_FrameMsSum / Math.Max(1, m_Frames):F2} ms over {m_Frames} frames (desktop window, not VR)");
-            Finish(m_StrikeSpeed > 0f && hole.Strokes == 1 && m_Errors == 0);
+            Finish(m_StrikeSpeed > 0f && hole.IsComplete && hole.Strokes == 1 && m_Errors == 0);
         }
 
         IEnumerator Shot(string name)

@@ -93,13 +93,13 @@ namespace Gamebreak.MiniGolf.Editor
         {
             const BuildTargetGroup group = BuildTargetGroup.Standalone;
 
-            EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.k_SettingsKey, out XRGeneralSettingsPerBuildTarget perTarget);
+            EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.settingsKey, out XRGeneralSettingsPerBuildTarget perTarget);
             if (!perTarget)
             {
                 Directory.CreateDirectory("Assets/XR");
                 perTarget = ScriptableObject.CreateInstance<XRGeneralSettingsPerBuildTarget>();
                 AssetDatabase.CreateAsset(perTarget, "Assets/XR/XRGeneralSettingsPerBuildTarget.asset");
-                EditorBuildSettings.AddConfigObject(XRGeneralSettings.k_SettingsKey, perTarget, true);
+                EditorBuildSettings.AddConfigObject(XRGeneralSettings.settingsKey, perTarget, true);
             }
 
             var settings = perTarget.SettingsForBuildTarget(group);

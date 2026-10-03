@@ -24,11 +24,44 @@ namespace Gamebreak.MiniGolf.Editor
         [MenuItem("Gamebreak/Build Desktop Debug Player")]
         public static void BuildDesktopPlayer() => Build(DesktopPlayerPath, false);
 
+        /// <summary>
+        /// Every component script must live in a file named after its class. The editor tolerates a
+        /// mismatch but player builds cannot resolve the script, which corrupts scene data (level0)
+        /// and crashes on load. Returns the offending script paths.
+        /// </summary>
+        public static string[] FindUnresolvableComponentScripts()
+        {
+            var bad = new System.Collections.Generic.List<string>();
+            foreach (var guid in AssetDatabase.FindAssets("t:MonoScript", new[] { "Assets/_Game/Scripts" }))
+            {
+                string p = AssetDatabase.GUIDToAssetPath(guid);
+                var script = AssetDatabase.LoadAssetAtPath<MonoScript>(p);
+                if (!script) continue;
+                string text = script.text;
+                bool declaresComponent = System.Text.RegularExpressions.Regex.IsMatch(text, @"class\s+\w+\s*:\s*(MonoBehaviour|ScriptableObject)\b");
+                if (declaresComponent && script.GetClass() == null) bad.Add(p);
+            }
+            return bad.ToArray();
+        }
+
         static void Build(string path, bool xr)
         {
+            var bad = FindUnresolvableComponentScripts();
+            if (bad.Length > 0)
+            {
+                Debug.LogError("[Gamebreak] Build blocked: component class name does not match file name in: " + string.Join(", ", bad));
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                return;
+            }
+            // Desktop build: remove the OpenXR loader entirely. Toggling InitManagerOnStart is not enough,
+            // because the OpenXR plugin still pre-initialises from boot.config and tries to reach SteamVR.
+            const string Loader = "UnityEngine.XR.OpenXR.OpenXRLoader";
             var xrSettings = UnityEditor.XR.Management.XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(BuildTargetGroup.Standalone);
-            bool previous = xrSettings && xrSettings.InitManagerOnStart;
-            if (xrSettings) { xrSettings.InitManagerOnStart = xr; EditorUtility.SetDirty(xrSettings); AssetDatabase.SaveAssets(); }
+            if (xrSettings && !xr)
+            {
+                UnityEditor.XR.Management.Metadata.XRPackageMetadataStore.RemoveLoader(xrSettings.Manager, Loader, BuildTargetGroup.Standalone);
+                AssetDatabase.SaveAssets();
+            }
             try
             {
                 var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
@@ -37,7 +70,9 @@ namespace Gamebreak.MiniGolf.Editor
                     scenes = scenes,
                     locationPathName = path,
                     target = BuildTarget.StandaloneWindows64,
-                    options = BuildOptions.None,
+                    // The two players differ only in XR start-up; a shared incremental cache produced a
+                    // corrupt level0 when switching between them, so always build clean.
+                    options = BuildOptions.CleanBuildCache,
                 });
                 var s = report.summary;
                 Debug.Log($"[Gamebreak] Build {s.result} (xr={xr}): {s.totalErrors} errors, {s.totalSize / (1024 * 1024)} MB, {s.totalTime.TotalSeconds:F0}s -> {path}");
@@ -45,7 +80,12 @@ namespace Gamebreak.MiniGolf.Editor
             }
             finally
             {
-                if (xrSettings) { xrSettings.InitManagerOnStart = previous; EditorUtility.SetDirty(xrSettings); AssetDatabase.SaveAssets(); }
+                if (xrSettings && !xr)
+                {
+                    bool restored = UnityEditor.XR.Management.Metadata.XRPackageMetadataStore.AssignLoader(xrSettings.Manager, Loader, BuildTargetGroup.Standalone);
+                    AssetDatabase.SaveAssets();
+                    if (!restored) Debug.LogError("[Gamebreak] Failed to restore the OpenXR loader after the desktop build. Run Gamebreak/Setup/Configure Project for PCVR.");
+                }
             }
         }
 
