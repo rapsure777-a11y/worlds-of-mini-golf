@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -114,6 +114,8 @@ namespace Gamebreak.MiniGolf
         // Per-report-window performance samples.
         readonly List<float> m_CpuMs = new List<float>(4096);
         readonly List<float> m_GpuMs = new List<float>(4096);
+        readonly List<float> m_AppGpuMs = new List<float>(4096);
+        readonly List<float> m_CompGpuMs = new List<float>(4096);
         readonly Dictionary<int, int> m_RefreshHist = new Dictionary<int, int>();
         int m_DroppedStart = -1, m_PresentStart = -1;
         readonly FrameTiming[] m_Timing = new FrameTiming[1];
@@ -137,10 +139,12 @@ namespace Gamebreak.MiniGolf
                 if (m_Timing[0].gpuFrameTime > 0) m_GpuMs.Add((float)m_Timing[0].gpuFrameTime);
             }
             var display = ActiveDisplay();
-            if (display != null && display.TryGetAppGPUTimeLastFrame(out float appGpu) && appGpu > 0f && m_Timing[0].gpuFrameTime <= 0)
-                m_GpuMs.Add(appGpu);
             if (display != null)
             {
+                // The runtime's own measurements, comparable across sessions (Unity's GPU timer can
+                // include waits on the XR swapchain).
+                if (display.TryGetAppGPUTimeLastFrame(out float appGpu) && appGpu > 0f) m_AppGpuMs.Add(appGpu);
+                if (display.TryGetCompositorGPUTimeLastFrame(out float compGpu) && compGpu > 0f) m_CompGpuMs.Add(compGpu);
                 if (m_DroppedStart < 0 && display.TryGetDroppedFrameCount(out int d0)) m_DroppedStart = d0;
                 if (m_PresentStart < 0 && display.TryGetFramePresentCount(out int p0)) m_PresentStart = p0;
             }
@@ -154,7 +158,10 @@ namespace Gamebreak.MiniGolf
             if (m_FrameMs.Count < 10) return;
             W($"FRAMES n={m_FrameMs.Count} delta {Pct(m_FrameMs)}  over-budget {m_Hitches}");
             if (m_CpuMs.Count > 0) W($"  CPU main thread {Pct(m_CpuMs)}");
-            if (m_GpuMs.Count > 0) W($"  GPU (app) {Pct(m_GpuMs)}");
+            if (m_GpuMs.Count > 0) W($"  GPU (Unity timer) {Pct(m_GpuMs)}");
+            if (m_AppGpuMs.Count > 0) W($"  GPU (runtime, app) {Pct(m_AppGpuMs)}");
+            if (m_CompGpuMs.Count > 0) W($"  GPU (runtime, compositor) {Pct(m_CompGpuMs)}");
+            W($"  render: eye {XRSettings.eyeTextureWidth}x{XRSettings.eyeTextureHeight} scale {XRSettings.eyeTextureResolutionScale:F2}");
             var sb = new StringBuilder("  refresh rate seen:");
             foreach (var kv in m_RefreshHist) sb.Append($" {kv.Key} Hz x{kv.Value}");
             W(sb.ToString());
@@ -162,7 +169,7 @@ namespace Gamebreak.MiniGolf
             if (display != null && display.TryGetDroppedFrameCount(out int dropped) && display.TryGetFramePresentCount(out int presents) && m_DroppedStart >= 0)
                 W($"  compositor: dropped {dropped - m_DroppedStart}  presented {presents - m_PresentStart}");
             if (m_Putter) W($"Putter now: length {F(m_Putter.Length)} angle {F(m_Putter.AngleOffset)} twist {F(m_Putter.HeadTwist)}");
-            m_FrameMs.Clear(); m_CpuMs.Clear(); m_GpuMs.Clear(); m_RefreshHist.Clear();
+            m_FrameMs.Clear(); m_CpuMs.Clear(); m_GpuMs.Clear(); m_AppGpuMs.Clear(); m_CompGpuMs.Clear(); m_RefreshHist.Clear();
             m_Hitches = 0;
             m_DroppedStart = m_PresentStart = -1;
         }
@@ -186,7 +193,7 @@ namespace Gamebreak.MiniGolf
 
         void OnEnable()
         {
-            var paths = new[] { "{PrimaryButton}", "{SecondaryButton}", "{MenuButton}", "{Primary2DAxisClick}", "{GripButton}", "{TriggerButton}" };
+            var paths = new[] { "{PrimaryButton}", "{SecondaryButton}", "{FrameX}", "{FrameY}", "{DpadLeft}", "{DpadRight}", "{MenuButton}", "{Primary2DAxisClick}", "{GripButton}", "{TriggerButton}" };
             var list = new List<InputAction>();
             foreach (var hand in new[] { "LeftHand", "RightHand" })
             foreach (var p in paths)

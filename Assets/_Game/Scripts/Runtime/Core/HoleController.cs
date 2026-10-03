@@ -160,6 +160,8 @@ namespace Gamebreak.MiniGolf
         public void RequestReset()
         {
             if (IsComplete || !ball) return;
+            // Already sitting where the last shot was played from (e.g. on the tee): nothing to do.
+            if (ball.IsAtRest && ball.InPlay && (ball.Position - ShotStartPosition).sqrMagnitude < 0.02f * 0.02f) return;
             LastRestPosition = ShotStartPosition;
             ball.InPlay = false;
             ReturnBall(false);

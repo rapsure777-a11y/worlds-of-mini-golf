@@ -15,11 +15,13 @@ namespace Gamebreak.MiniGolf
     ///   Off-hand grip (hold + pull)    grab-move, Walkabout style
     ///   Dominant grip + stick up/down  putter length
     ///   Dominant grip + stick l/r      putter angle (add trigger: rotate head)
-    ///   Dominant A / X                 teleport beside the ball, facing the cup
-    ///   Dominant B / Y                 return ball to its last resting spot
-    ///   Off-hand B / Y (hold 1 s)      swap putter hand
-    ///   Off-hand A / X                 show / hide scorecard
+    ///   Dominant primary (A)           teleport beside the ball, facing the cup
+    ///   Dominant secondary (B)         ball back to where the last shot was played from
+    ///   Off-hand primary, or Frame X   show / hide scorecard
+    ///   Off-hand secondary or Frame Y, hold 1 s   swap putter hand
     ///   Menu (hold 1.5 s)              restart hole
+    /// Steam Frame (native profile): A, B, X, Y on the right controller; left D-pad down/up act as the
+    /// left hand's primary/secondary.
     /// Without a headset it falls back to a desktop debug mode (see <see cref="DesktopDebug"/>).
     /// </summary>
     [DefaultExecutionOrder(-100)]
@@ -159,6 +161,7 @@ namespace Gamebreak.MiniGolf
             PlayerPrefs.SetInt(PrefLeftHanded, value ? 1 : 0);
             PlayerPrefs.Save();
             ApplyHandedness();
+            Haptic(0.6f, 0.12f); // confirm on the new putter hand
         }
 
         void Update()
@@ -326,9 +329,11 @@ namespace Gamebreak.MiniGolf
         {
             if (Dom.primary.WasPressedThisFrame()) TeleportToBall();
             if (Dom.secondary.WasPressedThisFrame() && HoleController.Active) HoleController.Active.RequestReset();
-            if (Off.primary.WasPressedThisFrame()) ToggleScorecard();
+            bool frameX = m_Left.frameX.WasPressedThisFrame() || m_Right.frameX.WasPressedThisFrame();
+            if (Off.primary.WasPressedThisFrame() || frameX) ToggleScorecard();
 
-            m_SwapHeld = Off.secondary.IsPressed() ? m_SwapHeld + Time.deltaTime : 0f;
+            bool swapHeld = Off.secondary.IsPressed() || m_Left.frameY.IsPressed() || m_Right.frameY.IsPressed();
+            m_SwapHeld = swapHeld ? m_SwapHeld + Time.deltaTime : 0f;
             if (m_SwapHeld >= 1f) { m_SwapHeld = float.NegativeInfinity; SetLeftHanded(!leftHanded); }
 
             bool menu = m_Left.menu.IsPressed() || m_Right.menu.IsPressed();

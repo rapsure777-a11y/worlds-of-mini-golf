@@ -356,6 +356,7 @@ MonoBehaviour:
   - {fileID: -5322110739555210494}
   - {fileID: -3203326403412690829}
   - {fileID: -982719048430401628}
+  - {fileID: 7002111963030172655}
   customLoaderName: 
   m_renderMode: 1
   m_latencyOptimization: 0
@@ -440,6 +441,28 @@ MonoBehaviour:
   customRuntimeLoaderName: 
   m_MessageSeverity: 4369
   m_MessageType: 15
+--- !u!114 &7002111963030172655
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6941e9358d48c044a18d1b144b4777b, type: 3}
+  m_Name: SteamFrameControllerProfile Standalone
+  m_EditorClassIdentifier: Gamebreak.MiniGolf.XR::Gamebreak.MiniGolf.XR.SteamFrameControllerProfile
+  m_enabled: 1
+  nameUi: Steam Frame Controller Profile
+  version: 0.1.0
+  featureIdInternal: com.gamebreak.openxr.feature.input.steamframe
+  openxrExtensionStrings: 
+  company: Gamebreak Labs
+  priority: 0
+  targetOpenXRApiVersion: 
+  required: 0
+  customRuntimeLoaderName: 
 --- !u!114 &7757195356807081759
 MonoBehaviour:
   m_ObjectHideFlags: 0

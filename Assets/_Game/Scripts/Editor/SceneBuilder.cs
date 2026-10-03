@@ -136,10 +136,10 @@ namespace Gamebreak.MiniGolf.Editor
         const string ControlsText =
             "<b>CONTROLS</b>  (Steam Frame;  Touch/Index in brackets)\n\n" +
             "<b>Putt:</b> swing the putter through the ball\n" +
-            "<b>Right A:</b> stand beside the ball\n" +
-            "<b>Right B / X / Y</b> (B): ball back to where you last hit it\n" +
-            "<b>Left D-pad down</b> (X): scorecard\n" +
-            "<b>Left D-pad up, hold 1 s</b> (Y): swap putter hand\n" +
+            "<b>A:</b> stand beside the ball\n" +
+            "<b>B:</b> ball back to where you last hit it from\n" +
+            "<b>X</b> or left D-pad down (left X): scorecard\n" +
+            "<b>Y</b> or left D-pad up, hold 1 s (left Y): swap putter hand\n" +
             "<b>Stick forward + release:</b> teleport     <b>Stick left/right:</b> turn\n" +
             "<b>Left grip + pull:</b> drag yourself around\n" +
             "<b>Right grip + stick:</b> putter length / angle (+trigger: rotate head)\n" +

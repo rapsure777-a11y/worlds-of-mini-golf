@@ -28,6 +28,7 @@ namespace Gamebreak.MiniGolf.Editor
             "HTCViveControllerProfile",
             "KHRSimpleControllerProfile",
             "HPReverbG2ControllerProfile",
+            "SteamFrameControllerProfile", // ours: native Steam Frame buttons instead of Touch emulation
         };
 
         [MenuItem("Gamebreak/Setup/Configure Project for PCVR")]
@@ -149,6 +150,8 @@ namespace Gamebreak.MiniGolf.Editor
             bool assigned = XRPackageMetadataStore.AssignLoader(settings.Manager, "UnityEngine.XR.OpenXR.OpenXRLoader", group);
             Debug.Log($"[Gamebreak] OpenXR loader assigned: {assigned}");
 
+            // Pick up project-defined features such as SteamFrameControllerProfile.
+            UnityEditor.XR.OpenXR.Features.FeatureHelpers.RefreshFeatures(group);
             var oxr = OpenXRSettings.GetSettingsForBuildTargetGroup(group);
             if (oxr)
             {

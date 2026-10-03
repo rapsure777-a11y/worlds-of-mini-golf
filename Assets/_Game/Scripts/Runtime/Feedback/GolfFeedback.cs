@@ -65,17 +65,19 @@ namespace Gamebreak.MiniGolf
             if (rig) rig.Haptic(0.3f, 0.05f);
         }
 
-        /// <summary>Soft rising "pop" for the ball reappearing.</summary>
+        /// <summary>Short, low "pop" for the ball reappearing (the earlier rising tone sounded like a whistle).</summary>
         static AudioClip SynthReturn()
         {
             const int rate = 44100;
-            int n = rate / 5;
+            int n = (int)(rate * 0.09f);
             var data = new float[n];
+            float phase = 0f;
             for (int i = 0; i < n; i++)
             {
                 float t = i / (float)rate;
-                float f = 500f + 900f * (t / 0.2f);
-                data[i] = Mathf.Sin(2f * Mathf.PI * f * t) * Mathf.Sin(Mathf.PI * t / 0.2f) * 0.35f;
+                float f = Mathf.Lerp(420f, 180f, t / 0.09f);
+                phase += 2f * Mathf.PI * f / rate;
+                data[i] = Mathf.Sin(phase) * Mathf.Exp(-t * 45f) * 0.5f;
             }
             var clip = AudioClip.Create("return", n, 1, rate, false);
             clip.SetData(data, 0);

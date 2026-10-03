@@ -12,6 +12,8 @@ namespace Gamebreak.MiniGolf
         public readonly string side;
         public readonly InputAction position, rotation, aimPosition, aimRotation;
         public readonly InputAction stick, grip, trigger, primary, secondary, menu;
+        /// <summary>Steam Frame right-controller X and Y (only bound when the Frame profile is active).</summary>
+        public readonly InputAction frameX, frameY;
 
         public HandInput(string side) // "LeftHand" or "RightHand"
         {
@@ -29,6 +31,8 @@ namespace Gamebreak.MiniGolf
             primary = Button(c + "/{PrimaryButton}");
             secondary = Button(c + "/{SecondaryButton}");
             menu = Button(c + "/{MenuButton}");
+            frameX = Button(c + "/{FrameX}");
+            frameY = Button(c + "/{FrameY}");
         }
 
         static InputAction Value(string binding, string type) =>
@@ -37,7 +41,7 @@ namespace Gamebreak.MiniGolf
         static InputAction Button(string binding) =>
             new InputAction(type: InputActionType.Button, binding: binding);
 
-        InputAction[] All => new[] { position, rotation, aimPosition, aimRotation, stick, grip, trigger, primary, secondary, menu };
+        InputAction[] All => new[] { position, rotation, aimPosition, aimRotation, stick, grip, trigger, primary, secondary, menu, frameX, frameY };
 
         public void Enable() { foreach (var a in All) a.Enable(); }
         public void Disable() { foreach (var a in All) a.Disable(); }
