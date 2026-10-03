@@ -156,6 +156,34 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [UnityTest]
+        public IEnumerator PlayerReset_AfterBallStops_ReturnsToLastShotSpot()
+        {
+            using var c = new TwoHoleCourse();
+            yield return Steps(5);
+            var hole = c.course.Current;
+            Vector3 tee = c.ball.Position;
+            c.ball.Strike(new Vector3(0.1f, 0f, 1.0f));
+            yield return Steps(1);
+            yield return WaitUntil(() => c.ball.IsAtRest, 8f);
+            Vector3 firstRest = c.ball.Position;
+            Assert.Greater(Vector3.Distance(firstRest, tee), 0.3f);
+
+            hole.RequestReset(); // ball is at rest: must still visibly return, to where it was hit from
+            yield return Steps(3);
+            Assert.Less(Vector3.Distance(c.ball.Position, tee), 0.01f, "should return to the shot's start (the tee)");
+            Assert.AreEqual(1, hole.Strokes, "the shot still counts, no extra penalty");
+
+            // Second shot from the tee, then reset: back to the tee again, not to the first rest spot.
+            c.ball.Strike(new Vector3(-0.1f, 0f, 0.6f));
+            yield return Steps(1);
+            yield return WaitUntil(() => c.ball.IsAtRest, 8f);
+            hole.RequestReset();
+            yield return Steps(3);
+            Assert.Less(Vector3.Distance(c.ball.Position, tee), 0.01f);
+            Assert.AreEqual(2, hole.Strokes);
+        }
+
+        [UnityTest]
         public IEnumerator SlowBallAtCupEdge_Drops()
         {
             using var c = new TwoHoleCourse();

@@ -17,19 +17,21 @@ Repo: `C:\Users\fence\Projects\WorldsOfMiniGolf`. Unity: `C:\Program Files\Unity
 **In the headset**
 You start behind Hole 1's tee, looking down the lane. The putter is in your right hand.
 
-| Input | Action |
-|---|---|
-| Right hand (default) | Putter. Swing it through the ball. There is no shoot button. |
-| Either stick forward, release | Teleport (arc) |
-| Stick left/right | Snap turn 30° |
-| Left grip, hold and pull | Grab-move (drag yourself, Walkabout style) |
-| Right grip + stick up/down | Putter length |
-| Right grip + stick left/right | Shaft angle (add trigger: rotate head) |
-| A / X on putter hand | Stand beside the ball, facing across the line to the cup |
-| B / Y on putter hand | Return ball to its last resting spot (no penalty) |
-| Off-hand A / X | Show or hide the scorecard |
-| Off-hand B / Y, hold 1 s | Switch putter hand |
-| Menu, hold 1.5 s | Restart hole |
+Steam Frame layout. SteamVR presents the Frame to the game as Touch controllers: the right controller's B, X and Y all act as Touch "B", and the left D-pad acts as X (down) and Y (up/left/right). The same table is on a sign beside the first tee.
+
+| Steam Frame input | (Touch/Index) | Action |
+|---|---|---|
+| Right hand (default) | | Putter. Swing it through the ball. There is no shoot button. |
+| Either stick forward, release | | Teleport (arc) |
+| Stick left/right | | Snap turn 30° |
+| Left grip, hold and pull | | Grab-move (drag yourself, Walkabout style) |
+| Right grip + stick up/down | | Putter length |
+| Right grip + stick left/right | | Shaft angle (add trigger: rotate head) |
+| Right A | A | Stand beside the ball, facing across the line to the cup |
+| Right B, X or Y | B | Ball back to where you last hit it from (the shot still counts) |
+| Left D-pad down | X | Show/hide scorecard (it also appears for 5 s after every hole) |
+| Left D-pad up/left/right, hold 1 s | Y | Switch putter hand |
+| Menu, hold 1.5 s | | Restart hole |
 
 Suggested order:
 1. Look around: both eyes render the same scene, nothing pink, the floor is at your real floor height.

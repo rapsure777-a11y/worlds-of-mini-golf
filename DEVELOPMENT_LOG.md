@@ -1,5 +1,25 @@
 # Development log
 
+## 2026-10-03 (afternoon): first Steam Frame playtest feedback
+
+**Andrew's verdict:** physics "absolutely great"; teleport, snap turn and grab-move great. Problems: B didn't return the ball, scorecard not seen, Y didn't swap hands.
+
+**Diagnosis (session logs + SteamVR's Frame remapping file)**
+- SteamVR exposes the Frame controllers as **Oculus Touch**. The Frame has A/B/X/Y all on the right controller and a D-pad on the left. In Touch emulation, right B, X and Y all become Touch B; left D-pad down = X; left D-pad up/left/right = Y. So the "X" and "Y" presses arrived as B. The scorecard and hand swap live on the left D-pad.
+- B did fire (about 30 log entries), but it returned the ball to its last *resting* spot, which is where it already was, so nothing visibly happened.
+- At the moment the controllers connected, the hand pose jumped from the floor origin to the hand, and the putter swept through the ball: an accidental stroke at a logged "36 m/s".
+- Putter needed no adjustment (0.85 m, 0°, 0°). Strikes looked clean (e.g. head 1.96 → ball 2.58 m/s, 3° aim error).
+- Performance: app GPU median 6.5 ms, p99 10.8 ms against an 8.3 ms budget at 120 Hz. SteamVR ran about half the frames at 60 Hz.
+
+**Fixes**
+- B returns the ball to where the last shot was played from (the tee before any shot). The stroke still counts; there's a sound and haptic.
+- Putter ignores tracking jumps (>0.3 m in one frame, or head speed >15 m/s): no stroke when controllers connect.
+- Scorecard appears automatically for 5 s after each hole and stays at course end.
+- Controls sign beside the first tee with the Frame layout; test guide corrected.
+- VR render settings: SSAO off, depth/opaque copies off, HDR off, 2 shadow cascades, low soft-shadow quality (MSAA 4x kept). The GPU effect still needs measuring in the headset.
+- Session log now records every button press with its control path, CPU/GPU frame times, the refresh rates seen and compositor dropped frames.
+- Tests: 34/34 (added return-to-shot-spot and tracking-jump tests).
+
 ## 2026-10-03 (overnight): headset-free validation and foundations
 
 **Done**

@@ -67,6 +67,7 @@ namespace Gamebreak.MiniGolf.Editor
             if (holes.Length > 0) ballGo.transform.position = holes[0].TeePosition;
 
             BuildEnvironment(theme);
+            if (holes.Length > 0) BuildControlsSign(holes[0], theme);
 
             // Player rig.
             var rigGo = new GameObject("PlayerRig");
@@ -130,6 +131,45 @@ namespace Gamebreak.MiniGolf.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
             Debug.Log($"[Gamebreak] Built {ScenePath} with {holes.Length} hole(s).");
+        }
+
+        const string ControlsText =
+            "<b>CONTROLS</b>  (Steam Frame;  Touch/Index in brackets)\n\n" +
+            "<b>Putt:</b> swing the putter through the ball\n" +
+            "<b>Right A:</b> stand beside the ball\n" +
+            "<b>Right B / X / Y</b> (B): ball back to where you last hit it\n" +
+            "<b>Left D-pad down</b> (X): scorecard\n" +
+            "<b>Left D-pad up, hold 1 s</b> (Y): swap putter hand\n" +
+            "<b>Stick forward + release:</b> teleport     <b>Stick left/right:</b> turn\n" +
+            "<b>Left grip + pull:</b> drag yourself around\n" +
+            "<b>Right grip + stick:</b> putter length / angle (+trigger: rotate head)\n" +
+            "<b>Menu, hold:</b> restart hole";
+
+        /// <summary>World-space sign beside the first tee listing the controls.</summary>
+        static void BuildControlsSign(HoleController firstHole, WorldTheme theme)
+        {
+            var start = firstHole.PlayerStart;
+            var sign = new GameObject("ControlsSign").transform;
+            // Just left of where the player starts (clear of the palms), angled toward them.
+            Vector3 pos = start.position + start.forward * 0.3f - start.right * 1.25f;
+            pos.y = 0f;
+            sign.position = pos;
+            Vector3 toPlayer = start.position - pos; toPlayer.y = 0f;
+            sign.rotation = Quaternion.LookRotation(-toPlayer.normalized);
+
+            var post = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            post.name = "Post";
+            Object.DestroyImmediate(post.GetComponent<Collider>());
+            post.transform.SetParent(sign, false);
+            post.transform.localPosition = new Vector3(0f, 0.6f, 0.03f);
+            post.transform.localScale = new Vector3(0.06f, 0.6f, 0.06f);
+            post.GetComponent<MeshRenderer>().sharedMaterial = theme.wall;
+
+            var canvas = WorldText.CreateCanvas("Canvas", sign, new Vector2(980, 560), new Color(0.12f, 0.2f, 0.28f, 0.92f));
+            canvas.transform.localPosition = new Vector3(0f, 1.35f, 0f);
+            var text = WorldText.CreateText(canvas.transform, "Text", 34, TextAnchor.MiddleLeft, Color.white);
+            text.text = ControlsText;
+            text.lineSpacing = 1.1f;
         }
 
         static Transform MakeHand(string name, Transform parent, Material mat)

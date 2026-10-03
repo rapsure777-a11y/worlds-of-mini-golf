@@ -167,6 +167,11 @@ namespace Gamebreak.MiniGolf
             foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = visible;
         }
 
+        /// <summary>Head movement in one frame above this is treated as a tracking jump, not a swing (metres).</summary>
+        const float MaxHeadJump = 0.3f;
+        /// <summary>Head speeds above this are tracking glitches; no human putting stroke gets close (m/s).</summary>
+        const float MaxHumanHeadSpeed = 15f;
+
         void Update() => Step(Time.time);
 
         /// <summary>Follow the hand and run strike detection. Public so tests can drive it.</summary>
@@ -182,6 +187,21 @@ namespace Gamebreak.MiniGolf
             Vector3 headPos = m_Head.position;
             HeadPosition = headPos;
             HeadRotation = headRot;
+
+            // A jump no swing can produce (tracking just acquired, controller woke up, rig teleport)
+            // must not sweep through the ball: restart tracking from the new pose instead.
+            if (m_HasPrev && (headPos - m_PrevHeadPos).sqrMagnitude > MaxHeadJump * MaxHeadJump)
+            {
+                ResetTracking();
+                PushHistory(headPos, time);
+                HeadVelocity = Vector3.zero;
+                m_PrevHeadPos = headPos;
+                m_PrevHeadRot = headRot;
+                m_PrevBallPos = ball ? ball.Position : Vector3.zero;
+                m_HasPrev = true;
+                return;
+            }
+
             PushHistory(headPos, time);
             HeadVelocity = EstimateVelocity();
 
@@ -244,6 +264,8 @@ namespace Gamebreak.MiniGolf
             Vector3 nFlat = n - Vector3.Dot(n, ground) * ground;
             if (nFlat.magnitude < 0.3f) return; // touched the top or bottom of the head
             nFlat.Normalize();
+
+            if (HeadVelocity.sqrMagnitude > MaxHumanHeadSpeed * MaxHumanHeadSpeed) { m_Overlapping = true; return; }
 
             Vector3 vRel = HeadVelocity - ball.Velocity;
             float vn = Vector3.Dot(vRel, nFlat);

@@ -114,6 +114,12 @@ namespace Gamebreak.MiniGolf.Editor
                 ("overview", new Vector3(5.5f, 7f, -5.5f), new Vector3(-2f, 0f, 3.5f)),
             };
             var holes = Object.FindObjectsByType<HoleController>(FindObjectsSortMode.None).OrderBy(h => h.HoleNumber);
+            var sign = GameObject.Find("ControlsSign");
+            if (sign)
+            {
+                var start = holes.First().PlayerStart.position + Vector3.up * 1.6f;
+                shots.Add(("controls_sign", start, sign.transform.position + Vector3.up * 1.35f));
+            }
             foreach (var h in holes)
             {
                 var cupPos = h.Cup.transform.position;

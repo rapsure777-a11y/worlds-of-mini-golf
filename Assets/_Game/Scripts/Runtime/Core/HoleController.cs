@@ -35,6 +35,8 @@ namespace Gamebreak.MiniGolf
         public int Strokes { get; private set; }
         public bool IsComplete { get; private set; }
         public Vector3 LastRestPosition { get; private set; }
+        /// <summary>Where the most recent stroke was played from.</summary>
+        public Vector3 ShotStartPosition { get; private set; }
 
         public event Action<HoleController> StrokesChanged;
         public event Action<HoleController> Completed;
@@ -66,6 +68,7 @@ namespace Gamebreak.MiniGolf
             Strokes = 0;
             IsComplete = false;
             LastRestPosition = TeePosition;
+            ShotStartPosition = LastRestPosition;
             ball.PlaceAt(LastRestPosition);
             StrokesChanged?.Invoke(this);
         }
@@ -90,6 +93,7 @@ namespace Gamebreak.MiniGolf
         void OnStruck(GolfBall b, Vector3 v)
         {
             if (IsComplete || Active != this) return;
+            ShotStartPosition = b.Position;
             Strokes++;
             StrokesChanged?.Invoke(this);
         }
@@ -148,10 +152,15 @@ namespace Gamebreak.MiniGolf
             ReturnBall(true);
         }
 
-        /// <summary>Player-requested reset to the last resting spot. No penalty.</summary>
+        /// <summary>
+        /// Player-requested return: puts the ball back where the last shot was played from (the tee
+        /// before any shot). The shot still counts; no extra penalty. Lets the player replay a bad or
+        /// accidental shot, and always visibly moves the ball.
+        /// </summary>
         public void RequestReset()
         {
             if (IsComplete || !ball) return;
+            LastRestPosition = ShotStartPosition;
             ball.InPlay = false;
             ReturnBall(false);
         }

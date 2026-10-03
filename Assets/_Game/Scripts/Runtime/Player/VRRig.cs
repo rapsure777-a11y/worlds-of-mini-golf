@@ -125,6 +125,21 @@ namespace Gamebreak.MiniGolf
                 m_Desktop = new DesktopDebug(this, head, cameraOffset);
             }
             ApplyHandedness();
+            if (course)
+            {
+                course.HoleFinished += (c, h) => ShowScorecardFor(ScorecardAutoSeconds);
+                course.CourseFinished += c => { m_ScorecardHideAt = float.PositiveInfinity; SetScorecardVisible(true); };
+            }
+        }
+
+        const float ScorecardAutoSeconds = 5f;
+        float m_ScorecardHideAt = float.PositiveInfinity;
+
+        /// <summary>Show the scorecard, hiding it again after <paramref name="seconds"/> unless the player toggles it.</summary>
+        public void ShowScorecardFor(float seconds)
+        {
+            SetScorecardVisible(true);
+            m_ScorecardHideAt = Time.time + seconds;
         }
 
         void ApplyHandedness()
@@ -321,7 +336,11 @@ namespace Gamebreak.MiniGolf
             if (m_MenuHeld >= 1.5f) { m_MenuHeld = float.NegativeInfinity; course?.RestartHole(); }
         }
 
-        public void ToggleScorecard() => SetScorecardVisible(scorecard && !scorecard.activeSelf);
+        public void ToggleScorecard()
+        {
+            m_ScorecardHideAt = float.PositiveInfinity; // a manual toggle cancels any auto-hide
+            SetScorecardVisible(scorecard && !scorecard.activeSelf);
+        }
 
         public void SetScorecardVisible(bool visible)
         {
@@ -405,6 +424,11 @@ namespace Gamebreak.MiniGolf
 
         void LateUpdate()
         {
+            if (Time.time >= m_ScorecardHideAt)
+            {
+                m_ScorecardHideAt = float.PositiveInfinity;
+                SetScorecardVisible(false);
+            }
             // Keep the scorecard in front of the player when they toggle it on.
             if (scorecard && scorecard.activeSelf && scorecard.transform.parent == null)
             {

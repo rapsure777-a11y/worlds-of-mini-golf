@@ -99,6 +99,28 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [UnityTest]
+        public IEnumerator TrackingJumpThroughBall_DoesNotStrike()
+        {
+            // Seen in the first Steam Frame session: when the controllers connect, the hand pose jumps
+            // from the floor origin to the real hand in one frame and swept through the ball.
+            Time.timeScale = 1f;
+            using var bed = new TestBed(Lane(), new Vector2(0f, 1f));
+            for (int i = 0; i < 5; i++) yield return new WaitForFixedUpdate();
+            var p = MakePutter(bed.ball);
+            Vector3 b = bed.ball.Position;
+            p.transform.position = new Vector3(b.x, b.y + 0.85f, b.z - 1.5f); // "untracked" pose far behind
+            yield return null;
+            yield return null;
+            p.transform.position = new Vector3(b.x, b.y + 0.85f, b.z + 0.2f); // tracking acquired: past the ball
+            yield return null;
+            yield return null;
+            for (int i = 0; i < 10; i++) yield return new WaitForFixedUpdate();
+            Object.Destroy(p.gameObject);
+            Assert.AreEqual(0, bed.hole.Strokes, "a tracking jump must not count as a stroke");
+            Assert.Less(bed.ball.Velocity.magnitude, 0.01f);
+        }
+
+        [UnityTest]
         public IEnumerator HardSwing_ClampedToMaxBallSpeed()
         {
             Time.timeScale = 1f;

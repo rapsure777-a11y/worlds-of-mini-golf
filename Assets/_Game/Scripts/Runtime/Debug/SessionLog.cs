@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -64,7 +64,7 @@ namespace Gamebreak.MiniGolf
                 course.CourseFinished += c => W($"COURSE finished: {c.Card.TotalStrokes} strokes, par {c.Card.TotalParPlayed}");
             }
             foreach (var hole in FindObjectsByType<HoleController>(FindObjectsSortMode.None))
-                hole.BallReturned += (h, oob) => W(oob ? $"  out of bounds -> strokes {h.Strokes}" : "  ball reset by player");
+                hole.BallReturned += (h, oob) => W(oob ? $"  out of bounds -> strokes {h.Strokes}" : "  ball returned to last shot spot (player)");
         }
 
         void OnDestroy()
@@ -111,6 +111,13 @@ namespace Gamebreak.MiniGolf
             W($"  STRIKE hole {(hole ? hole.HoleNumber : 0)} stroke {(hole ? hole.Strokes : 0)}: head {F(head.magnitude)} m/s (vertical {F(head.y)})  ball {F(ballSpeed)} m/s  face-vs-path {F(faceVsPath)} deg{toCup}");
         }
 
+        // Per-report-window performance samples.
+        readonly List<float> m_CpuMs = new List<float>(4096);
+        readonly List<float> m_GpuMs = new List<float>(4096);
+        readonly Dictionary<int, int> m_RefreshHist = new Dictionary<int, int>();
+        int m_DroppedStart = -1, m_PresentStart = -1;
+        readonly FrameTiming[] m_Timing = new FrameTiming[1];
+
         void Update()
         {
             if (m_Out == null) return;
@@ -118,8 +125,26 @@ namespace Gamebreak.MiniGolf
             float ms = Time.unscaledDeltaTime * 1000f;
             m_FrameMs.Add(ms);
             float hz = RefreshRate();
+            int hzKey = Mathf.RoundToInt(hz);
+            m_RefreshHist[hzKey] = m_RefreshHist.TryGetValue(hzKey, out int c) ? c + 1 : 1;
             float budget = hz > 1f ? 1000f / hz : 16.7f;
             if (ms > budget * 1.5f) m_Hitches++;
+
+            FrameTimingManager.CaptureFrameTimings();
+            if (FrameTimingManager.GetLatestTimings(1, m_Timing) > 0)
+            {
+                m_CpuMs.Add((float)m_Timing[0].cpuMainThreadFrameTime);
+                if (m_Timing[0].gpuFrameTime > 0) m_GpuMs.Add((float)m_Timing[0].gpuFrameTime);
+            }
+            var display = ActiveDisplay();
+            if (display != null && display.TryGetAppGPUTimeLastFrame(out float appGpu) && appGpu > 0f && m_Timing[0].gpuFrameTime <= 0)
+                m_GpuMs.Add(appGpu);
+            if (display != null)
+            {
+                if (m_DroppedStart < 0 && display.TryGetDroppedFrameCount(out int d0)) m_DroppedStart = d0;
+                if (m_PresentStart < 0 && display.TryGetFramePresentCount(out int p0)) m_PresentStart = p0;
+            }
+
             if (Time.unscaledTime > m_NextFrameReport) { m_NextFrameReport = Time.unscaledTime + 60f; ReportFrames(); }
             if (Time.unscaledTime > m_NextFlush) { m_NextFlush = Time.unscaledTime + 5f; m_Out.Flush(); }
         }
@@ -127,12 +152,59 @@ namespace Gamebreak.MiniGolf
         void ReportFrames()
         {
             if (m_FrameMs.Count < 10) return;
-            m_FrameMs.Sort();
-            float P(float q) => m_FrameMs[Mathf.Clamp((int)(q * (m_FrameMs.Count - 1)), 0, m_FrameMs.Count - 1)];
-            W($"FRAMES n={m_FrameMs.Count} median {F(P(0.5f))} ms  p95 {F(P(0.95f))} ms  p99 {F(P(0.99f))} ms  max {F(P(1f))} ms  hitches(>1.5x budget) {m_Hitches}");
+            W($"FRAMES n={m_FrameMs.Count} delta {Pct(m_FrameMs)}  over-budget {m_Hitches}");
+            if (m_CpuMs.Count > 0) W($"  CPU main thread {Pct(m_CpuMs)}");
+            if (m_GpuMs.Count > 0) W($"  GPU (app) {Pct(m_GpuMs)}");
+            var sb = new StringBuilder("  refresh rate seen:");
+            foreach (var kv in m_RefreshHist) sb.Append($" {kv.Key} Hz x{kv.Value}");
+            W(sb.ToString());
+            var display = ActiveDisplay();
+            if (display != null && display.TryGetDroppedFrameCount(out int dropped) && display.TryGetFramePresentCount(out int presents) && m_DroppedStart >= 0)
+                W($"  compositor: dropped {dropped - m_DroppedStart}  presented {presents - m_PresentStart}");
             if (m_Putter) W($"Putter now: length {F(m_Putter.Length)} angle {F(m_Putter.AngleOffset)} twist {F(m_Putter.HeadTwist)}");
-            m_FrameMs.Clear();
+            m_FrameMs.Clear(); m_CpuMs.Clear(); m_GpuMs.Clear(); m_RefreshHist.Clear();
             m_Hitches = 0;
+            m_DroppedStart = m_PresentStart = -1;
+        }
+
+        static string Pct(List<float> v)
+        {
+            v.Sort();
+            float P(float q) => v[Mathf.Clamp((int)(q * (v.Count - 1)), 0, v.Count - 1)];
+            return $"median {F(P(0.5f))} p95 {F(P(0.95f))} p99 {F(P(0.99f))} max {F(P(1f))} ms";
+        }
+
+        static XRDisplaySubsystem ActiveDisplay()
+        {
+            SubsystemManager.GetSubsystems(s_Displays);
+            foreach (var d in s_Displays) if (d.running) return d;
+            return null;
+        }
+
+        // Every button press with the exact control that fired, to verify mappings on new controllers.
+        InputAction[] m_ButtonLog;
+
+        void OnEnable()
+        {
+            var paths = new[] { "{PrimaryButton}", "{SecondaryButton}", "{MenuButton}", "{Primary2DAxisClick}", "{GripButton}", "{TriggerButton}" };
+            var list = new List<InputAction>();
+            foreach (var hand in new[] { "LeftHand", "RightHand" })
+            foreach (var p in paths)
+            {
+                var a = new InputAction(type: InputActionType.Button, binding: $"<XRController>{{{hand}}}/{p}");
+                string label = $"{hand} {p.Trim('{', '}')}";
+                a.performed += ctx => W($"  BUTTON {label} ({ctx.control.path})");
+                a.Enable();
+                list.Add(a);
+            }
+            m_ButtonLog = list.ToArray();
+        }
+
+        void OnDisable()
+        {
+            if (m_ButtonLog == null) return;
+            foreach (var a in m_ButtonLog) { a.Disable(); a.Dispose(); }
+            m_ButtonLog = null;
         }
 
         static readonly List<XRDisplaySubsystem> s_Displays = new List<XRDisplaySubsystem>();

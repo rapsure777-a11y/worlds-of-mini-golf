@@ -33,18 +33,53 @@ namespace Gamebreak.MiniGolf
             m_BallSource.playOnAwake = false;
         }
 
+        AudioClip m_ReturnClip;
+
         void OnEnable()
         {
             if (putter) putter.StruckBall += OnStrike;
             if (ball) ball.HitWall += OnWall;
-            if (course) course.HoleFinished += OnHoleFinished;
+            if (course)
+            {
+                course.HoleFinished += OnHoleFinished;
+                foreach (var h in course.Holes) if (h) h.BallReturned += OnBallReturned;
+            }
         }
 
         void OnDisable()
         {
             if (putter) putter.StruckBall -= OnStrike;
             if (ball) ball.HitWall -= OnWall;
-            if (course) course.HoleFinished -= OnHoleFinished;
+            if (course)
+            {
+                course.HoleFinished -= OnHoleFinished;
+                foreach (var h in course.Holes) if (h) h.BallReturned -= OnBallReturned;
+            }
+        }
+
+        void OnBallReturned(HoleController hole, bool outOfBounds)
+        {
+            if (!m_ReturnClip) m_ReturnClip = SynthReturn();
+            m_BallSource.pitch = outOfBounds ? 0.8f : 1f;
+            m_BallSource.PlayOneShot(m_ReturnClip, 0.6f);
+            if (rig) rig.Haptic(0.3f, 0.05f);
+        }
+
+        /// <summary>Soft rising "pop" for the ball reappearing.</summary>
+        static AudioClip SynthReturn()
+        {
+            const int rate = 44100;
+            int n = rate / 5;
+            var data = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)rate;
+                float f = 500f + 900f * (t / 0.2f);
+                data[i] = Mathf.Sin(2f * Mathf.PI * f * t) * Mathf.Sin(Mathf.PI * t / 0.2f) * 0.35f;
+            }
+            var clip = AudioClip.Create("return", n, 1, rate, false);
+            clip.SetData(data, 0);
+            return clip;
         }
 
         void OnStrike(Putter p, float speed)

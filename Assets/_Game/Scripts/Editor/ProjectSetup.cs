@@ -49,6 +49,7 @@ namespace Gamebreak.MiniGolf.Editor
             PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64, new[] { GraphicsDeviceType.Direct3D11 });
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.Mono2x);
             PlayerSettings.runInBackground = true;
+            PlayerSettings.enableFrameTimingStats = true; // CPU/GPU frame times in the session log
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
             PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;
@@ -62,11 +63,35 @@ namespace Gamebreak.MiniGolf.Editor
             {
                 var asset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(AssetDatabase.GUIDToAssetPath(guid));
                 if (!asset || !asset.name.StartsWith("PC")) continue;
+                // VR budget at 120 Hz is 8.3 ms for two 2160x2160 views. The template's PC settings
+                // (SSAO, depth + opaque copies, HDR, 4 soft cascades) measured 6.5 ms median /
+                // 10.8 ms p99 GPU on a greybox scene, so SteamVR halved the frame rate.
                 asset.msaaSampleCount = 4;
                 asset.renderScale = 1f;
-                asset.shadowDistance = 30f;
-                asset.supportsHDR = true;
+                asset.shadowDistance = 25f;
+                asset.shadowCascadeCount = 2;
+                asset.supportsHDR = false;          // no post-processing uses it; halves colour bandwidth
+                asset.supportsCameraDepthTexture = false;
+                asset.supportsCameraOpaqueTexture = false;
+                var so = new SerializedObject(asset);
+                var soft = so.FindProperty("m_SoftShadowQuality");
+                if (soft != null) soft.intValue = 1; // Low (1) instead of High (3)
+                so.ApplyModifiedPropertiesWithoutUndo();
                 EditorUtility.SetDirty(asset);
+
+                // Screen-space ambient occlusion is a full-screen pass per eye; disable it for VR.
+                foreach (var r in asset.rendererDataList)
+                {
+                    if (!r) continue;
+                    foreach (var feature in r.rendererFeatures)
+                    {
+                        if (!feature || !feature.GetType().Name.Contains("AmbientOcclusion")) continue;
+                        feature.SetActive(false);
+                        EditorUtility.SetDirty(feature);
+                        Debug.Log($"[Gamebreak] Disabled renderer feature {feature.name} on {r.name}");
+                    }
+                    EditorUtility.SetDirty(r);
+                }
             }
             // Make the PC quality level the default for Windows.
             var names = QualitySettings.names;
