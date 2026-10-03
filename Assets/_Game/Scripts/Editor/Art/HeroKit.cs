@@ -90,7 +90,9 @@ namespace Gamebreak.MiniGolf.Editor.Art
             m.SetFloat("_Specular", spec);
             m.SetColor("_RimColor", new Color(1f, 0.95f, 0.85f, 0.12f));
             m.SetFloat("_AmbientBoost", 1f);
-            m.SetFloat("_WindStrength", 0.04f);
+            // No sway by default: meshes without wind weights (greens, rails, buildings) read vertex alpha
+            // as 1 and would ripple as a whole. Only meshes with baked weights opt in below.
+            m.SetFloat("_WindStrength", 0f);
             m.SetFloat("_Cull", 2f);
             m.DisableKeyword("_ALPHATEST_ON"); m.SetFloat("_AlphaClip", 0f);
             m.SetColor("_EmissionColor", Color.black);
@@ -130,9 +132,9 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
             Wood = Surface("Hero_Wood", "wood", Color.white, 0.45f, 0.12f);
             Thatch = Surface("Hero_Thatch", "thatch", new Color(1f, 0.97f, 0.9f), 0.2f, 0.05f, 1.3f);
-            Thatch.SetFloat("_WindStrength", 0.05f);
             Bamboo = Surface("Hero_Bamboo", "bamboo", Color.white, 0.6f, 0.2f);
             Bark = Surface("Hero_Bark", "bark", new Color(1f, 0.95f, 0.9f), 0.25f, 0.06f, 1.4f);
+            Bark.SetFloat("_WindStrength", 0.04f); // palm trunks: Blender bakes a 0 (base) to 0.2 (crown) weight in vertex alpha
             Totem = Surface("Hero_Totem", "wood", new Color(0.82f, 0.62f, 0.48f), 0.4f, 0.1f, 1.2f, new Vector2(0.8f, 0.8f));
             // Low bump strength and smoothness: this is the putting surface, so it must not shimmer or hide the ball line.
             Turf = Surface("Hero_Turf", "turf", new Color(1f, 1.05f, 1f), 0.08f, 0.02f, 0.5f, new Vector2(1.2f, 1.2f));
@@ -150,7 +152,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Lantern.SetColor("_BaseColor", new Color(1f, 0.85f, 0.6f));
             Lantern.SetColor("_EmissionColor", new Color(2.4f, 1.3f, 0.45f));
             Lantern.SetFloat("_DetailStrength", 0f);
-            Lantern.SetFloat("_WindStrength", 0.05f);
+            Lantern.SetFloat("_WindStrength", 0f);
             EditorUtility.SetDirty(Lantern);
 
             Leaves = LoadOrCreate("Hero_Leaves", Sh("Gamebreak/StylizedLit"));

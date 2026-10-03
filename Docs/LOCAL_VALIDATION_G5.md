@@ -51,3 +51,8 @@ Screenshots: `Logs/shots_{balanced,rich,lean}/` (local only; `Logs/` is git-igno
 - **HeroCliffWall** reads as a huge tilted slab with a straight bottom edge floating above the ground in the from-cup and side views. It probably needs to be sunk or rotated, or replaced by stacked mesas.
 - Old kit palms and rocks still sit next to the new hero ones, which mixes the two styles.
 - Rich vs balanced: only a slightly stronger grade; bloom is barely visible.
+
+## Second fix: the green was waving (reported by Andrew)
+Andrew saw the putting green moving like water. Cause: `HeroKit.Surface()` gave every textured material a vertex wind sway of 0.04 m. Green and rail meshes have no vertex colours, so the shader read their wind weight as 1, and the whole turf and the rails rippled while the collider stayed still. The clubhouse wood, bamboo, thatch, totems and lanterns swayed the same way.
+
+Fix: wind is now 0 by default. Only `Hero_Bark` (0.04; palm trunks carry a baked 0 to 0.2 weight) and `Hero_Leaves` (0.07) sway. New PlayMode test `TropicalScene_CourseSurfacesDoNotSway` fails if any material under a hole has non-zero wind. It compiles but has not been run yet (SteamVR). Both players rebuilt (0 errors).

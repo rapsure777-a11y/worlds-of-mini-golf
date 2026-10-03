@@ -402,6 +402,24 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.AreEqual(0, blocked, "scenery on greens:\n" + report);
         }
 
+        /// <summary>
+        /// Course surfaces must not use vertex wind sway: green and rail meshes have no wind weights, so any
+        /// sway moves the whole visible surface while the collider stays still.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TropicalScene_CourseSurfacesDoNotSway()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            var report = new System.Text.StringBuilder();
+            foreach (var hole in Object.FindObjectsByType<HoleController>(FindObjectsSortMode.None))
+            foreach (var r in hole.GetComponentsInChildren<MeshRenderer>())
+            foreach (var m in r.sharedMaterials)
+                if (m && m.HasProperty("_WindStrength") && m.GetFloat("_WindStrength") != 0f)
+                    report.AppendLine($"{r.name}: {m.name} _WindStrength {m.GetFloat("_WindStrength")}");
+            Assert.IsEmpty(report.ToString(), "swaying course surfaces:\n" + report);
+        }
+
         [UnityTest]
         public IEnumerator TropicalScene_ProgressesToHoleTwoAndFinishes()
         {
