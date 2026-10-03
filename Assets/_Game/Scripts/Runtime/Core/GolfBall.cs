@@ -238,6 +238,17 @@ namespace Gamebreak.MiniGolf
             Struck?.Invoke(this, velocity);
         }
 
+        /// <summary>Stop the ball where it is and raise <see cref="Stopped"/> (stuck-ball safeguard).</summary>
+        public void ForceStop()
+        {
+            Body.linearVelocity = Vector3.zero;
+            m_PreStepVelocity = Vector3.zero;
+            m_SurfaceSpeed = 0f;
+            m_SlowTimer = 0f;
+            IsAtRest = true;
+            Stopped?.Invoke(this);
+        }
+
         /// <summary>Teleport the ball to a resting position (tee, reset, etc.).</summary>
         public void PlaceAt(Vector3 position)
         {

@@ -29,6 +29,35 @@ namespace Gamebreak.MiniGolf
             return new List<HoleDefinition>
             {
                 Hole01(),
+                Hole02(),
+            };
+        }
+
+        /// <summary>
+        /// Hole 2, "Palm Corner" (DRAFT greybox, pending HQ creative approval). A left-hand dogleg:
+        /// lay up to the corner, or bank off the far rail. A low mound guards the inside of the turn
+        /// and the green drops gently toward the cup. Mainly here so hole-to-hole progression can be
+        /// tested in the headset.
+        /// </summary>
+        static HoleDefinition Hole02()
+        {
+            var l = new GreenLayout();
+            l.Area(-0.6f, 0f, 1.2f, 5.2f);     // tee lane, running +Z
+            l.Area(-3.6f, 4.0f, 4.2f, 1.2f);   // cross lane to the left at the far end
+            var mound = new Vector2(-0.15f, 4.35f);
+            l.height = (x, z) =>
+                Slopes.Mound(x, z, mound, 0.45f, 0.05f)
+                + Slopes.RampX(x, -1.2f, -2.6f, 0f, -0.04f);
+            l.cup = new Vector2(-3.0f, 4.6f);
+            return new HoleDefinition
+            {
+                number = 2,
+                name = "Palm Corner",
+                par = 3,
+                layout = l,
+                tee = new Vector2(0f, 0.6f),
+                origin = new Vector3(-4.2f, GreenElevation, 0.5f),
+                yaw = 0f,
             };
         }
 

@@ -97,6 +97,11 @@ namespace Gamebreak.MiniGolf
         void OnStopped(GolfBall b)
         {
             if (IsComplete || Active != this || !b.InPlay) return;
+            if (!PlayableSurface.IsUnder(b.Position, b.Radius))
+            {
+                BallOutOfBounds(b); // came to rest on a rail top, rock or other scenery
+                return;
+            }
             LastRestPosition = b.Position;
             if (Strokes >= Tuning.strokeLimit) Finish(Tuning.strokeLimit);
         }
@@ -119,8 +124,20 @@ namespace Gamebreak.MiniGolf
         void FixedUpdate()
         {
             if (Active != this || IsComplete || !ball || !ball.InPlay) return;
-            if (ball.Position.y < killY) BallOutOfBounds(ball);
+            if (ball.Position.y < killY) { BallOutOfBounds(ball); return; }
+
+            // Stuck-ball safeguard: a ball that creeps or rattles for too long is stopped where it is.
+            m_MovingTime = ball.IsAtRest ? 0f : m_MovingTime + Time.fixedDeltaTime;
+            if (m_MovingTime > maxRollSeconds && ball.SurfaceSpeed < 0.3f)
+            {
+                m_MovingTime = 0f;
+                ball.ForceStop();
+            }
         }
+
+        [Tooltip("A ball still moving slowly after this many seconds is stopped where it is.")]
+        [SerializeField] float maxRollSeconds = 20f;
+        float m_MovingTime;
 
         public void BallOutOfBounds(GolfBall b)
         {

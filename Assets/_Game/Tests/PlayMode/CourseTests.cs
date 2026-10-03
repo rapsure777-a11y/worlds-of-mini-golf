@@ -226,6 +226,37 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.Less(bed.ball.Position.z, 2.05f, "ball should roll back down");
         }
 
+        [UnityTest]
+        public IEnumerator BallStoppingOnRailTop_IsOutOfBounds()
+        {
+            using var bed = new TestBed(Flat(), new Vector2(0f, 1f));
+            yield return Steps(5);
+            // Rail top: inner face at x = 0.6, 8 cm thick, 9 cm high.
+            var railTop = new Vector3(0.64f, 0.09f + bed.ball.Radius + 0.001f, 3f);
+            bed.ball.PlaceAt(railTop);
+            bed.ball.Strike(new Vector3(0f, 0f, 0.05f)); // tiny nudge so it settles and "stops" up there
+            yield return WaitUntil(() => bed.hole.Strokes >= 2, 4f);
+            Assert.AreEqual(1 + bed.tuning.outOfBoundsPenalty, bed.hole.Strokes, "resting on a rail should cost a penalty");
+            yield return WaitUntil(() => bed.ball.InPlay, 2f);
+            Assert.Less(Vector3.Distance(bed.ball.Position, bed.hole.TeePosition), 0.01f, "ball should return to last legal spot");
+        }
+
+        [UnityTest]
+        public IEnumerator StuckBall_IsForceStopped()
+        {
+            // A bowl the ball can rock in forever is approximated by a very long, slow roll.
+            var l = Flat();
+            l.Area(-0.6f, 0f, 1.2f, 40f);
+            using var bed = new TestBed(l, new Vector2(0f, 1f));
+            bed.tuning.rollingDeceleration = 0.005f;
+            bed.tuning.speedDrag = 0f;
+            yield return Steps(5);
+            bed.ball.Strike(new Vector3(0f, 0f, 0.25f));
+            yield return Steps(1);
+            yield return WaitUntil(() => bed.ball.IsAtRest, 30f);
+            Assert.IsTrue(bed.ball.IsAtRest, "safeguard should stop a ball that keeps creeping");
+        }
+
         static GreenLayout Flat()
         {
             var l = new GreenLayout();
@@ -263,6 +294,48 @@ namespace Gamebreak.MiniGolf.Tests
             while (!hole.IsComplete && Time.time < end) yield return new WaitForFixedUpdate();
             Assert.IsTrue(hole.IsComplete, $"hole 1 not holed, ball at {ball.Position}, cup {hole.Cup.transform.position}");
             Assert.AreEqual(1, course.Card.strokes[0]);
+            Time.timeScale = 1f;
+        }
+
+        [UnityTest]
+        public IEnumerator TropicalScene_ProgressesToHoleTwoAndFinishes()
+        {
+            Time.timeScale = 3f;
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            yield return null;
+            var course = Object.FindFirstObjectByType<CourseController>();
+            Assert.GreaterOrEqual(course.Holes.Length, 2, "scene should have at least two holes");
+            course.AdvanceDelay = 0.5f;
+
+            for (int h = 0; h < course.Holes.Length; h++)
+            {
+                var hole = course.Current;
+                Assert.AreEqual(h, course.CurrentIndex);
+                var ball = hole.Ball;
+                for (int i = 0; i < 5; i++) yield return new WaitForFixedUpdate();
+                // Drop the ball 40 cm short of the cup on the line from the tee and roll it in.
+                Vector3 cup = hole.Cup.transform.position;
+                Vector3 back = hole.TeePosition - cup; back.y = 0f;
+                if (h == 1) back = Vector3.right; // dogleg: approach along the cross lane
+                Vector3 start = cup + back.normalized * 0.4f;
+                start.y = cup.y + ball.Radius + 0.002f;
+                ball.PlaceAt(start);
+                for (int i = 0; i < 5; i++) yield return new WaitForFixedUpdate();
+                Vector3 d = cup - ball.Position; d.y = 0f;
+                ball.Strike(d.normalized * 1.1f);
+                float end = Time.time + 8f;
+                while (!hole.IsComplete && Time.time < end) yield return new WaitForFixedUpdate();
+                Assert.IsTrue(hole.IsComplete, $"hole {h + 1} not holed, ball {ball.Position}, cup {cup}");
+                if (h + 1 < course.Holes.Length)
+                {
+                    end = Time.time + 4f;
+                    while (course.CurrentIndex == h && Time.time < end) yield return null;
+                }
+            }
+            float fin = Time.time + 4f;
+            while (!course.Finished && Time.time < fin) yield return null;
+            Assert.IsTrue(course.Finished);
             Time.timeScale = 1f;
         }
     }

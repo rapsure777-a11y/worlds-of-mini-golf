@@ -22,8 +22,10 @@ namespace Gamebreak.MiniGolf
             aimPosition = Value(c + "/pointerPosition", "Vector3");
             aimRotation = Value(c + "/pointerRotation", "Quaternion");
             stick = Value(c + "/{Primary2DAxis}", "Vector2");
-            grip = Button(c + "/{GripButton}");
-            trigger = Button(c + "/{TriggerButton}");
+            // Analog axes (pressed above 50%) rather than click usages: Index-style "grip click"
+            // needs a hard squeeze, and every profile exposes the Grip and Trigger axes.
+            grip = Button(c + "/{Grip}");
+            trigger = Button(c + "/{Trigger}");
             primary = Button(c + "/{PrimaryButton}");
             secondary = Button(c + "/{SecondaryButton}");
             menu = Button(c + "/{MenuButton}");

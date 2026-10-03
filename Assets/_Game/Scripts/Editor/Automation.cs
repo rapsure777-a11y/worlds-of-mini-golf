@@ -69,14 +69,20 @@ namespace Gamebreak.MiniGolf.Editor
             var path = EditorBuildSettings.scenes[0].path;
             UnityEditor.SceneManagement.EditorSceneManager.OpenScene(path);
             System.IO.Directory.CreateDirectory("Screenshots");
-            var cup = Object.FindFirstObjectByType<Cup>();
-            var tee = Object.FindFirstObjectByType<HoleController>().Tee;
-            var shots = new (string name, Vector3 pos, Vector3 look)[]
+            var shots = new System.Collections.Generic.List<(string name, Vector3 pos, Vector3 look)>
             {
-                ("overview", new Vector3(4.5f, 4.5f, -3.5f), new Vector3(0f, 0f, 3.5f)),
-                ("tee_view", tee.position + new Vector3(-0.4f, 1.6f, -1.0f), cup.transform.position),
-                ("cup_close", cup.transform.position + new Vector3(0.25f, 0.25f, -0.35f), cup.transform.position),
+                ("overview", new Vector3(5.5f, 7f, -5.5f), new Vector3(-2f, 0f, 3.5f)),
             };
+            var holes = Object.FindObjectsByType<HoleController>(FindObjectsSortMode.None).OrderBy(h => h.HoleNumber);
+            foreach (var h in holes)
+            {
+                var cupPos = h.Cup.transform.position;
+                var tee = h.Tee.position;
+                Vector3 line = cupPos - tee; line.y = 0f; line.Normalize();
+                shots.Add(($"hole{h.HoleNumber:00}_tee", tee - line * 1.0f + Vector3.up * 1.6f, tee + line * 3f));
+                shots.Add(($"hole{h.HoleNumber:00}_above", (tee + cupPos) * 0.5f + new Vector3(0f, 6f, -2.5f), (tee + cupPos) * 0.5f));
+                shots.Add(($"hole{h.HoleNumber:00}_cup", cupPos + new Vector3(0.25f, 0.25f, -0.35f), cupPos));
+            }
             var go = new GameObject("ReviewCamera");
             var cam = go.AddComponent<Camera>();
             cam.fieldOfView = 70f;

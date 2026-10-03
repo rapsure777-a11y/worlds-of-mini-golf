@@ -244,6 +244,7 @@ namespace Gamebreak.MiniGolf
             var mc = greenGo.AddComponent<MeshCollider>();
             mc.sharedMesh = surface;
             mc.sharedMaterial = GolfMaterials.Course;
+            greenGo.AddComponent<PlayableSurface>();
 
             var walls = BuildWalls(layout);
             var wallGo = new GameObject("Walls");

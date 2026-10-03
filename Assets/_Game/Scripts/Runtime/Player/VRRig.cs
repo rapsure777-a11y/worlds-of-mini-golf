@@ -174,8 +174,9 @@ namespace Gamebreak.MiniGolf
 
         static void ApplyPose(HandInput input, Transform t)
         {
-            if (input.position.activeControl != null) t.localPosition = input.position.ReadValue<Vector3>();
-            if (input.rotation.activeControl != null) t.localRotation = input.rotation.ReadValue<Quaternion>();
+            // controls.Count, not activeControl: activeControl stays null until a value changes.
+            if (input.position.controls.Count > 0) t.localPosition = input.position.ReadValue<Vector3>();
+            if (input.rotation.controls.Count > 0) t.localRotation = input.rotation.ReadValue<Quaternion>();
         }
 
         void UpdatePutterAdjust()
@@ -258,7 +259,7 @@ namespace Gamebreak.MiniGolf
             Transform t = hand == m_Left ? leftHand : rightHand;
             Vector3 origin = t.position;
             Vector3 dir = t.forward;
-            if (hand.aimRotation.activeControl != null)
+            if (hand.aimRotation.controls.Count > 0)
             {
                 origin = cameraOffset.TransformPoint(hand.aimPosition.ReadValue<Vector3>());
                 dir = cameraOffset.rotation * (hand.aimRotation.ReadValue<Quaternion>() * Vector3.forward);
