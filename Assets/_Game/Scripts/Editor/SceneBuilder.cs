@@ -80,8 +80,9 @@ namespace Gamebreak.MiniGolf.Editor
             cam.nearClipPlane = 0.02f;
             cam.farClipPlane = 400f;
             camGo.AddComponent<AudioListener>();
-            var left = MakeHand("LeftHand", offset, theme.putterGrip);
-            var right = MakeHand("RightHand", offset, theme.putterGrip);
+            // Light, small marker for the free hand (a dark 5 cm sphere read as a "black ball" in VR).
+            var left = MakeHand("LeftHand", offset, theme.ball);
+            var right = MakeHand("RightHand", offset, theme.ball);
 
             var putterGo = new GameObject("Putter");
             var putter = putterGo.AddComponent<Putter>();
@@ -143,7 +144,8 @@ namespace Gamebreak.MiniGolf.Editor
             "<b>Stick forward + release:</b> teleport     <b>Stick left/right:</b> turn\n" +
             "<b>Left grip + pull:</b> drag yourself around\n" +
             "<b>Right grip + stick:</b> putter length / angle (+trigger: rotate head)\n" +
-            "<b>Menu, hold:</b> restart hole";
+            "<b>Menu, hold:</b> restart hole\n" +
+            "<b>Look at your free wrist:</b> hole, par and strokes";
 
         /// <summary>World-space sign beside the first tee listing the controls.</summary>
         static void BuildControlsSign(HoleController firstHole, WorldTheme theme)
@@ -180,7 +182,7 @@ namespace Gamebreak.MiniGolf.Editor
             marker.name = "Marker";
             Object.DestroyImmediate(marker.GetComponent<Collider>());
             marker.transform.SetParent(hand, false);
-            marker.transform.localScale = Vector3.one * 0.05f;
+            marker.transform.localScale = Vector3.one * 0.03f;
             marker.GetComponent<MeshRenderer>().sharedMaterial = mat;
             return hand;
         }
