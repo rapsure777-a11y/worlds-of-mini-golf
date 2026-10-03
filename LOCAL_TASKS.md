@@ -7,26 +7,41 @@ Repo: `C:\Users\fence\Projects\WorldsOfMiniGolf`. Unity: `C:\Program Files\Unity
 ---
 
 ## L1: First physical putt in the Steam Frame (Milestone 1 acceptance), OPEN
-**Who:** Andrew (headset). About 15 minutes.
+**Who:** Andrew (headset). About 15–20 minutes. The two holes are greybox: plain colours and primitive palms. Judge the feel, not the art.
 
-1. Start SteamVR with the Frame connected and streaming.
-2. Run `Builds\Windows\WorldsOfMiniGolf.exe`. (Rebuild first if needed: `Unity.exe -batchmode -quit -projectPath . -executeMethod Gamebreak.MiniGolf.Editor.Automation.SetupAndBuild -logFile Logs\build.log`.)
-   - Or open the project in Unity, open `Assets/_Game/Worlds/Tropical/Scenes/TropicalAdventure.unity` and press Play with SteamVR running.
-3. Controls:
-   | Input | Action |
-   |---|---|
-   | Right hand (default) | Putter. Swing it through the ball. There is no shoot button. |
-   | Either stick forward, release | Teleport |
-   | Stick left/right | Snap turn 30° |
-   | Left grip, hold and pull | Grab-move (drag yourself) |
-   | Right grip + stick up/down | Putter length |
-   | Right grip + stick left/right | Putter angle (add trigger: rotate head) |
-   | A / X on putter hand | Stand beside the ball, facing the cup |
-   | B / Y on putter hand | Return ball to last resting spot |
-   | Off-hand A / X | Show or hide scorecard |
-   | Off-hand B / Y, hold 1 s | Switch putter hand |
-   | Menu, hold 1.5 s | Restart hole |
-4. Report back (copy this list):
+**Before you put the headset on (2 min)**
+1. Optional sanity check without VR: double-click `Builds\Desktop\WorldsOfMiniGolf_Desktop.exe`. Hold the left mouse button and move the mouse through the ball to putt; the help panel lists the keys. Close it when done.
+2. Start SteamVR with the Frame connected and streaming. Wait until SteamVR shows the headset as ready.
+3. Run `Builds\Windows\WorldsOfMiniGolf.exe`. The desktop window shows a debug panel (FPS, strike speeds) that is useful if someone is watching. If the window says "Desktop debug" instead of "VR: ...", OpenXR did not start: check SteamVR is the active OpenXR runtime (SteamVR Settings > Developer > "Set SteamVR as OpenXR runtime") and relaunch.
+
+**In the headset**
+You start behind Hole 1's tee, looking down the lane. The putter is in your right hand.
+
+| Input | Action |
+|---|---|
+| Right hand (default) | Putter. Swing it through the ball. There is no shoot button. |
+| Either stick forward, release | Teleport (arc) |
+| Stick left/right | Snap turn 30° |
+| Left grip, hold and pull | Grab-move (drag yourself, Walkabout style) |
+| Right grip + stick up/down | Putter length |
+| Right grip + stick left/right | Shaft angle (add trigger: rotate head) |
+| A / X on putter hand | Stand beside the ball, facing across the line to the cup |
+| B / Y on putter hand | Return ball to its last resting spot (no penalty) |
+| Off-hand A / X | Show or hide the scorecard |
+| Off-hand B / Y, hold 1 s | Switch putter hand |
+| Menu, hold 1.5 s | Restart hole |
+
+Suggested order:
+1. Look around: both eyes render the same scene, nothing pink, the floor is at your real floor height.
+2. Look at the putter. If it points somewhere strange (along your forearm, sideways), hold the **right grip** and push the stick **left/right** until the shaft hangs down naturally, then rotate the head (grip + trigger + stick left/right) until the face is square. Note roughly how far you had to adjust; I'll make it the default.
+3. Press **A** to stand beside the ball. Take a few practice swings away from the ball, then putt. Try a soft tap, a medium putt and a firm one.
+4. Play Hole 1 out. After 3 seconds you move to Hole 2 (draft dogleg). Play it out too.
+5. Try teleport, snap turn, grab-move, ball return (B), the scorecard (off-hand X) and a hand switch.
+6. Quit with Alt+F4 on the desktop window, or from the SteamVR dashboard.
+
+**The session is logged automatically** to `%USERPROFILE%\AppData\LocalLow\Gamebreak Labs\Worlds of Mini Golf\Sessions\session_*.txt`. It records the headset and controller layout, every strike (head speed, ball speed, face angle, aim error), hole results, your final putter settings and frame timing. Just tell me to look at it; you don't need to copy numbers.
+
+**Report back** (short answers are fine):
    - [ ] Game renders in both eyes (no pink materials, no single-eye rendering)
    - [ ] Head and controllers track; putter follows the hand with no visible lag
    - [ ] Which way does the putter extend from the controller? Is the face square to the target when you hold it naturally? (If not, say roughly how far off: grip-angle and head-rotate adjustments exist)

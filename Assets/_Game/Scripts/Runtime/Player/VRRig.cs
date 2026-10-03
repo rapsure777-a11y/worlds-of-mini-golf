@@ -311,7 +311,7 @@ namespace Gamebreak.MiniGolf
         {
             if (Dom.primary.WasPressedThisFrame()) TeleportToBall();
             if (Dom.secondary.WasPressedThisFrame() && HoleController.Active) HoleController.Active.RequestReset();
-            if (Off.primary.WasPressedThisFrame() && scorecard) scorecard.SetActive(!scorecard.activeSelf);
+            if (Off.primary.WasPressedThisFrame()) ToggleScorecard();
 
             m_SwapHeld = Off.secondary.IsPressed() ? m_SwapHeld + Time.deltaTime : 0f;
             if (m_SwapHeld >= 1f) { m_SwapHeld = float.NegativeInfinity; SetLeftHanded(!leftHanded); }
@@ -319,6 +319,20 @@ namespace Gamebreak.MiniGolf
             bool menu = m_Left.menu.IsPressed() || m_Right.menu.IsPressed();
             m_MenuHeld = menu ? m_MenuHeld + Time.deltaTime : 0f;
             if (m_MenuHeld >= 1.5f) { m_MenuHeld = float.NegativeInfinity; course?.RestartHole(); }
+        }
+
+        public void ToggleScorecard() => SetScorecardVisible(scorecard && !scorecard.activeSelf);
+
+        public void SetScorecardVisible(bool visible)
+        {
+            if (!scorecard) return;
+            if (visible && !scorecard.activeSelf)
+            {
+                // Appear straight in front of the player rather than sliding in from where it was hidden.
+                ScorecardPose(out Vector3 pos, out Quaternion rot);
+                scorecard.transform.SetPositionAndRotation(pos, rot);
+            }
+            scorecard.SetActive(visible);
         }
 
         /// <summary>Stand beside the ball in a putting stance, facing across the line to the cup.</summary>
@@ -394,13 +408,27 @@ namespace Gamebreak.MiniGolf
             // Keep the scorecard in front of the player when they toggle it on.
             if (scorecard && scorecard.activeSelf && scorecard.transform.parent == null)
             {
-                Vector3 fwd = head.transform.forward; fwd.y = 0f;
-                if (fwd.sqrMagnitude < 1e-4f) return;
-                fwd.Normalize();
-                Vector3 target = head.transform.position + fwd * 1.1f + Vector3.down * 0.25f;
+                ScorecardPose(out Vector3 target, out Quaternion rot);
                 scorecard.transform.position = Vector3.Lerp(scorecard.transform.position, target, 1f - Mathf.Exp(-4f * Time.deltaTime));
-                scorecard.transform.rotation = Quaternion.LookRotation(fwd);
+                scorecard.transform.rotation = rot;
             }
+        }
+
+        /// <summary>VR: level, slightly below eye height. Desktop: centred on the camera view.</summary>
+        void ScorecardPose(out Vector3 pos, out Quaternion rot)
+        {
+            var cam = head.transform;
+            if (m_Desktop != null)
+            {
+                pos = cam.position + cam.forward * 1.35f;
+                rot = Quaternion.LookRotation(cam.forward, cam.up);
+                return;
+            }
+            Vector3 fwd = cam.forward; fwd.y = 0f;
+            if (fwd.sqrMagnitude < 1e-4f) fwd = transform.forward;
+            fwd.Normalize();
+            pos = cam.position + fwd * 1.1f + Vector3.down * 0.25f;
+            rot = Quaternion.LookRotation(fwd);
         }
 
         /// <summary>
@@ -464,6 +492,7 @@ namespace Gamebreak.MiniGolf
                 if (kb.rKey.wasPressedThisFrame && HoleController.Active) HoleController.Active.RequestReset();
                 if (kb.nKey.wasPressedThisFrame) course?.NextHole();
                 if (kb.backspaceKey.wasPressedThisFrame) course?.RestartHole();
+                if (kb.tabKey.wasPressedThisFrame) m_Rig.ToggleScorecard();
                 if (course)
                 {
                     for (int i = 0; i < 9 && i < course.Holes.Length; i++)
@@ -507,6 +536,6 @@ namespace Gamebreak.MiniGolf
             "Right mouse: look   WASD: move (Shift fast)   Q/E: lower/raise camera\n" +
             "Hold LEFT mouse: putter down; move mouse through the ball to putt\n" +
             "T: stand at ball   R: return ball   Backspace: restart hole\n" +
-            "N: next hole   1-9: jump to hole   F1: hide this panel";
+            "Tab: scorecard   N: next hole   1-9: jump to hole   F1: hide this panel";
     }
 }

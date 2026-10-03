@@ -33,7 +33,11 @@ namespace Gamebreak.MiniGolf
             float colW = (Width - LabelW - TotalW - 40f) / Mathf.Max(1, n);
             string[] labels = { "Hole", "Par", "Score" };
             for (int r = 0; r < 3; r++)
-                WorldText.CreateCell(m_Canvas, labels[r], new Rect(20, Top + r * RowH, LabelW, RowH), 32, ink).fontStyle = FontStyle.Bold;
+            {
+                var label = WorldText.CreateCell(m_Canvas, labels[r], new Rect(20, Top + r * RowH, LabelW, RowH), 32, ink);
+                label.fontStyle = FontStyle.Bold;
+                label.text = labels[r];
+            }
             m_Holes = new Text[n]; m_Pars = new Text[n]; m_Scores = new Text[n];
             for (int i = 0; i < n; i++)
             {
@@ -43,8 +47,9 @@ namespace Gamebreak.MiniGolf
                 m_Scores[i] = WorldText.CreateCell(m_Canvas, "S" + i, new Rect(x, Top + 2 * RowH, colW, RowH), 36, ink);
             }
             float tx = Width - TotalW - 20;
-            WorldText.CreateCell(m_Canvas, "TotLabel", new Rect(tx, Top, TotalW, RowH), 32, ink).fontStyle = FontStyle.Bold;
-            m_Canvas.Find("TotLabel").GetComponent<Text>().text = "Tot";
+            var tot = WorldText.CreateCell(m_Canvas, "TotLabel", new Rect(tx, Top, TotalW, RowH), 32, ink);
+            tot.fontStyle = FontStyle.Bold;
+            tot.text = "Tot";
             m_ParTotal = WorldText.CreateCell(m_Canvas, "ParTot", new Rect(tx, Top + RowH, TotalW, RowH), 32, ink);
             m_ScoreTotal = WorldText.CreateCell(m_Canvas, "ScoreTot", new Rect(tx, Top + 2 * RowH, TotalW, RowH), 36, ink);
             m_ScoreTotal.fontStyle = FontStyle.Bold;

@@ -108,8 +108,25 @@ namespace Gamebreak.MiniGolf
 
             Vector3 rest = ball.Position;
             Line($"Holed: {hole.IsComplete}  strokes {hole.Strokes}  ball {rest:F3}  cup {hole.Cup.transform.position:F3}");
+            // Progression: the course should move the player and ball to the next hole.
+            bool advanced = true;
+            if (course.Holes.Length > 1)
+            {
+                end = Time.realtimeSinceStartup + 8f;
+                while (course.CurrentIndex == 0 && Time.realtimeSinceStartup < end) yield return null;
+                advanced = course.CurrentIndex == 1;
+                var next = course.Current;
+                Line($"Advanced to hole 2: {advanced}  ball on tee: {Vector3.Distance(next.Ball.Position, next.TeePosition) < 0.02f}");
+                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Shot("04_next_hole");
+            }
+            rig.SetScorecardVisible(true);
+            yield return new WaitForSecondsRealtime(0.6f);
+            yield return Shot("05_scorecard");
+            Line($"Scorecard: {string.Join(" ", course.Card.strokes)} (total {course.Card.TotalStrokes})");
+
             Line($"Average frame {m_FrameMsSum / Math.Max(1, m_Frames):F2} ms over {m_Frames} frames (desktop window, not VR)");
-            Finish(m_StrikeSpeed > 0f && hole.IsComplete && hole.Strokes == 1 && m_Errors == 0);
+            Finish(m_StrikeSpeed > 0f && hole.IsComplete && hole.Strokes == 1 && advanced && m_Errors == 0);
         }
 
         IEnumerator Shot(string name)
