@@ -1,5 +1,27 @@
 # Development log
 
+## 2026-10-03 (overnight): headset-free validation and foundations
+
+**Done**
+- **Tests: 27/27 pass** (editor PlayMode). New since Milestone 1: multi-hole progression and scorecard totals, restart during advance delay, stroke limit, free reset, slow edge putt drops, glancing fast putt lips out, 45° rail rebound (leaves at −37.5°), ramp climb and roll-back, rail-top rest = out of bounds, stuck-ball safeguard, putter misuse (2 cm/s nudge ignored, follow-through no double hit, backswing strikes backwards with two-faced head, spawn-overlap ignored, 12 m/s swing caught and clamped), full scene load + hole 1 + progression through hole 2.
+- **Builds:** `Builds/Windows/WorldsOfMiniGolf.exe` (PCVR, OpenXR) and `Builds/Desktop/WorldsOfMiniGolf_Desktop.exe` (OpenXR loader removed; never touches SteamVR). Zero compiler warnings.
+- **Built-player smoke test** (`Tools/smoke-test.ps1`, or `-smoketest` on either exe): scripted swing of the real putter at 2.4 m/s gives a 3.24 m/s strike and a hole in one, then advances to hole 2 and opens the scorecard. Both builds pass. Without SteamVR the PCVR build falls back to desktop mode cleanly.
+- **Desktop debug mode:** hold the left mouse button to ground the putter and swing with the mouse; WASD/right mouse, Q/E height, T stand at ball, R return, Tab scorecard, 1–9 jump to hole, N next, Backspace restart, F1 help panel. The IMGUI overlay shows FPS, ball and strike speed, and putter settings (also on the monitor during VR).
+- **Session log** (always on): XR device and controller layouts, every strike (head speed, ball speed, face-vs-path, aim error), hole results, putter settings, frame-time percentiles. Written to `%USERPROFILE%\AppData\LocalLow\Gamebreak Labs\Worlds of Mini Golf\Sessions\`.
+- **Rules:** a ball resting anywhere except a green (`PlayableSurface`) is out of bounds; a ball still creeping after 20 s is stopped in place.
+- **Draft Hole 2 "Palm Corner"** (L-shaped dogleg, par 3), so progression can be tested in VR. Pending HQ creative approval.
+- Scorecard rebuilt as a real grid (under/over par colours, current hole highlighted).
+- VR input hardening: grip/trigger read from analog axes (Index-style grip click needs a hard squeeze); controller poses are read whenever bound. Verified the binding paths against the OpenXR package's Index profile.
+
+**Bugs found and fixed**
+- **Player build crashed on load** (`level0 is corrupted`): `ScoreUI.cs` contained two MonoBehaviours whose names didn't match the file. The editor tolerated it, but player builds could not resolve the scripts. Split into one class per file, and added a pre-build guard that blocks the build if any component script can't be resolved.
+- Desktop build still pre-initialised OpenXR from boot.config (6 s stall, tries SteamVR). Now the loader is removed for that build and restored afterwards.
+- A pending hole advance fired after a restart during the 3 s delay.
+- Desktop "stand at ball" used the VR side-on stance (wrong for mouse putting); camera yaw was not synced on teleport.
+- The smoke-test swing was sampled with a one-frame lag (strike speed drifted with frame rate). It's now driven before the putter samples the hand.
+
+**Still not verified (needs the headset):** tracking, putter orientation on Frame controllers, SPI rendering in the HMD, haptics, comfort, VR frame timing, which interaction profile SteamVR selects.
+
 ## 2026-10-03: Milestone 1 build (First Physical Putt)
 
 **Done**

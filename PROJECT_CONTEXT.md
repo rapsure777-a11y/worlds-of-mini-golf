@@ -26,7 +26,7 @@ Inspirations are art-direction references only. Use no assets or IP from those g
 Out of scope for now: multiplayer, other worlds, elaborate progression.
 
 ## Milestones
-1. **First Physical Putt**: Unity/OpenXR, tracked putter, ball, green, cup. *Code complete and tested in editor; awaiting headset test.*
+1. **First Physical Putt**: Unity/OpenXR, tracked putter, ball, green, cup. *Code complete; 27 editor tests and built-player smoke tests pass; awaiting headset test (LOCAL_TASKS L1).*
 2. Gameplay Refinement: tune against Walkabout measurements (`WALKABOUT_REFERENCE.md`).
 3. First Complete Hole (original design).
 4. Tropical Environment: Crash-inspired art around Hole 1; first World Forge assets (palm, rock formation, structure).
@@ -48,7 +48,8 @@ Assets/_Game/
     Core/      GolfBall, Putter, Cup, HoleController, CourseController, GolfTuning, GolfMaterials, OutOfBoundsZone
     Course/    CourseGeometry (green mesh with real cup hole + rails), HoleDefinition, HoleFactory, TropicalCourse
     Player/    VRRig (tracking, teleport, snap turn, grab-move, putter adjust, handedness), HandInput
-    UI/        WristDisplay, ScorecardPanel
+    UI/        WristDisplay, ScorecardPanel, WorldText, DebugOverlay (monitor-only)
+    Debug/     SmokeTest (-smoketest built-player test), SessionLog (per-session play log)
     Feedback/  GolfFeedback (synthesised SFX + haptics)
     Worlds/    WorldTheme (per-world materials and lighting)
   Scripts/Editor/             ProjectSetup, SceneBuilder, Automation (batch entry points, screenshots)
@@ -67,12 +68,23 @@ Key design decisions:
 
 ## Batch commands
 ```
-Unity.exe -batchmode -quit -projectPath <repo> -executeMethod Gamebreak.MiniGolf.Editor.Automation.Setup          # configure + rebuild scene
-Unity.exe -batchmode -quit -projectPath <repo> -executeMethod Gamebreak.MiniGolf.Editor.Automation.SetupAndBuild  # + Windows player
-Unity.exe -batchmode -projectPath <repo> -runTests -testPlatform PlayMode -testResults Logs/results.xml
-Unity.exe -batchmode -quit -projectPath <repo> -executeMethod Gamebreak.MiniGolf.Editor.Automation.CaptureScreenshots
+Unity.exe -batchmode -quit -projectPath <repo> -executeMethod Gamebreak.MiniGolf.Editor.Automation.Setup             # configure + rebuild scene
+Unity.exe -batchmode -quit -projectPath <repo> -executeMethod Gamebreak.MiniGolf.Editor.Automation.SetupAndBuildAll   # + PCVR and desktop players
+Unity.exe -batchmode -quit -projectPath <repo> -executeMethod Gamebreak.MiniGolf.Editor.Automation.CaptureScreenshots # Screenshots/ per hole
+powershell -File Tools\run-tests.ps1      # PlayMode suite with a one-line-per-test summary
+powershell -File Tools\smoke-test.ps1     # built desktop exe: scripted putt, progression, screenshots
 ```
-Do not pass `-nographics` for builds or screenshots.
+Do not pass `-nographics` for builds or screenshots. Builds take about 4 minutes (clean cache each time).
+
+| Output | Path |
+|---|---|
+| PCVR player | `Builds/Windows/WorldsOfMiniGolf.exe` |
+| Desktop debug player (no XR) | `Builds/Desktop/WorldsOfMiniGolf_Desktop.exe` |
+| Smoke test report/screenshots | `Builds/<build>/SmokeTest/` |
+| Player log | `%USERPROFILE%\AppData\LocalLow\Gamebreak Labs\Worlds of Mini Golf\Player.log` |
+| Session logs (strikes, holes, frame times) | same folder, `Sessions\` |
+
+Unity gotcha: every MonoBehaviour/ScriptableObject must be in a file with the same name. The build is blocked automatically if one isn't.
 
 ## World Forge (asset pipeline, later)
 Creative brief, then AI asset generation (Universal Modder `um fal`), then Blender cleanup, then Unity assembly, then a playable course. First trial after Hole 1 works: one palm tree, one rock formation, one decorative structure. Asset licences are logged in `ASSETS.md`.
