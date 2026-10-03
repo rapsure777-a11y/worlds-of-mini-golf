@@ -84,7 +84,7 @@ Suggested order:
 
 Cleanup when finished: delete `Mods\WalkaboutProbe.dll`. Note that `Mods\sinai-dev-UnityExplorer` is left over from the earlier experiment (UnityExplorer crashed the game) and is probably safe to delete. To return the game to vanilla, verify files in Steam and remove `version.dll`, `MelonLoader\`, `Mods\`, `UserLibs\`, `UserData\`.
 
-## L3: GitHub remote, OPEN
+## L3: GitHub remote, DONE (2026-10-03): https://github.com/rapsure777-a11y/worlds-of-mini-golf (private)
 **Who:** Andrew, about 2 minutes. `gh` 2.102 is installed but not signed in.
 1. In the Claude Code prompt type `! gh auth login` (GitHub.com, HTTPS, browser sign-in).
 2. Claude then creates the **private** repo `worlds-of-mini-golf` and pushes `main`.
