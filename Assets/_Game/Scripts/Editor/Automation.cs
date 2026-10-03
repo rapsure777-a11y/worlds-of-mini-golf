@@ -9,6 +9,7 @@ namespace Gamebreak.MiniGolf.Editor
     public static class Automation
     {
         public const string PlayerPath = "Builds/Windows/WorldsOfMiniGolf.exe";
+        public const string DesktopPlayerPath = "Builds/Desktop/WorldsOfMiniGolf_Desktop.exe";
 
         public static void Setup()
         {
@@ -16,26 +17,49 @@ namespace Gamebreak.MiniGolf.Editor
             SceneBuilder.BuildTropicalScene();
         }
 
-        [MenuItem("Gamebreak/Build Windows Player")]
-        public static void BuildPlayer()
+        [MenuItem("Gamebreak/Build Windows Player (PCVR)")]
+        public static void BuildPlayer() => Build(PlayerPath, true);
+
+        /// <summary>Same game with OpenXR not started at launch: opens straight into desktop debug mode, never starts SteamVR.</summary>
+        [MenuItem("Gamebreak/Build Desktop Debug Player")]
+        public static void BuildDesktopPlayer() => Build(DesktopPlayerPath, false);
+
+        static void Build(string path, bool xr)
         {
-            var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
-            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            var xrSettings = UnityEditor.XR.Management.XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(BuildTargetGroup.Standalone);
+            bool previous = xrSettings && xrSettings.InitManagerOnStart;
+            if (xrSettings) { xrSettings.InitManagerOnStart = xr; EditorUtility.SetDirty(xrSettings); AssetDatabase.SaveAssets(); }
+            try
             {
-                scenes = scenes,
-                locationPathName = PlayerPath,
-                target = BuildTarget.StandaloneWindows64,
-                options = BuildOptions.None,
-            });
-            var s = report.summary;
-            Debug.Log($"[Gamebreak] Build {s.result}: {s.totalErrors} errors, {s.totalSize / (1024 * 1024)} MB, {s.totalTime.TotalSeconds:F0}s -> {PlayerPath}");
-            if (Application.isBatchMode && s.result != BuildResult.Succeeded) EditorApplication.Exit(1);
+                var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+                var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = scenes,
+                    locationPathName = path,
+                    target = BuildTarget.StandaloneWindows64,
+                    options = BuildOptions.None,
+                });
+                var s = report.summary;
+                Debug.Log($"[Gamebreak] Build {s.result} (xr={xr}): {s.totalErrors} errors, {s.totalSize / (1024 * 1024)} MB, {s.totalTime.TotalSeconds:F0}s -> {path}");
+                if (Application.isBatchMode && s.result != BuildResult.Succeeded) EditorApplication.Exit(1);
+            }
+            finally
+            {
+                if (xrSettings) { xrSettings.InitManagerOnStart = previous; EditorUtility.SetDirty(xrSettings); AssetDatabase.SaveAssets(); }
+            }
         }
 
         public static void SetupAndBuild()
         {
             Setup();
             BuildPlayer();
+        }
+
+        public static void SetupAndBuildAll()
+        {
+            Setup();
+            BuildPlayer();
+            BuildDesktopPlayer();
         }
 
         /// <summary>Renders review shots of the first scene to Screenshots/. Needs a graphics device (no -nographics).</summary>

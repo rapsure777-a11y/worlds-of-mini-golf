@@ -95,7 +95,7 @@ namespace Gamebreak.MiniGolf
             {
                 // Desktop: pin to the corner of the view.
                 var cam = rig.Head.transform;
-                m_Canvas.position = cam.position + cam.forward * 0.6f + cam.right * -0.28f + cam.up * 0.17f;
+                m_Canvas.position = cam.position + cam.forward * 0.6f + cam.right * 0.3f + cam.up * 0.17f;
                 m_Canvas.rotation = cam.rotation;
             }
 

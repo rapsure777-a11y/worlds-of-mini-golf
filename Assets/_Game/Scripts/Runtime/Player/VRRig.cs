@@ -330,9 +330,19 @@ namespace Gamebreak.MiniGolf
             toCup.y = 0f;
             if (toCup.sqrMagnitude < 1e-4f) toCup = Vector3.forward;
             toCup.Normalize();
-            // Right-handed players stand with the target on their left.
-            Vector3 facing = Quaternion.Euler(0f, leftHanded ? -90f : 90f, 0f) * toCup;
-            Vector3 feet = ball - facing * 0.5f;
+            Vector3 feet, facing;
+            if (m_Desktop != null)
+            {
+                // Desktop: the putter face follows the camera, so stand behind the ball looking at the cup.
+                facing = toCup;
+                feet = ball - toCup * 0.9f;
+            }
+            else
+            {
+                // Right-handed players stand with the target on their left.
+                facing = Quaternion.Euler(0f, leftHanded ? -90f : 90f, 0f) * toCup;
+                feet = ball - facing * 0.5f;
+            }
             feet.y = ball.y - hole.Ball.Radius;
             TeleportTo(feet, facing);
         }
@@ -346,6 +356,7 @@ namespace Gamebreak.MiniGolf
                 if (headFwd.sqrMagnitude < 1e-4f) headFwd = transform.forward;
                 float angle = Vector3.SignedAngle(headFwd, facing, Vector3.up);
                 transform.RotateAround(head.transform.position, Vector3.up, angle);
+                m_Desktop?.SetYaw(Quaternion.LookRotation(facing).eulerAngles.y);
             }
             TeleportFeet(feetPosition);
         }
@@ -392,24 +403,31 @@ namespace Gamebreak.MiniGolf
         }
 
         /// <summary>
-        /// Debug controls for running in the editor without a headset. Not a gameplay mode:
-        /// the putter still has to be swung through the ball (mouse movement), there is no shoot button.
-        ///   WASD + right mouse: move and look.  Mouse: putter head follows the cursor on the ground.
-        ///   T: stand by the ball.  R: return ball.  N: next hole.
+        /// Debug controls for inspecting the course without a headset. Not a gameplay mode:
+        /// the putter still has to be swung through the ball with the mouse; there is no shoot button.
+        /// See <see cref="DesktopHelp"/> for the key list.
         /// </summary>
         class DesktopDebug
         {
             readonly VRRig m_Rig;
             readonly Camera m_Cam;
-            float m_Yaw, m_Pitch = 35f;
+            float m_Yaw, m_Pitch = 40f, m_Height = 1.6f;
 
             public DesktopDebug(VRRig rig, Camera cam, Transform offset)
             {
                 m_Rig = rig; m_Cam = cam;
                 var tpd = cam.GetComponent<TrackedPoseDriver>();
                 if (tpd) tpd.enabled = false;
-                cam.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+                cam.transform.localPosition = new Vector3(0f, m_Height, 0f);
                 m_Yaw = rig.transform.eulerAngles.y;
+            }
+
+            public void SyncYaw() => m_Yaw = m_Cam.transform.eulerAngles.y;
+
+            public void SetYaw(float yaw)
+            {
+                m_Yaw = yaw;
+                m_Cam.transform.localRotation = Quaternion.Euler(m_Pitch, m_Yaw - m_Rig.transform.eulerAngles.y, 0f);
             }
 
             public void Update(CourseController course)
@@ -430,31 +448,64 @@ namespace Gamebreak.MiniGolf
                 if (kb.sKey.isPressed) move += Vector3.back;
                 if (kb.aKey.isPressed) move += Vector3.left;
                 if (kb.dKey.isPressed) move += Vector3.right;
+                float speed = kb.leftShiftKey.isPressed ? 6f : 2f;
                 if (move != Vector3.zero)
                 {
-                    move = Quaternion.Euler(0f, m_Yaw, 0f) * move.normalized * 2f * dt;
+                    move = Quaternion.Euler(0f, m_Yaw, 0f) * move.normalized * speed * dt;
                     m_Rig.transform.position += move;
                     m_Rig.SnapToGround();
                 }
+                if (kb.eKey.isPressed) m_Height = Mathf.Min(m_Height + dt * 2f, 12f);
+                if (kb.qKey.isPressed) m_Height = Mathf.Max(m_Height - dt * 2f, 0.3f);
+                m_Cam.transform.localPosition = new Vector3(m_Cam.transform.localPosition.x, m_Height, m_Cam.transform.localPosition.z);
 
-                if (kb.tKey.wasPressedThisFrame) { m_Rig.TeleportToBall(); m_Yaw = m_Cam.transform.eulerAngles.y; }
+                if (kb.tKey.wasPressedThisFrame) { m_Rig.TeleportToBall(); SyncYaw(); }
                 if (kb.rKey.wasPressedThisFrame && HoleController.Active) HoleController.Active.RequestReset();
                 if (kb.nKey.wasPressedThisFrame) course?.NextHole();
+                if (kb.backspaceKey.wasPressedThisFrame) course?.RestartHole();
+                if (course)
+                {
+                    for (int i = 0; i < 9 && i < course.Holes.Length; i++)
+                        if (kb[Key.Digit1 + i].wasPressedThisFrame) { course.StartHole(i, true); SyncYaw(); }
+                }
 
-                // Putter head follows the mouse on the course surface.
+                if (!m_Rig.DesktopMouseControl) return;
+                // Putter: hold the left button to put the head down; move the mouse to swing it.
                 var putter = m_Rig.putter;
                 if (!putter) return;
                 Ray ray = m_Cam.ScreenPointToRay(mouse.position.ReadValue());
-                if (Physics.Raycast(ray, out RaycastHit hit, 20f, ~0, QueryTriggerInteraction.Ignore))
+                var ball = HoleController.Active ? HoleController.Active.Ball : null;
+                foreach (var hit in Physics.RaycastAll(ray, 30f, ~0, QueryTriggerInteraction.Ignore))
                 {
-                    var hand = m_Rig.DominantHand;
-                    Vector3 fwd = m_Cam.transform.forward; fwd.y = 0f;
+                    if (ball && hit.collider.gameObject == ball.gameObject) continue;
                     Vector3 right = m_Cam.transform.right; right.y = 0f;
-                    float headHalf = putter.Tuning.headSize.z * 0.5f + 0.003f;
-                    hand.position = hit.point + Vector3.up * (putter.Length + headHalf);
-                    hand.rotation = Quaternion.LookRotation(Vector3.down, right.normalized);
+                    Vector3 face = Vector3.Cross(Vector3.up, right).normalized; // camera forward, flat
+                    float lift = mouse.leftButton.isPressed ? 0.003f : 0.12f;
+                    PlaceHead(putter, m_Rig.DominantHand, hit.point + Vector3.up * lift, face);
+                    break;
                 }
             }
         }
+
+        /// <summary>Pose the hand so the putter head centre sits just above <paramref name="ground"/> with its face toward <paramref name="face"/>.</summary>
+        public static void PlaceHead(Putter putter, Transform hand, Vector3 ground, Vector3 face)
+        {
+            face.y = 0f; face.Normalize();
+            Quaternion headPose = Quaternion.LookRotation(Vector3.down, Vector3.Cross(Vector3.down, face));
+            // Undo the player's saved shaft angle so the head still lands on the ground.
+            hand.rotation = headPose * Quaternion.Inverse(Quaternion.Euler(putter.AngleOffset, 0f, 0f));
+            float headHalf = putter.Tuning.headSize.z * 0.5f;
+            hand.position = ground + Vector3.up * headHalf + Vector3.up * putter.Length;
+        }
+
+        /// <summary>When false, desktop mode leaves the putter hand alone (used by the smoke test).</summary>
+        public bool DesktopMouseControl { get; set; } = true;
+
+        public const string DesktopHelp =
+            "DESKTOP DEBUG (no headset)\n" +
+            "Right mouse: look   WASD: move (Shift fast)   Q/E: lower/raise camera\n" +
+            "Hold LEFT mouse: putter down; move mouse through the ball to putt\n" +
+            "T: stand at ball   R: return ball   Backspace: restart hole\n" +
+            "N: next hole   1-9: jump to hole   F1: hide this panel";
     }
 }

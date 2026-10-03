@@ -120,6 +120,8 @@ namespace Gamebreak.MiniGolf.Editor
             wrist.Configure(course, rig);
             var feedback = courseGo.AddComponent<GolfFeedback>();
             feedback.Configure(putter, ball, rig, course);
+            var overlay = courseGo.AddComponent<DebugOverlay>();
+            overlay.Configure(course, rig);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
