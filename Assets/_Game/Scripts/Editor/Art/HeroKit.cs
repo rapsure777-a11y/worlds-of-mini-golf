@@ -270,9 +270,11 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         void AddFoliage(string name, Mesh mesh)
         {
-            mesh.name = name;
+            mesh.name = "Hero_" + name;
             mesh.RecalculateTangents();
-            string path = $"{MeshDir}/{name}.asset";
+            // "Hero_" prefix: TropicalKit saves its own meshes (e.g. BigLeaf0) in the same folder; sharing a
+            // path overwrote them and the old plants rendered the leaf atlas mesh with the palette material.
+            string path = $"{MeshDir}/Hero_{name}.asset";
             var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if (existing)
             {
