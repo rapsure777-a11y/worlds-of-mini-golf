@@ -173,6 +173,7 @@ namespace Gamebreak.MiniGolf
             }
             UpdateHandPoses();
             UpdatePutterAdjust();
+            UpdatePutterAutoLength();
             UpdateGrabMove();
             UpdateTurnAndTeleport();
             UpdateButtons();
@@ -197,6 +198,24 @@ namespace Gamebreak.MiniGolf
             if (input.rotation.controls.Count > 0) t.localRotation = input.rotation.ReadValue<Quaternion>();
         }
 
+        PutterSizing m_SizingField;
+        // Created lazily: PutterSizing reads PlayerPrefs, which Unity forbids during deserialization.
+        public PutterSizing Sizing => m_SizingField ??= new PutterSizing();
+
+        /// <summary>Walkabout-style: size the putter from the player's standing eye height.</summary>
+        void UpdatePutterAutoLength()
+        {
+            if (!putter) return;
+            Sizing.AddSample(head.transform.localPosition.y);
+            float? target = Sizing.TargetLength(putter.Tuning);
+            if (target == null || m_Adjusting) return;
+            // Only change length while the putter is nearly still, never mid-swing.
+            if (putter.HeadVelocity.sqrMagnitude > 0.2f * 0.2f) return;
+            float current = putter.Length;
+            if (Mathf.Abs(target.Value - current) < 0.005f) return;
+            putter.SetLength(Mathf.MoveTowards(current, target.Value, 0.3f * Time.deltaTime));
+        }
+
         void UpdatePutterAdjust()
         {
             bool adjusting = putter && Dom.Grip;
@@ -204,7 +223,12 @@ namespace Gamebreak.MiniGolf
             {
                 Vector2 s = Dom.Stick;
                 float dt = Time.deltaTime;
-                if (Mathf.Abs(s.y) > 0.2f) putter.AdjustLength(s.y * lengthSpeed * dt);
+                if (Mathf.Abs(s.y) > 0.2f)
+                {
+                    float delta = s.y * lengthSpeed * dt;
+                    putter.AdjustLength(delta);
+                    if (Sizing.Auto) Sizing.AddOffset(delta); // personal offset on top of auto size
+                }
                 if (Mathf.Abs(s.x) > 0.2f)
                 {
                     if (Dom.Trigger) putter.AdjustTwist(s.x * angleSpeed * dt);
@@ -214,6 +238,7 @@ namespace Gamebreak.MiniGolf
             else if (m_Adjusting && putter)
             {
                 putter.SaveAdjustments();
+                Sizing.Save();
             }
             m_Adjusting = adjusting;
         }

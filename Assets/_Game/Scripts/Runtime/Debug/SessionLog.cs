@@ -168,7 +168,7 @@ namespace Gamebreak.MiniGolf
             var display = ActiveDisplay();
             if (display != null && display.TryGetDroppedFrameCount(out int dropped) && display.TryGetFramePresentCount(out int presents) && m_DroppedStart >= 0)
                 W($"  compositor: dropped {dropped - m_DroppedStart}  presented {presents - m_PresentStart}");
-            if (m_Putter) W($"Putter now: length {F(m_Putter.Length)} angle {F(m_Putter.AngleOffset)} twist {F(m_Putter.HeadTwist)}");
+            if (m_Putter) W($"Putter now: length {F(m_Putter.Length)} angle {F(m_Putter.AngleOffset)} twist {F(m_Putter.HeadTwist)}" + (rig ? $"  auto {rig.Sizing.Auto} eye height {F(rig.Sizing.EyeHeight)} offset {F(rig.Sizing.Offset)}" : ""));
             m_FrameMs.Clear(); m_CpuMs.Clear(); m_GpuMs.Clear(); m_AppGpuMs.Clear(); m_CompGpuMs.Clear(); m_RefreshHist.Clear();
             m_Hitches = 0;
             m_DroppedStart = m_PresentStart = -1;

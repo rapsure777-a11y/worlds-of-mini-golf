@@ -1,5 +1,10 @@
 # Development log
 
+## 2026-10-03 (afternoon, test 4-5): Frame profile works; auto putter length
+
+- Native Steam Frame profile accepted once XR_VALVE_frame_controller_interaction was requested. First build read hand pose from wrong bytes (offsets copied from the Index layout), so the putter swung erratically. Fixed with correct offsets (33/36/40/52/100/112) and layout tests. Andrew: 'worked perfectly', 'really, really smooth'.
+- Feedback: putter about 20% short. Added Walkabout-style auto length: standing eye height (90th percentile of head height, so time bent over putts is ignored) x 0.62 (1.02 m at 1.65 m eye height). Grip + stick now sets a saved personal offset on top. Length only changes while the putter is still. Eye height, offset and length are in the session log. Tests 40/40.
+
 ## 2026-10-03 (afternoon, test 3): smooth at 120 Hz; Frame profile needs its extension
 
 - **Performance fixed:** frame delta flat 8.33 ms (120 Hz) for the whole session, Unity GPU timer 1.6-7 ms. Earlier sessions spent about half their frames at 60 Hz. The VR render-settings change worked. Andrew: 'totally smooth'.

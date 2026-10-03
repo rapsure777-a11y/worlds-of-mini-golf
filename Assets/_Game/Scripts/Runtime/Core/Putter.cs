@@ -127,6 +127,14 @@ namespace Gamebreak.MiniGolf
             LayoutVisual();
         }
 
+        /// <summary>Set the hand-to-head length directly (used by auto-sizing).</summary>
+        public void SetLength(float newLength)
+        {
+            var t = Tuning;
+            length = Mathf.Clamp(newLength, t.minPutterLength, t.maxPutterLength);
+            LayoutVisual();
+        }
+
         public void AdjustLength(float delta)
         {
             var t = Tuning;

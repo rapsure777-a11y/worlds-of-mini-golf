@@ -46,6 +46,9 @@ namespace Gamebreak.MiniGolf
 
         [Header("Putter shape")]
         public float defaultPutterLength = 0.85f;
+        [Tooltip("Auto-sized putter length = standing eye height x this. 0.62 gives ~1.02 m at 1.65 m eye height " +
+                 "(first Frame test: 0.85 m was about 20% short).")]
+        public float autoLengthRatio = 0.62f;
         public float minPutterLength = 0.4f;
         public float maxPutterLength = 1.4f;
         public Vector3 headSize = new Vector3(0.03f, 0.12f, 0.035f); // face thickness, toe-heel, height
