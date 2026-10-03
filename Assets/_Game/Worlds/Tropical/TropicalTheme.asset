@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca6b3053ef6c9884ba7f3bc5d405135e, type: 3}
+  m_Name: TropicalTheme
+  m_EditorClassIdentifier: Gamebreak.MiniGolf::Gamebreak.MiniGolf.WorldTheme
+  worldName: Tropical Adventure
+  inspiration: 'Crash Bandicoot 4: It''s About Time (style reference only).'
+  green: {fileID: 2100000, guid: b0702f4ca7b6f7d4b95aa1a6bfc709fc, type: 2}
+  wall: {fileID: 2100000, guid: 962c12d5693e4a048824b91c9bed56e0, type: 2}
+  cup: {fileID: 2100000, guid: 655513c2c1cf4504d819ff2188a935d8, type: 2}
+  flag: {fileID: 2100000, guid: 3e4dba8c124270846bbd9d1ee6a6c484, type: 2}
+  tee: {fileID: 2100000, guid: 622036c989ee1a345bc9b2859718b903, type: 2}
+  ball: {fileID: 2100000, guid: 3edb15d90867a2a4fa1b68c6572e8095, type: 2}
+  putterShaft: {fileID: 2100000, guid: fd49e39cab3a55446a920ff9d4182ce9, type: 2}
+  putterHead: {fileID: 2100000, guid: 506ea77d9e2575545a82db173eea7b94, type: 2}
+  putterGrip: {fileID: 2100000, guid: 253e84a519f00084f80de9a3cb13004c, type: 2}
+  ground: {fileID: 2100000, guid: 1ad4671e1dd31fe41b221118eef0d0af, type: 2}
+  water: {fileID: 2100000, guid: 3ae122644a000ed408c4b8a0394f229f, type: 2}
+  skybox: {fileID: 2100000, guid: d0db859e78166bf4595919a34817efc1, type: 2}
+  sunColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+  sunIntensity: 1.4
+  sunEuler: {x: 48, y: -35, z: 0}
+  fogColor: {r: 0.66, g: 0.86, b: 0.96, a: 1}
+  fogDensity: 0.004
+  teleportLine: {fileID: 2100000, guid: 8ffdf4e10e8e34d498658d5a9908488f, type: 2}
