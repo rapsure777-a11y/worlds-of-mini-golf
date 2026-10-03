@@ -72,6 +72,7 @@ Unity.exe -batchmode -quit -projectPath <repo> -executeMethod Gamebreak.MiniGolf
 Unity.exe -batchmode -quit -projectPath <repo> -executeMethod Gamebreak.MiniGolf.Editor.Automation.SetupAndBuildAll   # + PCVR and desktop players
 Unity.exe -batchmode -quit -projectPath <repo> -executeMethod Gamebreak.MiniGolf.Editor.Automation.CaptureScreenshots # Screenshots/ per hole
 powershell -File Tools\run-tests.ps1      # PlayMode suite with a one-line-per-test summary
+%LOCALAPPDATA%\Unity\bin\unity.exe test . --mode PlayMode --output Logs/cli-results.xml --non-interactive   # same suite via the Unity CLI
 powershell -File Tools\smoke-test.ps1     # built desktop exe: scripted putt, progression, screenshots
 ```
 Do not pass `-nographics` for builds or screenshots. Builds take about 4 minutes (clean cache each time).

@@ -257,6 +257,51 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.IsTrue(bed.ball.IsAtRest, "safeguard should stop a ball that keeps creeping");
         }
 
+        [UnityTest]
+        public IEnumerator MaxSpeedRailHits_NeverTunnel([Values(0f, 30f, 60f, 80f)] float angle)
+        {
+            using var bed = new TestBed(Flat(), new Vector2(0f, 3f));
+            yield return Steps(5);
+            // Max-speed shot at the +Z end rail (0 = straight on, 80 = nearly parallel).
+            var dir = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+            bed.ball.Strike(dir * bed.tuning.maxBallSpeed);
+            float end = Time.time + 4f;
+            bool escaped = false;
+            while (Time.time < end && !bed.ball.IsAtRest)
+            {
+                var p = bed.ball.Position;
+                if (Mathf.Abs(p.x) > 0.6f || p.z < 0f || p.z > 6f || p.y < -0.05f || p.y > 0.3f) { escaped = true; break; }
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.IsFalse(escaped, $"ball left the green at {bed.ball.Position} (angle {angle})");
+            Assert.AreEqual(1, bed.hole.Strokes, "no out-of-bounds penalty expected");
+        }
+
+        [UnityTest]
+        public IEnumerator DoglegCorner_BallStaysInPlay()
+        {
+            // Same shape as Hole 2: lane up +Z, cross lane to the left at the far end.
+            var l = new GreenLayout();
+            l.Area(-0.6f, 0f, 1.2f, 5.2f);
+            l.Area(-3.6f, 4.0f, 4.2f, 1.2f);
+            using var bed = new TestBed(l, new Vector2(0f, 0.6f));
+            yield return Steps(5);
+            int wallHits = 0;
+            bed.ball.HitWall += (b, s) => wallHits++;
+            // Firm shot into the far corner, then off the rails into the cross lane.
+            bed.ball.Strike(new Vector3(-0.25f, 0f, 1f).normalized * 6f);
+            float end = Time.time + 15f;
+            while (Time.time < end && !bed.ball.IsAtRest)
+            {
+                Assert.IsTrue(bed.ball.InPlay, "ball went out of bounds");
+                yield return new WaitForFixedUpdate();
+            }
+            Assert.IsTrue(bed.ball.IsAtRest);
+            Assert.AreEqual(1, bed.hole.Strokes);
+            Assert.Greater(wallHits, 0);
+            Debug.Log($"[Test] dogleg: rest at {bed.ball.Position:F2} after {wallHits} rail hits");
+        }
+
         static GreenLayout Flat()
         {
             var l = new GreenLayout();
