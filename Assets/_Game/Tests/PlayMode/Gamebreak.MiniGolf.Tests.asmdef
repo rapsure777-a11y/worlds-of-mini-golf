@@ -3,6 +3,9 @@
     "rootNamespace": "Gamebreak.MiniGolf.Tests",
     "references": [
         "Gamebreak.MiniGolf",
+        "Gamebreak.MiniGolf.XR",
+        "Unity.InputSystem",
+        "Unity.XR.OpenXR",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

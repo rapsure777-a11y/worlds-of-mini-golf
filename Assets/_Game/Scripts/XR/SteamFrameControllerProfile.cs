@@ -71,12 +71,12 @@ namespace Gamebreak.MiniGolf.XR
             [Preserve, InputControl(alias = "joystickClicked", usage = "Primary2DAxisClick")] public ButtonControl thumbstickClicked { get; private set; }
             [Preserve, InputControl(offset = 0, aliases = new[] { "device", "gripPose" }, usage = "Device")] public PoseControl devicePose { get; private set; }
             [Preserve, InputControl(offset = 0, alias = "aimPose", usage = "Pointer")] public PoseControl pointer { get; private set; }
-            [Preserve, InputControl(offset = 53)] new public ButtonControl isTracked { get; private set; }
-            [Preserve, InputControl(offset = 56)] new public IntegerControl trackingState { get; private set; }
-            [Preserve, InputControl(offset = 60, alias = "gripPosition")] new public Vector3Control devicePosition { get; private set; }
-            [Preserve, InputControl(offset = 72, alias = "gripOrientation")] new public QuaternionControl deviceRotation { get; private set; }
-            [Preserve, InputControl(offset = 120)] public Vector3Control pointerPosition { get; private set; }
-            [Preserve, InputControl(offset = 132, alias = "pointerOrientation")] public QuaternionControl pointerRotation { get; private set; }
+            [Preserve, InputControl(offset = 33)] new public ButtonControl isTracked { get; private set; }
+            [Preserve, InputControl(offset = 36)] new public IntegerControl trackingState { get; private set; }
+            [Preserve, InputControl(offset = 40, alias = "gripPosition")] new public Vector3Control devicePosition { get; private set; }
+            [Preserve, InputControl(offset = 52, alias = "gripOrientation")] new public QuaternionControl deviceRotation { get; private set; }
+            [Preserve, InputControl(offset = 100)] public Vector3Control pointerPosition { get; private set; }
+            [Preserve, InputControl(offset = 112, alias = "pointerOrientation")] public QuaternionControl pointerRotation { get; private set; }
             [Preserve, InputControl(usage = "Haptic")] public HapticControl haptic { get; private set; }
 
             protected override void FinishSetup()
