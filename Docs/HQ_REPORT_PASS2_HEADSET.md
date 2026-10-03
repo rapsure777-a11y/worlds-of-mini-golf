@@ -21,7 +21,7 @@
 ## Bugs found and fixed this session (local)
 1. **All hero rocks rendered white.** A single-object FBX loses its `__Rock` suffix on the root, so the white fallback material was used. `HeroKit` now reads the suffix from the mesh name.
 2. **The putting green "waved like water"** (Andrew). Every textured material had 0.04 m vertex wind, and the green and rails have no wind weights, so the whole turf rippled. Wind now defaults to 0; only palm bark and leaves sway. New test `TropicalScene_CourseSurfacesDoNotSway`.
-3. **Big plants rendered orange/white/red stripes** (Andrew). The new foliage meshes were saved with the same file names as the old kit's `BigLeaf0/1` and overwrote them. They are now saved as `Hero_*.asset`; the old meshes match `main` again.
+3. **Big plants rendered orange/white/red stripes** (Andrew). The new foliage meshes were saved with the same file names as the old kit's `BigLeaf0/1` and overwrote them. They are now saved as `Hero_*.asset`; the old meshes match `main` again. **Headset-confirmed by Andrew: "Plants are right now."**
 
 ## Open issues (not fixed)
 - **The waterfall clips into the tiki clubhouse**, seen from Hole 2. The clubhouse sits almost on top of the cliff, pool and waterfall, and its surfboards crowd Hole 2's tee. It needs relocating.
