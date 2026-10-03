@@ -56,3 +56,15 @@ Screenshots: `Logs/shots_{balanced,rich,lean}/` (local only; `Logs/` is git-igno
 Andrew saw the putting green moving like water. Cause: `HeroKit.Surface()` gave every textured material a vertex wind sway of 0.04 m. Green and rail meshes have no vertex colours, so the shader read their wind weight as 1, and the whole turf and the rails rippled while the collider stayed still. The clubhouse wood, bamboo, thatch, totems and lanterns swayed the same way.
 
 Fix: wind is now 0 by default. Only `Hero_Bark` (0.04; palm trunks carry a baked 0 to 0.2 weight) and `Hero_Leaves` (0.07) sway. New PlayMode test `TropicalScene_CourseSurfacesDoNotSway` fails if any material under a hole has non-zero wind. It compiles but has not been run yet (SteamVR). Both players rebuilt (0 errors).
+
+## Round 2 validation (Cloud Claude `4b6ed28`)
+| Step | Result |
+|---|---|
+| Compile | 0 errors |
+| Scene build + rich screenshots | Pass. `Clubhouse site: hole-local (-1.8, -6.8)`; waterfall raycast-fitted (lip y 4.41). No dressing removed from greens. |
+| Visual | Clubhouse now sits behind the tee, clear of the cliff, pool and waterfall, and framed at the end of the lane from the cup. Old kit rocks are gone (sandstone stacks and boulders everywhere). The waterfall reads cleanly. |
+| Scene stats (LOD0 worst case) | **2,059k triangles (1,601k shadow-casting)**, up from 750k / 700k. Distant LODs should reduce what is drawn; VR timing will tell. |
+| Builds | PCVR 207 MB, desktop 204 MB, 0 errors |
+| PlayMode tests | **42/42 pass** (SteamVR closed) |
+| Desktop smoke test | PASS |
+| VR probe (`Tools\vr-probe.ps1`) | Pending: needs Andrew in the headset at 90 Hz, then 80 Hz |
