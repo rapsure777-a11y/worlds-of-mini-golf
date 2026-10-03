@@ -70,6 +70,10 @@ namespace Gamebreak.MiniGolf
         public event Action<CourseController> CourseFinished;
 
         public IPlayerMover Mover => playerMover as IPlayerMover;
+        public float AdvanceDelay { get => advanceDelay; set => advanceDelay = value; }
+        public bool StartOnAwake { get => startOnAwake; set => startOnAwake = value; }
+
+        Coroutine m_Advance;
 
         public void Configure(string name, HoleController[] holeList, GolfBall golfBall, MonoBehaviour mover)
         {
@@ -91,6 +95,7 @@ namespace Gamebreak.MiniGolf
 
         public void StartHole(int index, bool movePlayer)
         {
+            if (m_Advance != null) { StopCoroutine(m_Advance); m_Advance = null; }
             if (Current) Current.Completed -= OnHoleCompleted;
             CurrentIndex = index;
             var hole = Current;
@@ -117,12 +122,13 @@ namespace Gamebreak.MiniGolf
             Card.strokes[CurrentIndex] = hole.Strokes;
             HoleFinished?.Invoke(this, hole);
             ScorecardChanged?.Invoke(this);
-            StartCoroutine(AdvanceRoutine());
+            m_Advance = StartCoroutine(AdvanceRoutine());
         }
 
         IEnumerator AdvanceRoutine()
         {
             yield return new WaitForSeconds(advanceDelay);
+            m_Advance = null;
             if (CurrentIndex + 1 < holes.Length) NextHole();
             else
             {

@@ -1,0 +1,269 @@
+using System;
+using System.Collections;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
+
+namespace Gamebreak.MiniGolf.Tests
+{
+    /// <summary>Rules, scoring, progression and cup edge cases.</summary>
+    public class CourseTests
+    {
+        static IEnumerator WaitUntil(Func<bool> condition, float timeout)
+        {
+            float end = Time.time + timeout;
+            while (!condition() && Time.time < end) yield return new WaitForFixedUpdate();
+        }
+
+        static IEnumerator Steps(int n)
+        {
+            for (int i = 0; i < n; i++) yield return new WaitForFixedUpdate();
+        }
+
+        static Vector3 Toward(GolfBall ball, Vector3 target, float speed)
+        {
+            Vector3 d = target - ball.Position; d.y = 0f;
+            return d.normalized * speed;
+        }
+
+        [SetUp] public void SetUp() => Time.timeScale = 3f;
+        [TearDown] public void TearDown() => Time.timeScale = 1f;
+
+        /// <summary>Two straight holes side by side sharing one ball, run by a CourseController.</summary>
+        class TwoHoleCourse : IDisposable
+        {
+            public readonly GolfTuning tuning;
+            public readonly GolfBall ball;
+            public readonly CourseController course;
+            readonly GameObject m_Root;
+
+            public TwoHoleCourse()
+            {
+                tuning = ScriptableObject.CreateInstance<GolfTuning>();
+                GolfPhysicsBootstrap.Apply(tuning);
+                m_Root = new GameObject("TwoHoleCourse");
+                var ballGo = new GameObject("Ball");
+                ballGo.transform.SetParent(m_Root.transform);
+                ballGo.AddComponent<Rigidbody>();
+                ballGo.AddComponent<SphereCollider>();
+                ball = ballGo.AddComponent<GolfBall>();
+                ball.SetTuning(tuning);
+                var holes = new HoleController[2];
+                for (int i = 0; i < 2; i++)
+                {
+                    var l = new GreenLayout();
+                    l.Area(-0.6f, 0f, 1.2f, 4f);
+                    l.cup = new Vector2(0f, 2.5f);
+                    var def = new HoleDefinition { number = i + 1, name = "H" + (i + 1), par = 2 + i, layout = l, tee = new Vector2(0f, 0.5f), origin = new Vector3(i * 5f, 0f, 0f) };
+                    holes[i] = HoleFactory.Build(def, null, tuning, m_Root.transform, ball);
+                }
+                var go = new GameObject("Course");
+                go.transform.SetParent(m_Root.transform);
+                course = go.AddComponent<CourseController>();
+                course.StartOnAwake = false;
+                course.AdvanceDelay = 0.5f;
+                course.Configure("Test", holes, ball, null);
+                course.StartCourse();
+            }
+
+            public void Dispose()
+            {
+                Object.Destroy(m_Root);
+                Object.Destroy(tuning);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Course_RecordsScoresAndAdvances()
+        {
+            using var c = new TwoHoleCourse();
+            yield return Steps(5);
+            Assert.AreEqual(0, c.course.CurrentIndex);
+
+            // Hole 1: miss short, then hole out. 2 strokes.
+            c.ball.Strike(Toward(c.ball, c.course.Current.Cup.transform.position, 1.0f));
+            yield return Steps(1);
+            yield return WaitUntil(() => c.ball.IsAtRest, 8f);
+            Assert.IsFalse(c.course.Current.IsComplete);
+            c.ball.Strike(Toward(c.ball, c.course.Current.Cup.transform.position, 1.6f));
+            yield return WaitUntil(() => c.course.Current.IsComplete, 8f);
+            Assert.IsTrue(c.course.Current.IsComplete, "hole 1 not completed");
+            Assert.AreEqual(2, c.course.Card.strokes[0]);
+
+            // Advances to hole 2 and puts the ball on its tee.
+            yield return WaitUntil(() => c.course.CurrentIndex == 1, 3f);
+            Assert.AreEqual(1, c.course.CurrentIndex);
+            Assert.Less(Vector3.Distance(c.ball.Position, c.course.Current.TeePosition), 0.01f);
+            Assert.AreEqual(0, c.course.Current.Strokes);
+
+            // Hole 2: hole in one.
+            yield return Steps(3);
+            c.ball.Strike(Toward(c.ball, c.course.Current.Cup.transform.position, 1.9f));
+            yield return WaitUntil(() => c.course.Finished, 10f);
+            Assert.IsTrue(c.course.Finished, "course did not finish");
+            Assert.AreEqual(1, c.course.Card.strokes[1]);
+            Assert.AreEqual(3, c.course.Card.TotalStrokes);
+            Assert.AreEqual(5, c.course.Card.TotalParPlayed);
+        }
+
+        [UnityTest]
+        public IEnumerator RestartDuringAdvanceDelay_DoesNotSkipHole()
+        {
+            using var c = new TwoHoleCourse();
+            c.course.AdvanceDelay = 1.5f;
+            yield return Steps(5);
+            c.ball.Strike(Toward(c.ball, c.course.Current.Cup.transform.position, 1.9f));
+            yield return WaitUntil(() => c.course.Current.IsComplete, 8f);
+            c.course.RestartHole();
+            yield return new WaitForSeconds(2.5f);
+            Assert.AreEqual(0, c.course.CurrentIndex, "pending advance fired after restart");
+            Assert.IsFalse(c.course.Current.IsComplete);
+        }
+
+        [UnityTest]
+        public IEnumerator StrokeLimit_EndsHole()
+        {
+            using var c = new TwoHoleCourse();
+            c.tuning.strokeLimit = 2;
+            yield return Steps(5);
+            var hole = c.course.Current;
+            for (int i = 0; i < 2; i++)
+            {
+                c.ball.Strike(new Vector3(0.3f, 0f, -0.1f)); // away from the cup
+                yield return Steps(1);
+                yield return WaitUntil(() => c.ball.IsAtRest || hole.IsComplete, 6f);
+            }
+            Assert.IsTrue(hole.IsComplete, "hole should end at the stroke limit");
+            Assert.AreEqual(2, c.course.Card.strokes[0]);
+        }
+
+        [UnityTest]
+        public IEnumerator PlayerReset_ReturnsBallWithoutPenalty()
+        {
+            using var c = new TwoHoleCourse();
+            yield return Steps(5);
+            var hole = c.course.Current;
+            Vector3 tee = c.ball.Position;
+            c.ball.Strike(new Vector3(0f, 0f, 0.8f));
+            yield return Steps(10);
+            hole.RequestReset(); // while still rolling: back to the last rest spot (the tee)
+            yield return Steps(3);
+            Assert.Less(Vector3.Distance(c.ball.Position, tee), 0.01f);
+            Assert.AreEqual(1, hole.Strokes);
+            Assert.IsTrue(c.ball.InPlay);
+        }
+
+        [UnityTest]
+        public IEnumerator SlowBallAtCupEdge_Drops()
+        {
+            using var c = new TwoHoleCourse();
+            yield return Steps(5);
+            var hole = c.course.Current;
+            Vector3 cup = hole.Cup.transform.position;
+            // Off-centre by 3 cm, dying speed: should catch the edge and fall in.
+            c.ball.PlaceAt(new Vector3(cup.x + 0.03f, c.ball.Position.y, cup.z - 0.4f));
+            yield return Steps(3);
+            c.ball.Strike(new Vector3(0f, 0f, 0.75f));
+            yield return WaitUntil(() => hole.IsComplete || (c.ball.IsAtRest && c.ball.Position.z > cup.z - 0.39f), 6f);
+            Assert.IsTrue(hole.IsComplete, $"edge putt did not drop, ball at {c.ball.Position - cup}");
+        }
+
+        [UnityTest]
+        public IEnumerator GlancingFastBall_LipsOut()
+        {
+            using var c = new TwoHoleCourse();
+            yield return Steps(5);
+            var hole = c.course.Current;
+            Vector3 cup = hole.Cup.transform.position;
+            c.ball.PlaceAt(new Vector3(cup.x + 0.045f, c.ball.Position.y, cup.z - 0.6f));
+            yield return Steps(3);
+            c.ball.Strike(new Vector3(0f, 0f, 2.6f));
+            yield return WaitUntil(() => hole.IsComplete || c.ball.Position.z > cup.z + 0.4f, 4f);
+            Assert.IsFalse(hole.IsComplete, "fast glancing ball should not drop");
+        }
+
+        [UnityTest]
+        public IEnumerator AngledRailHit_ReflectsAngle()
+        {
+            using var bed = new TestBed(Flat(), new Vector2(0f, 1f));
+            yield return Steps(5);
+            // 45 degrees into the +X rail.
+            var v = new Vector3(1.5f, 0f, 1.5f);
+            float impact = 0f;
+            bed.ball.HitWall += (b, s) => impact = s;
+            bed.ball.Strike(v);
+            yield return WaitUntil(() => impact > 0f, 3f);
+            yield return Steps(1);
+            Vector3 after = bed.ball.Velocity;
+            float angleOut = Vector3.SignedAngle(Vector3.forward, new Vector3(after.x, 0f, after.z), Vector3.up);
+            Debug.Log($"[Test] 45° rail hit: out {after:F2}, angle {angleOut:F1}, impact {impact:F2}");
+            Assert.Less(after.x, 0f, "x should reverse");
+            Assert.Greater(after.z, 0f, "z should continue");
+            // Restitution 0.72 on the normal and 0.94 on the tangent => about -37° off the rail.
+            Assert.That(angleOut, Is.InRange(-45f, -30f));
+        }
+
+        [UnityTest]
+        public IEnumerator BallOnRampClimbsAndRollsBack()
+        {
+            var l = Flat();
+            l.height = (x, z) => Slopes.RampZ(z, 2f, 3f, 0f, 0.15f);
+            using var bed = new TestBed(l, new Vector2(0f, 1f));
+            yield return Steps(5);
+            bed.ball.Strike(new Vector3(0f, 0f, 1.3f)); // not enough to crest 15 cm
+            float maxZ = 0f;
+            float end = Time.time + 6f;
+            while (Time.time < end && !(bed.ball.IsAtRest && maxZ > 2f))
+            {
+                maxZ = Mathf.Max(maxZ, bed.ball.Position.z);
+                yield return new WaitForFixedUpdate();
+            }
+            Debug.Log($"[Test] ramp: max z {maxZ:F2}, rest z {bed.ball.Position.z:F2}");
+            Assert.Greater(maxZ, 2.1f, "ball should climb onto the ramp");
+            Assert.Less(maxZ, 3f, "ball should not crest the ramp");
+            Assert.Less(bed.ball.Position.z, 2.05f, "ball should roll back down");
+        }
+
+        static GreenLayout Flat()
+        {
+            var l = new GreenLayout();
+            l.Area(-0.6f, 0f, 1.2f, 6f);
+            return l;
+        }
+    }
+
+    /// <summary>Loads the generated Tropical scene and plays it, catching wiring errors.</summary>
+    public class SceneIntegrationTests
+    {
+        [UnityTest]
+        public IEnumerator TropicalScene_LoadsAndHoleOneIsPlayable()
+        {
+            Time.timeScale = 3f;
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            yield return null;
+            var course = Object.FindFirstObjectByType<CourseController>();
+            Assert.IsNotNull(course, "no CourseController in scene");
+            Assert.AreEqual(0, course.CurrentIndex, "course did not start on hole 1");
+            var hole = course.Current;
+            var ball = hole.Ball;
+            Assert.IsNotNull(hole.Cup);
+            Assert.Less(Vector3.Distance(ball.Position, hole.TeePosition), 0.02f, "ball not on tee");
+            var rig = Object.FindFirstObjectByType<VRRig>();
+            Assert.IsNotNull(rig);
+            Assert.IsNotNull(rig.Putter);
+
+            for (int i = 0; i < 10; i++) yield return new WaitForFixedUpdate();
+            Vector3 d = hole.Cup.transform.position - ball.Position; d.y = 0f;
+            // Speed chosen to reach the cup over the rise with some pace left.
+            ball.Strike(d.normalized * 3.2f);
+            float end = Time.time + 12f;
+            while (!hole.IsComplete && Time.time < end) yield return new WaitForFixedUpdate();
+            Assert.IsTrue(hole.IsComplete, $"hole 1 not holed, ball at {ball.Position}, cup {hole.Cup.transform.position}");
+            Assert.AreEqual(1, course.Card.strokes[0]);
+            Time.timeScale = 1f;
+        }
+    }
+}
