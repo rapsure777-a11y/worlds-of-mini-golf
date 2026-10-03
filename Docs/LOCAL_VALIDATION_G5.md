@@ -68,3 +68,8 @@ Fix: wind is now 0 by default. Only `Hero_Bark` (0.04; palm trunks carry a baked
 | PlayMode tests | **42/42 pass** (SteamVR closed) |
 | Desktop smoke test | PASS |
 | VR probe (`Tools\vr-probe.ps1`) | Pending: needs Andrew in the headset at 90 Hz, then 80 Hz |
+
+## VR frame-cost probe (round 2 build, rich preset, 90 Hz)
+- **Run 1** (`Docs/perf/probe_rich90.txt`): every stage, including hiding **all** scenery and rendering at 0.7 scale, held about 89% full-rate frames and 10% half-rate. **Scene content is not what causes the half-rate frames.**
+- **Run 2** (`Docs/perf/probe_rich90_run2.txt`): after restarting SteamVR (the stream had dropped to "waiting"), **half-rate frames went to 0%** at every stage. But the vrlink stream logged 60–120 `THROTTLE EVENT`s per minute (versus 1–5 per minute in earlier sessions), each stalling about 300 ms. That corrupts the per-stage comparison; this run shows link instability, not scene cost.
+- **Conclusion so far:** the half-rate pattern seen all day comes from SteamVR or streaming state, not the game; a fresh SteamVR session removed it. Confirm with a normal play session once the wireless link is stable. The probe's MSAA stages are desktop-only (changing MSAA while XR runs breaks URP).
