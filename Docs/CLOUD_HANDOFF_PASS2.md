@@ -1,6 +1,6 @@
 # Cloud handoff: Worlds of Mini Golf, Graphical Pass 2
 
-**Status of this branch: UNVERIFIED work in progress.** It compiles in the Unity editor. Nothing on it has been seen in a rendered scene, run through the test suite, built or played.
+**Status of this branch: UNVERIFIED work in progress.** The original WIP compiled in the Unity editor. Section G (cloud integration pass, `cloud/graphical-pass-2-integration`) completed the scene integration **by static inspection only: nothing has been compiled, rendered, tested, built or played.** Local verification is required before anything is trusted.
 
 | | |
 |---|---|
@@ -251,11 +251,11 @@ public class HeroKit {
 | Shaders | Written; Unity parsed them at import. GPU variant compilation, SPI stereo and visual correctness are **untested** |
 | HeroKit / LeafAtlas / foliage generators | Written, compiles, **never run** |
 | IslandGen splat | Written, compiles, **off by default, never run** |
-| Scene integration (SceneBuilder/TropicalWorld) | **Not started** |
-| Waterfall feature | **Not started** (shader + materials only) |
-| URP/HDR/post-processing changes | **Not started** |
-| Runtime quality presets | **Not started** |
-| Docs: ASSETS.md, asset-generation workflow, before/after checkpoint | **Not started** |
+| Scene integration (SceneBuilder/TropicalWorld) | **Written in cloud pass (G); never compiled** |
+| Waterfall feature | **Written in cloud pass (G); never rendered** |
+| URP/HDR/post-processing changes | **Written in cloud pass (G); never rendered** |
+| Runtime quality presets | **Written in cloud pass (G); never run** |
+| Docs: ASSETS.md, asset-generation workflow, before/after checkpoint | ASSETS.md + workflow + Universal Modder docs done; **before/after checkpoint needs a local render** |
 
 ---
 
@@ -445,6 +445,92 @@ The editor menu has the same entry points: `Gamebreak/Setup/Configure Project fo
 - No multiplayer, no other worlds.
 
 ---
+
+## G. Cloud integration pass (branch `cloud/graphical-pass-2-integration`)
+
+Written 2026-10-03 by Cloud Claude with **no Unity, Blender, GPU or headset available** (checked: no `unity`, `Unity.exe`, `blender`, `dotnet` or `mono` on the cloud image). The only automated check run was a tree-sitter C# **syntax** parse of every script under `Assets/_Game/Scripts` (42 files, 0 parse errors). That proves nothing about types, APIs, shader compilation or visuals. **Compilation status: UNKNOWN. Tests: NOT RUN (the 41/41 baseline is still only on `main`). Screenshots, builds, benchmarks: NONE.**
+
+### G1. Files changed
+| File | Change |
+|---|---|
+| `Scripts/Runtime/Rendering/QualityPreset.cs` (new) | Runtime presets Lean / Balanced / Rich |
+| `Scripts/Runtime/Gamebreak.MiniGolf.asmdef` | + `Unity.RenderPipelines.Universal.Runtime`, `...Core.Runtime` references |
+| `Scripts/Runtime/Debug/SessionLog.cs` | one line: logs the active quality preset |
+| `Art/Shaders/StylizedWater.shader` | `_GB_WATER_DEPTH` keyword; no-depth fallback path |
+| `Art/Shaders/Mist.shader` (new) | soft-particle mist (replaces hand-configured URP particle material) |
+| `Scripts/Editor/ProjectSetup.cs` | `EnsureQualityAssets()`: creates `PC_Lean_RPAsset`, `PC_Rich_RPAsset`; `PC_RPAsset` becomes Balanced |
+| `Scripts/Editor/SceneBuilder.cs` | builds `HeroKit`; `theme.green = Hero_Turf`, `theme.wall = Hero_Rail`; post Volume + generated `TropicalPostProfile.asset`; adds `QualityPreset` |
+| `Scripts/Editor/Art/TropicalWorld.cs` | new `Build(kit, hero, defs, parent)`; splat terrain with `Hero_Terrain`; Hole 1 rewritten; waterfall/pool/mist; sea arch |
+| `Scripts/Editor/Art/Dresser.cs` | `Hero` field; `Leaf()`, `Model()`, `PlaceMesh()` helpers (`Place` now delegates) |
+| `Scripts/Editor/Art/IslandGen.cs` | `basins` (carved pools), splat handling for basins |
+| `Scripts/Editor/Art/HeroKit.cs` | Mist on the new shader; turf bump 0.5 / smoothness 0.08; clearer error messages |
+| `Scripts/Editor/Automation.cs`, `Tools/art-shots.ps1`, `Tools/benchmark.ps1` | quality selection for captures and benchmarks |
+| `Docs/*`, `ASSETS.md`, `DEVELOPMENT_LOG.md`, `PROJECT_CONTEXT.md` | documentation |
+
+No gameplay, input, XR or test files were touched (the Steam Frame profile and the 41 tests are unchanged).
+
+### G2. Implementation details
+**Presets** (`ProjectSetup.ApplyLevel`, MSAA 4x and render scale 1 in all):
+
+| | Lean | Balanced (default) | Rich |
+|---|---|---|---|
+| Shadow distance / cascades | 25 m / 2 | 30 m / 3 | 40 m / 4 |
+| Soft shadows | Low | Low | Medium |
+| URP depth + opaque texture | off | **on** | on |
+| HDR | off | off | **on** |
+| Post (Neutral tonemap, grade, bloom 1/4 res, 4 iterations) | off | off | **on** |
+| Water | baked-shore fallback | real depth/refraction | real depth/refraction |
+
+Select with `-quality lean|balanced|rich`, PlayerPrefs `gb.quality`, or **F9** (desktop). `QualityPreset` swaps `QualitySettings.renderPipeline`, sets the camera's `renderPostProcessing`, enables/disables the Volume and sets the global keyword `_GB_WATER_DEPTH`. Lean reproduces the pre-Pass-2 settings. Costly features arrive one tier at a time so each can be benchmarked on its own.
+
+**Terrain:** `IslandGen.splat = true`, `Hero_Terrain` (TerrainSplat). Pool basin gets a sandy bed.
+
+**Course:** `Hero_Turf` (UV scale 1.2, bump 0.5, low smoothness) and `Hero_Rail` (wood).
+
+**Hole 1 composition** (`DressHole1`; hole-local x across the lane, + = sea side; z down the lane):
+- Clubhouse `HeroTikiClubhouse` at (-5.6, -1.8), front toward the tee, collider on, no OutOfBoundsSurface.
+- Palms `HeroPalm_0/1/2`: four on the beach leaning seaward, three inland leaning away from the lane. `PalmLeanSign` in `TropicalWorld` flips the lean if the FBX arrives mirrored. Palms still elsewhere on the island and on Hole 2 are the old kit palms (tri budget).
+- `HeroCliffWall` at (-9.5, -2.5), scale 0.85, yaw -90 (model front -Z toward +x). `HeroMesa_0/1` behind it at (-15.5, 3) and (-13.5, -7.5). `HeroBoulders_*` flank the pool and the sea side. `HeroSeaArch` seated on the seabed in the lagoon (searches for depth below -0.6 m, then plants the legs).
+- Wall, boulders: colliders + `OutOfBoundsSurface`. Mesas, arch, palms: no colliders.
+- **Waterfall** (`BuildWaterfall`): rays are cast from the lane side into the wall's MeshColliders to find the lip and a smoothed surface line, then a 28-row ribbon (`Hero_Waterfall`, shadows off) hugs it. If the wall is not hit, a flat fallback sheet is used and a warning is logged.
+- **Pool:** carved basin (r 2.0 m, 0.8 m deep) at (-7.4, 1.0); water disc at the lowest rim height minus 6 cm with `Hero_PoolWater` (vertex R = baked depth/2.2 m for the fallback).
+- **Mist:** one ParticleSystem, 14/s, max 40, 0.6-1.5 m billboards, local space, `Hero_Mist`.
+- **Layered jungle** (all `Hero_Leaves` cards, seeded): ground cover/dune tufts, staggered flowering shrubs, bananas/big leaves, ferns, big shoulder foliage. Nothing but ground cover inside |x| < 1.2.
+- Keep-outs registered first for clubhouse, cliff volume, pool and mesas so scatter and `DressIsland` stay out.
+
+**Post profile:** `Worlds/Tropical/TropicalPostProfile.asset`, regenerated each scene build (Neutral tonemapping, bloom threshold 1.1 / intensity 0.22, +10 contrast, +14 saturation, +8 temperature). Deliberately no SSAO, DoF, motion blur, vignette or grain.
+
+### G3. Problems encountered
+- No Unity/Blender/GPU in the cloud image, so nothing could be compiled or rendered. Everything below is inference from source.
+- The handoff placed the cliff wall at local (-9.5, 2). Hole 2 occupies roughly local x -5…-10, z 5.4…9.6 (derived from the hole origins/yaws), so a 16 m wall centred at z = 2 would overlap Hole 2's green and `RemoveObstructions` would delete it. The wall was moved to z = -2.5 and scaled to 0.85 (z -9.3…4.3). The old clubhouse spot (-4.4, -1.6) overlapped the barrel/crates, so it moved to (-5.6, -1.8).
+- The Blender-to-Unity axis mapping could not be checked. Orientation assumptions: model -Z is the front (clubhouse, cliff wall); palm lean is toward model +X.
+- The handoff's mist material (URP particle shader configured by hand) was judged fragile, so a small custom shader replaced it.
+
+### G4. Not done / incomplete
+- Compilation, tests, screenshots, builds, benchmark, headset: none (see above).
+- `Docs/CHECKPOINT_HOLE1_PASS2.md` (before/after) needs real renders.
+- No LODs for hero palms; not placed island-wide for that reason. No alpha-to-coverage on leaves. No lantern/torch light sources; no turntable gallery capture.
+- Hole 2 and the island scatter keep the old kit dressing (Pass 2 is Hole 1 only).
+- Waterfall has no splash ring/foam mesh beyond the shader's plunge foam and the mist.
+
+### G5. Exact local validation (Windows, repo root, in this order)
+1. Compile: `& $unity -batchmode -nographics -quit -projectPath . -logFile Logs\compile.log`, then search for `error CS` and `Shader error`. Expect to fix a few API/typo errors; likeliest places: `SceneBuilder.BuildPostProfile` (URP 17 volume API names), `ProjectSetup.ApplyLevel`, `TropicalWorld.BuildWaterfall` (ParticleSystem modules), shader compile (`TerrainSplat`, `RockTriplanar`, `Waterfall`, `Mist`, `StylizedWater` with and without `_GB_WATER_DEPTH`).
+2. Regenerate + capture: `powershell -File Tools\art-shots.ps1 -Quality balanced` (then `rich`, `lean`). Read `Logs\art.log` for `[Gamebreak] Waterfall:` (must say "raycast-fitted"), `Removed dressing` warnings, and any exceptions (HeroKit missing texture/model).
+3. Look at the shots against `Docs/checkpoints/hole1/*.jpg`. Checklist is in section C7 (pink materials, FBX orientation/scale, clubhouse front toward the tee, palm lean direction, leaf cut-outs, triplanar stretching, splat seams, waterfall hugging the cliff, pool level against its banks, sea arch seated).
+4. Tests: `powershell -File Tools\run-tests.ps1` (all 41; `TropicalScene_NoSceneryOnGreens` is the likely canary).
+5. Build both players, `Tools\smoke-test.ps1`, then benchmark each tier: `Tools\benchmark.ps1 -Label after_pass2_lean -Quality lean`, `... balanced`, `... rich`. Compare with `Docs/perf/benchmark_before_pass2.txt` (1.65 ms median).
+6. Headset only with Andrew's agreement (never launch the PCVR build with SteamVR running without asking). Check `Sessions\session_*.txt` for the preset line and dropped-frame counts. Try Balanced first, then Rich.
+
+### G6. Expected visual improvements (unverified predictions)
+Splat-blended sand/lawn/rock/path terrain with normal-mapped detail instead of a palette gradient; PBR wood turf-edge rails; a modelled tiki clubhouse with thatch, totems, lanterns and a 3D sign; large-frond palms; a terraced sandstone cliff with a waterfall, plunge pool and mist as the lane's backdrop, mesas on the skyline and a sea arch in the lagoon; layered leaf-card jungle in depth; real depth-tinted, refracting lagoon water with intersection foam (Balanced/Rich); Rich adds neutral tonemapping, a saturation/contrast grade and soft bloom.
+
+### G7. Rendering and performance risks
+- **GPU cost is unmeasured.** Balanced adds a depth copy and an opaque-texture copy (with 4x MSAA these resolve per eye); Rich adds an HDR colour buffer, 4 cascades and bloom. The previous template-style mix cost about 5 ms and dropped SteamVR to 60 Hz. Benchmark each tier; if Balanced alone breaks 120 Hz, either accept 90 Hz or give the water its own cheaper path (e.g. depth only).
+- Alpha-tested foliage (overdraw, MSAA shimmer; no alpha-to-coverage) and TerrainSplat/RockTriplanar (about 15 and 6-9 texture samples per pixel). Check with the frame debugger; reduce `_Tiling`, drop rock triplanar to 2 axes, or lower foliage counts.
+- Hero palm triangle count is unknown (about 18-20 fronds x up to 16 segments each); see `Logs/scene-stats.txt` before using them more widely.
+- Lean-vs-Balanced water differ visibly; the fallback is only an approximation.
+- Runtime URP-asset swapping in an XR session is unproven; if it misbehaves, set the preset only at launch (it is applied in `Awake`) or build one player per preset.
+- Static batching merges hero meshes; check that wind sway on batched leaves still looks right.
 
 ## Executive summary for ChatGPT HQ
 

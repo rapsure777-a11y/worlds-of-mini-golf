@@ -98,6 +98,8 @@ Art is generated in code so it is original, versioned and easy to vary:
 4. **Safety**: obstruction scan removes scenery on greens; test `TropicalScene_NoSceneryOnGreens`.
 5. **Review**: `powershell -File Tools\art-shots.ps1` rebuilds the world and renders review screenshots + `Logs/scene-stats.txt`.
 
+6. **Pass 2 hero layer (unverified):** Blender scripts (`Tools/Blender`) bake PBR textures and hero models into `Art/Generated`; `HeroKit` makes materials, leaf-card foliage and places models by name suffix; `IslandGen.splat` feeds `TerrainSplat`; Hole 1 has a waterfall/pool/mist. `QualityPreset` (Lean/Balanced/Rich) swaps URP assets at runtime. See `Docs/ASSET_WORKFLOW.md` and `Docs/CLOUD_RETURN_REPORT.md`.
+
 A new world = a new palette + kit generator variations + its own `*World` dressing class; golf code is untouched. Blender (5.2 installed) and Universal Modder (needs `FAL_KEY`) are reserved for hero pieces. Licences in `ASSETS.md`.
 
 ## Rules
