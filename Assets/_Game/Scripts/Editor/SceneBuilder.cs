@@ -100,6 +100,8 @@ namespace Gamebreak.MiniGolf.Editor
                 AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(ProjectSetup.BalancedAssetPath),
                 AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(ProjectSetup.RichAssetPath),
                 QualityLevel.Balanced, cam, volume);
+            // Ablation probe for VR frame cost (starts only with -probe or F10 in a built player; see FrameCostProbe).
+            new GameObject("FrameCostProbe").AddComponent<FrameCostProbe>();
             // Light, small marker for the free hand (a dark 5 cm sphere read as a "black ball" in VR).
             var left = MakeHand("LeftHand", offset, theme.ball);
             var right = MakeHand("RightHand", offset, theme.ball);

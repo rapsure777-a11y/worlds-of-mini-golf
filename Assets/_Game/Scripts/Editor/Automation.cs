@@ -118,6 +118,7 @@ namespace Gamebreak.MiniGolf.Editor
             {
                 var mf = r.GetComponent<MeshFilter>();
                 if (!mf || !mf.sharedMesh || !r.enabled) continue;
+                if (r.name.StartsWith("LOD")) continue; // simplified LOD children (HeroKit rock LODs): count LOD0 only, i.e. worst case at close range
                 renderers++;
                 if (GameObjectUtility.AreStaticEditorFlagsSet(r.gameObject, StaticEditorFlags.BatchingStatic)) staticRenderers++;
                 var m = mf.sharedMesh;

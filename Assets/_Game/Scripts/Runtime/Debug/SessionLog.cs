@@ -159,9 +159,17 @@ namespace Gamebreak.MiniGolf
             if (m_FrameMs.Count < 10) return;
             W($"FRAMES n={m_FrameMs.Count} delta {Pct(m_FrameMs)}  over-budget {m_Hitches}");
             if (m_CpuMs.Count > 0) W($"  CPU main thread {Pct(m_CpuMs)}");
-            if (m_GpuMs.Count > 0) W($"  GPU (Unity timer) {Pct(m_GpuMs)}");
+            if (m_GpuMs.Count > 0) W($"  GPU (Unity timer; NOT valid in VR, tracks the frame interval) {Pct(m_GpuMs)}");
             if (m_AppGpuMs.Count > 0) W($"  GPU (runtime, app) {Pct(m_AppGpuMs)}");
             if (m_CompGpuMs.Count > 0) W($"  GPU (runtime, compositor) {Pct(m_CompGpuMs)}");
+            float hzNow = RefreshRate();
+            if (hzNow > 1f)
+            {
+                // Pacing at the refresh rate the runtime reports: share of frames delivered at full rate vs half rate (reprojection/ASW territory).
+                float budgetNow = 1000f / hzNow; int fullRate = 0, halfRate = 0;
+                foreach (float f in m_FrameMs) { if (f <= budgetNow * 1.15f) fullRate++; else if (f <= budgetNow * 2.3f) halfRate++; }
+                W($"  pacing at {hzNow:F0} Hz: full rate {100f * fullRate / m_FrameMs.Count:F0}%  half rate {100f * halfRate / m_FrameMs.Count:F0}%  worse {100f * (m_FrameMs.Count - fullRate - halfRate) / m_FrameMs.Count:F0}%  (preset {QualityPreset.CurrentName})");
+            }
             W($"  render: eye {XRSettings.eyeTextureWidth}x{XRSettings.eyeTextureHeight} scale {XRSettings.eyeTextureResolutionScale:F2}");
             var sb = new StringBuilder("  refresh rate seen:");
             foreach (var kv in m_RefreshHist) sb.Append($" {kv.Key} Hz x{kv.Value}");

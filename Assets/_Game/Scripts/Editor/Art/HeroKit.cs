@@ -229,8 +229,94 @@ namespace Gamebreak.MiniGolf.Editor.Art
             return dot >= 0 ? s.Substring(0, dot) : s;
         }
 
+        // ------------------------------------------------------------------ LODs
+
+        readonly Dictionary<string, Mesh> m_RockLods = new Dictionary<string, Mesh>();
+
+        /// <summary>Triangle fraction kept by LOD1 and LOD2 of a rock model (vertex clustering, see MeshLod).</summary>
+        public static readonly float[] LodKeep = { 1f, 0.22f, 0.06f };
+
+        /// <summary>Source mesh of a hero FBX (first mesh sub-asset).</summary>
+        static Mesh SourceMesh(string model)
+        {
+            foreach (var o in AssetDatabase.LoadAllAssetRepresentationsAtPath($"{ModelDir}/{model}.fbx"))
+                if (o is Mesh m) return m;
+            return null;
+        }
+
+        /// <summary>Simplified copy of a rock model's mesh, saved as Kit/Meshes/HeroLod_{model}_{level}.asset (level 1 or 2).</summary>
+        public Mesh RockLod(string model, int level)
+        {
+            string key = $"{model}_{level}";
+            if (m_RockLods.TryGetValue(key, out var cached)) return cached;
+            var src = SourceMesh(model);
+            if (!src) return null;
+            var mesh = MeshLod.Cluster(src, Mathf.Max(200, Mathf.RoundToInt(src.triangles.Length / 3 * LodKeep[level])), $"HeroLod_{key}");
+            string path = $"{MeshDir}/HeroLod_{key}.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (existing)
+            {
+                existing.Clear();
+                EditorUtility.CopySerialized(mesh, existing);
+                Object.DestroyImmediate(mesh);
+                mesh = existing;
+            }
+            else AssetDatabase.CreateAsset(mesh, path);
+            m_RockLods[key] = mesh;
+            return mesh;
+        }
+
+        /// <summary>
+        /// Gives every Rock renderer under <paramref name="go"/> two simplified LODs and culls it when tiny. Thresholds are
+        /// screen-relative heights (LOD0 while above <paramref name="t0"/>, LOD1 above t1, LOD2 above t2, culled below t2).
+        /// </summary>
+        void AddRockLods(GameObject go, string model, float t0, float t1, float t2, bool shadows)
+        {
+            var lod1 = RockLod(model, 1); var lod2 = RockLod(model, 2);
+            if (!lod1 || !lod2) return;
+            var rocks = new List<MeshRenderer>();
+            foreach (var r in go.GetComponentsInChildren<MeshRenderer>())
+                if (m_BySuffix.TryGetValue(Suffix(r.gameObject.name) != "" ? Suffix(r.gameObject.name) : Suffix(r.GetComponent<MeshFilter>().sharedMesh.name), out var m) && m == Rock)
+                    rocks.Add(r);
+            if (rocks.Count != 1) { if (rocks.Count > 1) Debug.LogWarning($"[Gamebreak] {model}: {rocks.Count} rock renderers, LODs skipped."); return; }
+            MeshRenderer Child(Mesh mesh, string name, bool cast)
+            {
+                var c = new GameObject(name);
+                c.transform.SetParent(rocks[0].transform, false);
+                c.AddComponent<MeshFilter>().sharedMesh = mesh;
+                var r = c.AddComponent<MeshRenderer>();
+                r.sharedMaterial = Rock;
+                r.shadowCastingMode = cast ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                r.lightProbeUsage = LightProbeUsage.Off;
+                r.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                return r;
+            }
+            var l1 = Child(lod1, "LOD1", shadows);
+            var l2 = Child(lod2, "LOD2", false);
+            var group = go.AddComponent<LODGroup>();
+            group.fadeMode = LODFadeMode.None;
+            group.SetLODs(new[]
+            {
+                new LOD(t0, new Renderer[] { rocks[0] }), new LOD(t1, new Renderer[] { l1 }), new LOD(t2, new Renderer[] { l2 }),
+            });
+            group.RecalculateBounds();
+        }
+
+        /// <summary>Single-LOD group that only culls the object once it is smaller than <paramref name="screenHeight"/> of the screen.</summary>
+        public static void AddCull(GameObject go, float screenHeight)
+        {
+            var renderers = go.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return;
+            var group = go.AddComponent<LODGroup>();
+            group.fadeMode = LODFadeMode.None;
+            group.SetLODs(new[] { new LOD(screenHeight, renderers) });
+            group.RecalculateBounds();
+        }
+
+        /// <param name="lods">Add rock LODs (LOD thresholds scale with <paramref name="lodScale"/>; lower keeps detail further out).</param>
+        /// <param name="colliderLod">0 = full mesh collider, 1/2 = collider from the simplified rock mesh (cheaper physics for far scenery).</param>
         public GameObject Instantiate(string model, Transform parent, Vector3 pos, float yaw, float scale = 1f,
-            bool colliders = false, bool outOfBounds = false, bool shadows = true)
+            bool colliders = false, bool outOfBounds = false, bool shadows = true, bool lods = false, float lodScale = 1f, int colliderLod = 0)
         {
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelDir}/{model}.fbx")
                         ?? throw new FileNotFoundException($"Missing generated model {model}. Regenerate with the scripts in Tools/Blender (see Docs/CLOUD_HANDOFF_PASS2.md, section B1).");
@@ -257,10 +343,11 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 if (colliders && suffix != "Leaves" && suffix != "Lantern")
                 {
                     var mc = r.gameObject.AddComponent<MeshCollider>();
-                    mc.sharedMesh = r.GetComponent<MeshFilter>().sharedMesh;
+                    mc.sharedMesh = colliderLod > 0 && suffix == "Rock" ? RockLod(model, colliderLod) ?? r.GetComponent<MeshFilter>().sharedMesh : r.GetComponent<MeshFilter>().sharedMesh;
                     if (outOfBounds) r.gameObject.AddComponent<OutOfBoundsSurface>();
                 }
             }
+            if (lods) AddRockLods(go, model, 0.12f * lodScale, 0.04f * lodScale, 0.012f * lodScale, shadows);
             foreach (var t in go.GetComponentsInChildren<Transform>())
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic);
             return go;
