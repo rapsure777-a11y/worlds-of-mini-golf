@@ -28,13 +28,13 @@ namespace Gamebreak.MiniGolf
         const float SettleSeconds = 3f, MeasureSeconds = 12f;
         static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
-        struct Stage { public string name; public Action apply; }
+        struct Stage { public string name; public bool desktopOnly; public Action apply; }
 
         UniversalRenderPipelineAsset m_Asset;
         float m_Shadow, m_Scale; int m_Msaa; bool m_Depth, m_Opaque, m_Hdr;
         readonly List<Renderer> m_Hidden = new List<Renderer>();
         readonly List<(Renderer r, ShadowCastingMode mode)> m_ShadowOff = new List<(Renderer, ShadowCastingMode)>();
-        bool m_Running;
+        bool m_Running, m_Xr;
 
         void Start()
         {
@@ -55,6 +55,7 @@ namespace Gamebreak.MiniGolf
             yield return new WaitForSecondsRealtime(delay);
             m_Asset = UniversalRenderPipeline.asset;
             if (!m_Asset) { Debug.LogWarning("[Probe] No URP asset."); m_Running = false; yield break; }
+            m_Xr = XRSettings.isDeviceActive;
             m_Shadow = m_Asset.shadowDistance; m_Scale = m_Asset.renderScale; m_Msaa = m_Asset.msaaSampleCount;
             m_Depth = m_Asset.supportsCameraDepthTexture; m_Opaque = m_Asset.supportsCameraOpaqueTexture; m_Hdr = m_Asset.supportsHDR;
 
@@ -63,9 +64,11 @@ namespace Gamebreak.MiniGolf
                 new Stage { name = "baseline", apply = () => { } },
                 new Stage { name = "shadows off (distance 0.1 m)", apply = () => m_Asset.shadowDistance = 0.1f },
                 new Stage { name = "terrain does not cast shadows", apply = () => SetShadows(new[] { "IslandTerrain" }, false) },
-                new Stage { name = "MSAA off", apply = () => m_Asset.msaaSampleCount = 1 },
-                new Stage { name = "MSAA 2x", apply = () => m_Asset.msaaSampleCount = 2 },
-                new Stage { name = "render scale 0.7", apply = () => m_Asset.renderScale = 0.7f },
+                // MSAA cannot change while XR is running (URP throws and the camera data breaks), so those stages are desktop only.
+                new Stage { name = "MSAA off", desktopOnly = true, apply = () => m_Asset.msaaSampleCount = 1 },
+                new Stage { name = "MSAA 2x", desktopOnly = true, apply = () => m_Asset.msaaSampleCount = 2 },
+                // In XR, scale the rendered viewport (no texture reallocation) instead of the URP render scale.
+                new Stage { name = "render scale 0.7", apply = () => { if (m_Xr) XRSettings.renderViewportScale = 0.7f; else m_Asset.renderScale = 0.7f; } },
                 new Stage { name = "no depth/opaque copies (water fallback)", apply = () => { m_Asset.supportsCameraDepthTexture = false; m_Asset.supportsCameraOpaqueTexture = false; QualityPreset.SetWaterDepth(false); } },
                 new Stage { name = "hide leaf cards (alpha-tested foliage)", apply = () => Hide(r => HasMat(r, "Hero_Leaves") || HasMat(r, "Kit_Foliage")) },
                 new Stage { name = "hide hero rocks", apply = () => Hide(r => HasMat(r, "Hero_Rock")) },
@@ -80,8 +83,15 @@ namespace Gamebreak.MiniGolf
             sb.AppendLine($"{"stage",-52} {"interval med",12} {"p95",8} {"full-rate",10} {"half-rate",10}  frames");
             foreach (var st in stages)
             {
+                if (st.desktopOnly && m_Xr) { sb.AppendLine($"{st.name,-52} (skipped in XR)"); continue; }
                 Restore();
-                st.apply();
+                try { st.apply(); }
+                catch (Exception e)
+                {
+                    sb.AppendLine($"{st.name,-52} (failed: {e.GetType().Name})");
+                    Debug.LogWarning($"[Probe] stage '{st.name}' failed: {e.Message}");
+                    continue;
+                }
                 yield return new WaitForSecondsRealtime(SettleSeconds);
                 var ms = new List<float>();
                 float end = Time.realtimeSinceStartup + MeasureSeconds;
@@ -138,7 +148,9 @@ namespace Gamebreak.MiniGolf
             foreach (var (r, mode) in m_ShadowOff) if (r) r.shadowCastingMode = mode;
             m_ShadowOff.Clear();
             if (!m_Asset) return;
-            m_Asset.shadowDistance = m_Shadow; m_Asset.renderScale = m_Scale; m_Asset.msaaSampleCount = m_Msaa;
+            m_Asset.shadowDistance = m_Shadow; m_Asset.renderScale = m_Scale;
+            if (!m_Xr && m_Asset.msaaSampleCount != m_Msaa) m_Asset.msaaSampleCount = m_Msaa;
+            if (m_Xr) XRSettings.renderViewportScale = 1f;
             m_Asset.supportsCameraDepthTexture = m_Depth; m_Asset.supportsCameraOpaqueTexture = m_Opaque; m_Asset.supportsHDR = m_Hdr;
             QualityPreset.SetWaterDepth(QualityPreset.Current != QualityLevel.Lean);
         }
