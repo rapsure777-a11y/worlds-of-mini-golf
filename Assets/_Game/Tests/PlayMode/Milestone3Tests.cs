@@ -179,7 +179,7 @@ namespace Gamebreak.MiniGolf.Tests
             public readonly GreenLayout layout;
             readonly GameObject m_Root;
 
-            public Hole3Bed()
+            public Hole3Bed(int number = 3)
             {
                 tuning = ScriptableObject.CreateInstance<GolfTuning>();
                 GolfPhysicsBootstrap.Apply(tuning);
@@ -190,9 +190,9 @@ namespace Gamebreak.MiniGolf.Tests
                 ballGo.AddComponent<SphereCollider>();
                 ball = ballGo.AddComponent<GolfBall>();
                 ball.SetTuning(tuning);
-                var src = Hole3();
+                var src = TropicalCourse.Holes().Find(h => h.number == number);
                 layout = src.layout;
-                var def = new HoleDefinition { number = 3, name = src.name, par = src.par, layout = src.layout, tee = src.tee, origin = Vector3.zero, yaw = 0f, cluster = src.cluster };
+                var def = new HoleDefinition { number = number, name = src.name, par = src.par, layout = src.layout, tee = src.tee, origin = Vector3.zero, yaw = 0f, cluster = src.cluster };
                 hole = HoleFactory.Build(def, null, tuning, m_Root.transform, ball);
                 hole.BeginHole(ball);
             }
@@ -426,6 +426,150 @@ namespace Gamebreak.MiniGolf.Tests
             c.PressButton(1);
             Assert.AreEqual(0, course.CurrentIndex);
             Assert.IsFalse(course.Finished);
+        }
+
+        // ------------------------------------------------------------------ Hole 4 ("Hollow Drop")
+
+        static HoleDefinition Hole4() => TropicalCourse.Holes().Find(h => h.number == 4);
+
+        [Test]
+        public void Hole4_IsAParFourOnTheJungleIsland_WithAConnectedLane()
+        {
+            var def = Hole4();
+            Assert.IsNotNull(def, "hole 4 is not defined");
+            Assert.AreEqual(4, def.par);
+            Assert.AreEqual(TropicalCourse.JungleCluster, def.cluster);
+            Assert.AreEqual(TropicalCourse.Holes().Find(h => h.number == 3).cluster, def.cluster, "holes 3 and 4 share an island");
+            Assert.IsTrue(Connected(def.layout, def.tee, def.layout.cup.Value, out _), "tee and cup are not connected by playable surface");
+            Assert.AreEqual(0, def.layout.deckAreas.Count, "hole 4 has no bridge");
+        }
+
+        [Test]
+        public void Hole4_LaneHeightHasNoCliffs_AndDropAndClimbAreModest()
+        {
+            var l = Hole4().layout;
+            float maxStep = 0f;
+            for (float x = -1.2f; x < 4.6f; x += 0.1f)
+            for (float z = 0.05f; z < 14f; z += 0.1f)
+            {
+                float h = l.Height(x, z);
+                maxStep = Mathf.Max(maxStep, Mathf.Abs(l.Height(x + 0.1f, z) - h), Mathf.Abs(l.Height(x, z + 0.1f) - h));
+            }
+            Assert.Less(maxStep, 0.04f, $"height jump of {maxStep:F3} m between neighbouring cells");
+            float drop = l.Height(4.0f, 5.0f) - l.Height(4.0f, 9.0f), climb = l.Height(-0.6f, 13.0f) - l.Height(-0.6f, 11.0f);
+            Assert.That(drop, Is.InRange(0.15f, 0.30f), "the drop should be a visible but gentle step");
+            Assert.That(climb, Is.InRange(0.07f, 0.14f), "the climb to the cup should be a short, modest rise");
+        }
+
+        [UnityTest]
+        public IEnumerator Hole4_BallRollsDownTheDrop_AndStaysInPlay()
+        {
+            using var b = new Hole3Bed(4);
+            yield return Steps(5);
+            b.ball.PlaceAt(b.Surface(4.0f, 5.5f));
+            yield return Steps(5);
+            b.ball.Strike(new Vector3(0f, 0f, 1.6f));
+            yield return WaitUntil(() => b.ball.Position.z > 9.0f, 6f);
+            Assert.Greater(b.ball.Position.z, 9.0f, $"ball did not roll down into the basin, at {b.ball.Position}");
+            Assert.AreEqual(1, b.hole.Strokes, "the drop should not cost a penalty");
+            Assert.IsTrue(b.ball.InPlay);
+        }
+
+        [UnityTest]
+        public IEnumerator Hole4_SoftPuttRollsBackDownTheClimb_WithoutLeavingTheCourse()
+        {
+            using var b = new Hole3Bed(4);
+            yield return Steps(5);
+            b.ball.PlaceAt(b.Surface(-0.6f, 11.0f));
+            yield return Steps(5);
+            b.ball.Strike(new Vector3(0f, 0f, 0.7f)); // too soft to top the climb
+            yield return Steps(3);
+            yield return WaitUntil(() => b.ball.IsAtRest, 8f);
+            yield return Steps(20);
+            Assert.AreEqual(1, b.hole.Strokes, "a soft putt must not cost a penalty");
+            Assert.Less(b.ball.Position.z, 12.2f, "a 0.7 m/s putt should not top the climb");
+            Assert.IsTrue(b.ball.InPlay);
+        }
+
+        [UnityTest]
+        public IEnumerator Hole4_FirmPuttTopsTheClimb()
+        {
+            using var b = new Hole3Bed(4);
+            yield return Steps(5);
+            b.ball.PlaceAt(b.Surface(-0.6f, 10.9f));
+            yield return Steps(5);
+            b.ball.Strike(new Vector3(0f, 0f, 2.0f));
+            yield return WaitUntil(() => b.ball.Position.z > 12.5f || b.hole.IsComplete, 6f);
+            Assert.IsTrue(b.ball.Position.z > 12.5f || b.hole.IsComplete, $"a firm putt should top the climb, ball at {b.ball.Position}");
+            Assert.AreEqual(1, b.hole.Strokes);
+        }
+
+        [UnityTest]
+        public IEnumerator Hole4_Cup_CanBeHoled()
+        {
+            using var b = new Hole3Bed(4);
+            yield return Steps(5);
+            var cup = b.hole.Cup.transform.position;
+            b.ball.PlaceAt(new Vector3(cup.x, b.layout.Height(cup.x, cup.z - 0.4f) + b.ball.Radius + 0.002f, cup.z - 0.4f));
+            yield return Steps(5);
+            Vector3 d = cup - b.ball.Position; d.y = 0f;
+            b.ball.Strike(d.normalized * 1.1f);
+            yield return WaitUntil(() => b.hole.IsComplete, 8f);
+            Assert.IsTrue(b.hole.IsComplete, $"cup not holed, ball at {b.ball.Position}, cup {cup}");
+        }
+
+        // ------------------------------------------------------------------ score celebrations
+
+        [Test]
+        public void ScoreCelebration_TiersFollowScoreAgainstPar()
+        {
+            Assert.AreEqual(ScoreCelebration.Tier.HoleInOne, ScoreCelebration.TierFor(1, 3));
+            Assert.AreEqual(ScoreCelebration.Tier.HoleInOne, ScoreCelebration.TierFor(1, 2));
+            Assert.AreEqual(ScoreCelebration.Tier.Albatross, ScoreCelebration.TierFor(2, 5));
+            Assert.AreEqual(ScoreCelebration.Tier.Eagle, ScoreCelebration.TierFor(2, 4));
+            Assert.AreEqual(ScoreCelebration.Tier.Birdie, ScoreCelebration.TierFor(2, 3));
+            Assert.AreEqual(ScoreCelebration.Tier.Par, ScoreCelebration.TierFor(3, 3));
+            Assert.AreEqual(ScoreCelebration.Tier.Bogey, ScoreCelebration.TierFor(4, 3));
+            Assert.AreEqual(ScoreCelebration.Tier.None, ScoreCelebration.TierFor(0, 3));
+            Assert.AreEqual("BIRDIE!", ScoreCelebration.LabelFor(ScoreCelebration.Tier.Birdie, -1));
+            Assert.AreEqual("Double Bogey", ScoreCelebration.LabelFor(ScoreCelebration.Tier.Bogey, 2));
+        }
+
+        [UnityTest]
+        public IEnumerator ScoreCelebration_BirdieAndBetterBurst_ParSparkles_BogeyOnlyLabels()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            yield return null;
+            var sc = Object.FindFirstObjectByType<ScoreCelebration>();
+            Assert.IsNotNull(sc, "the scene has no ScoreCelebration");
+            var at = Object.FindFirstObjectByType<CourseController>().Current.Cup.transform.position;
+
+            sc.Celebrate(ScoreCelebration.Tier.HoleInOne, -2, at);
+            yield return null; yield return null;
+            Assert.AreEqual(ScoreCelebration.Tier.HoleInOne, sc.LastTier);
+            Assert.IsNotNull(sc.LastLabel);
+            Assert.IsNotNull(sc.LastBurst);
+            Assert.Greater(sc.LastBurst.particleCount, 100, "a hole in one should throw plenty of confetti");
+            int hio = sc.LastBurst.particleCount;
+
+            sc.Celebrate(ScoreCelebration.Tier.Birdie, -1, at);
+            yield return null; yield return null;
+            Assert.Greater(sc.LastBurst.particleCount, 20);
+            Assert.Less(sc.LastBurst.particleCount, hio, "a birdie is a smaller celebration than a hole in one");
+            Assert.AreEqual("BIRDIE!", sc.LastLabel.GetComponentInChildren<UnityEngine.UI.Text>().text);
+
+            var before = sc.LastBurst;
+            sc.Celebrate(ScoreCelebration.Tier.Bogey, 1, at); // quiet: a label but no new confetti
+            yield return null;
+            Assert.AreSame(before, sc.LastBurst, "bogey must not throw confetti");
+            Assert.AreEqual("Bogey", sc.LastLabel.GetComponentInChildren<UnityEngine.UI.Text>().text);
+
+            // The label cleans itself up.
+            var label = sc.LastLabel;
+            float end = Time.time + 4f;
+            while (label && Time.time < end) yield return null;
+            Assert.IsTrue(label == null, "the score label should disappear on its own");
         }
 
         // ------------------------------------------------------------------ area title card

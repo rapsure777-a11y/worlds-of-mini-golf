@@ -161,6 +161,17 @@ namespace Gamebreak.MiniGolf.Editor
             wrist.Configure(course, rig);
             var feedback = courseGo.AddComponent<GolfFeedback>();
             feedback.Configure(putter, ball, rig, course);
+            // Under-par celebrations (confetti, floating label, fanfare). Particles use a bright copy of the soft Mist material.
+            var mistSource = AssetDatabase.LoadAssetAtPath<Material>(Art.TropicalKit.Root + "/Materials/Hero_Mist.mat");
+            Material burstMat = null;
+            if (mistSource)
+            {
+                burstMat = new Material(mistSource) { name = "ScoreBurst" };
+                burstMat.SetColor("_BaseColor", new Color(1f, 1f, 1f, 1f));
+                burstMat.SetFloat("_SoftDistance", 0.1f);
+            }
+            else Debug.LogWarning("[Gamebreak] Hero_Mist material not found; score confetti will use the default particle material.");
+            courseGo.AddComponent<ScoreCelebration>().Configure(course, rig, burstMat);
             var overlay = courseGo.AddComponent<DebugOverlay>();
             overlay.Configure(course, rig);
             var sessionLog = courseGo.AddComponent<SessionLog>();

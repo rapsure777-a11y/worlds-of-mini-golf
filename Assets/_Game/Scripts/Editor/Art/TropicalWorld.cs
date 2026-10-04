@@ -112,6 +112,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
                     case 1: DressHole1(dresser, frames[i], defs[i]); break;
                     case 2: DressHole2(dresser, frames[i], defs[i]); break;
                     case 3: JungleIsland.DressHole3(jungleDresser, frames[i], defs[i]); break;
+                    case 4: JungleIsland.DressHole4(jungleDresser, frames[i], defs[i]); break;
                     default: Debug.LogWarning($"[Gamebreak] No dressing for hole {defs[i].number} yet."); break;
                 }
             }
@@ -330,6 +331,12 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var stackPos = bottomCrate.transform.position + Vector3.up * 0.607f;
             HeroProp(d, "Crate1", stackPos, 40f, 1f, false, root);
             HeroProp(d, "Barrel", f.L(2.3f, -3.0f), 70f, 0.9f, true, root); // the pier runs z -2.1..-0.7 from x 1.7: keep clear of the planks
+
+            // Tiki poles beside the tee and the cup, and carved masks on stakes along the lane (they face the tee).
+            Tiki(d, "HeroTikiPole_0", f.L(-2.8f, 0.9f), FaceStart(f.L(-2.8f, 0.9f)), root, 0.22f, 2.3f);
+            Tiki(d, "HeroTikiPole_1", f.L(2.7f, 7.4f), FaceStart(f.L(2.7f, 7.4f)), root, 0.2f, 1.7f);
+            Tiki(d, "HeroTikiMask_0", f.L(-1.9f, 3.3f), FaceStart(f.L(-1.9f, 3.3f)), root, 0.07f, 1.7f);
+            Tiki(d, "HeroTikiMask_0", f.L(1.9f, 5.8f), FaceStart(f.L(1.9f, 5.8f)), root, 0.07f, 1.7f);
 
             // Welcome / controls board and the hole sign.
             var signPos = f.L(-1.7f, -1.1f);
@@ -706,6 +713,35 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 d.Model($"HeroPalm_{v % 3}", f.L(x, z), f.Yaw(Dresser.Range(new System.Random(x.GetHashCode()), 0f, 360f)), 1f, sink: 0.06f, parent: root, cull: 0.006f);
             d.Torch(f.L(-1.05f, 0.6f));
             d.Torch(f.L(1.05f, 0.6f));
+
+            // Tiki poles framing the dogleg corner and the cup, masks along the first lane.
+            float Face(Vector3 p) => Quaternion.LookRotation((p - start).WithY(0f)).eulerAngles.y;
+            foreach (var (x, z, model, r, h) in new[]
+            {
+                (2.6f, 2.8f, "HeroTikiPole_0", 0.22f, 2.3f), (-2.7f, 2.2f, "HeroTikiPole_1", 0.2f, 1.7f),
+                (1.7f, 5.9f, "HeroTikiMask_0", 0.07f, 1.7f), (-4.2f, 5.9f, "HeroTikiMask_0", 0.07f, 1.7f),
+            })
+                Tiki(d, model, f.L(x, z), Face(f.L(x, z)), root, r, h);
+        }
+
+        /// <summary>
+        /// A Blender tiki pole or mask (HeroTikiPole_0/1, HeroTikiMask_0) with a slim capsule collider. Positions are hand-picked beside the
+        /// lanes (inside each hole's own clearance zone, so the random-cover check is not used); skipped with a warning only when the spot is
+        /// underwater, and the green-overlap safety net still removes any prop that lands on a lane.
+        /// </summary>
+        internal static void Tiki(Dresser d, string model, Vector3 pos, float faceYaw, Transform parent, float radius, float height)
+        {
+            if (!d.HasModel(model)) return;
+            if (d.Ground(pos.x, pos.z) < 0.15f)
+            {
+                Debug.LogWarning($"[Gamebreak] Tiki '{model}' skipped at {pos:F1}: ground is below water level.");
+                return;
+            }
+            // The FBX export (forward -Z, up Y) puts a Blender -Y front on Unity +Z, so turn the model half a circle to face the viewer.
+            var go = d.Model(model, pos, faceYaw + 180f, 1f, sink: 0.04f, parent: parent);
+            if (go == null) return;
+            var cap = go.AddComponent<CapsuleCollider>();
+            cap.radius = radius; cap.height = height; cap.center = new Vector3(0f, height * 0.5f, 0f);
         }
 
         /// <summary>General island cover away from the holes.</summary>

@@ -33,6 +33,7 @@ namespace Gamebreak.MiniGolf
                 Hole01(),
                 Hole02(),
                 Hole03(),
+                Hole04(),
             };
         }
 
@@ -40,7 +41,7 @@ namespace Gamebreak.MiniGolf
 
         /// <summary>
         /// The archipelago: island clusters with their holes, music and position. Holes 1-2 share the Starting Island,
-        /// Holes 3-4 the Jungle Island (Hole 4 arrives in the next checkpoint). Later clusters (Temple, Volcanic, Summit) are added here.
+        /// Holes 3-4 the Jungle Island. Later clusters (Temple, Volcanic, Summit) are added here.
         /// </summary>
         public static List<IslandCluster> Clusters()
         {
@@ -114,6 +115,40 @@ namespace Gamebreak.MiniGolf
 
         /// <summary>Ground height of the Hole 3 plateau on the Jungle Island.</summary>
         public const float JungleDeckHeight = 2.6f;
+
+        /// <summary>
+        /// Hole 4, "Hollow Drop" (par 4): the valley hole. A long S-shaped lane that drops 24 cm down a ramp (the ball picks up speed,
+        /// so the lane below needs a gentle touch), turns back across a low basin, and finishes up a short 10% climb onto a raised
+        /// cup. A putt that is too soft for the climb rolls back into the basin without penalty. After Hole 3's bridge and bank
+        /// shot this one is about pace. Local axes: x across the first lane, z along it.
+        /// </summary>
+        static HoleDefinition Hole04()
+        {
+            var l = new GreenLayout { wallHeight = 0.12f };
+            l.Area(-0.6f, 0f, 1.2f, 4.0f);       // A: tee lane, running +Z
+            l.Area(-0.6f, 4.0f, 5.2f, 1.2f);     // B: turn east, x -0.6..4.6
+            l.Area(3.4f, 5.2f, 1.2f, 4.0f);      // C: descent lane, running +Z
+            l.Area(-1.2f, 9.2f, 5.8f, 1.2f);     // D: low basin, turn back west
+            l.Area(-1.2f, 10.4f, 1.2f, 3.6f);    // E: final lane with the climb and the cup
+            l.cup = new Vector2(-0.6f, 13.0f);
+            l.height = (x, z) =>
+                Slopes.RampZ(z, 5.6f, 8.2f, 0f, -0.24f)            // the drop (about 9%)
+                + Slopes.RampZ(z, 11.4f, 12.4f, 0f, 0.10f);        // the climb to the cup (10%)
+            return new HoleDefinition
+            {
+                number = 4,
+                name = "Hollow Drop",
+                par = 4,
+                layout = l,
+                tee = new Vector2(0f, 0.6f),
+                origin = new Vector3(69f, Hole4Height, -80f),
+                yaw = 0f,
+                cluster = JungleCluster,
+            };
+        }
+
+        /// <summary>Ground height of the Hole 4 plateau on the Jungle Island.</summary>
+        public const float Hole4Height = 2.4f;
 
         /// <summary>
         /// Hole 2, "Palm Corner" (DRAFT greybox, pending HQ creative approval). A left-hand dogleg:

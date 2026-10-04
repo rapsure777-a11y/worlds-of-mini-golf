@@ -1,6 +1,8 @@
 # Worlds of Mini Golf
 
-Original Unity PCVR mini-golf game inspired by (not copied from) Walkabout Mini Golf. Read `PROJECT_CONTEXT.md` first, then `DEVELOPMENT_LOG.md` and `LOCAL_TASKS.md`. `HANDOFF.md` is the original bootstrap note (tooling install details).
+**Start with `RESUME.md`: it has the exact current state, what to ask Andrew first and what to build next.**
+
+Original Unity PCVR mini-golf game inspired by (not copied from) Walkabout Mini Golf. Read `PROJECT_CONTEXT.md` next, then `DEVELOPMENT_LOG.md` and `LOCAL_TASKS.md`. `HANDOFF.md` is the original bootstrap note (tooling install details).
 
 Rules that always apply:
 - Never put Walkabout code, assets or extracted game files in this repo. Probe outputs stay in the game folder. Art must be original or permissively licensed; log licences in `ASSETS.md`.

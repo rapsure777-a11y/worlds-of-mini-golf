@@ -38,11 +38,12 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 centre = f.L2(centre.x, centre.y), halfSize = half + new Vector2(3.5f, 3.5f), yaw = f.yaw,
                 height = baseY - 0.25f, feather = 10f, plateau = true,
             });
-            island.channels.Add(new IslandGen.Channel
-            {
-                a = f.L2(BridgeAxisX, -16f), b = f.L2(BridgeAxisX, 24f), halfWidth = RavineHalfWidth, depth = RavineDepth,
-                floorFraction = 0.35f, endTaper = 7f,
-            });
+            if (def.layout.deckAreas.Count > 0) // only holes with a bridge cut the ravine
+                island.channels.Add(new IslandGen.Channel
+                {
+                    a = f.L2(BridgeAxisX, -16f), b = f.L2(BridgeAxisX, 24f), halfWidth = RavineHalfWidth, depth = RavineDepth,
+                    floorFraction = 0.35f, endTaper = 7f,
+                });
             // Lane areas (not the deck, which floats over the ravine) sit on the ground at their own surface height.
             var layout = def.layout;
             float originY = def.origin.y;
@@ -159,6 +160,88 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // Oversized shoulder foliage close to the lanes' edges (just outside the clear margin).
             foreach (var (x, z) in new[] { (-2.2f, 0.5f), (-2.4f, 4.5f), (-2.0f, 7.5f), (11.8f, 4.0f), (11.6f, 9.0f), (4.0f, 8.6f), (6.8f, 8.4f), (3.2f, 1.6f), (7.2f, 1.6f) })
                 if (Free(x, z)) d.Leaf(rnd.NextDouble() < 0.5 ? "BigLeaf1" : "Banana0", f.L(x, z), Yaw360(), Dresser.Range(rnd, 1.2f, 1.6f), shadows: false, parent: root, cull: 0.009f);
+        }
+
+        // ------------------------------------------------------------------ hole 4
+
+        /// <summary>Hole 4 "Hollow Drop": a sunken basin ringed by jungle on the island's east side.</summary>
+        public static void DressHole4(Dresser d, HoleFrame f, HoleDefinition def)
+        {
+            var root = new GameObject("Hole04_Dressing").transform;
+            root.SetParent(d.Root, false);
+            var rnd = new System.Random(404);
+            Vector3 start = f.L(0f, -0.3f);
+            float FaceStart(Vector3 p) => Quaternion.LookRotation((p - start).WithY(0f)).eulerAngles.y;
+            float Yaw360() => Dresser.Range(rnd, 0f, 360f);
+
+            foreach (var r in def.layout.areas)
+                d.KeepOut(f.L2(r.center.x, r.center.y), r.size * 0.5f, f.yaw, 0.9f);
+            d.KeepOut(f.L2(-14f, 8f), new Vector2(3f, 3f), f.yaw, 0.5f);   // mesas
+            d.KeepOut(f.L2(18f, 12f), new Vector2(3f, 3f), f.yaw, 0.5f);
+            d.KeepOut(f.L2(4f, 28f), new Vector2(3f, 3f), f.yaw, 0.5f);
+
+            bool Free(float x, float z, float minH = 0.3f)
+            {
+                var p = f.L(x, z);
+                return d.IsFree(new Vector2(p.x, p.z)) && d.Ground(p.x, p.z) > minH;
+            }
+
+            var holeSignPos = f.L(1.7f, 0.9f);
+            var holeSign = d.Place("SignSmall", d.Kit.Solid, holeSignPos, FaceStart(holeSignPos), 1f, parent: root);
+            TropicalWorld.AddSignText(holeSign.transform, new Vector3(0f, 0.65f + 0.225f, -0.032f), new Vector2(0.76f, 0.42f),
+                $"<size=46><b>HOLE {def.number}</b></size>\n{def.name}  ·  Par {def.par}", 34);
+
+            // A tiki pole beside the tee and a mask above the basin's far end (the Starting Island's totems follow you to the jungle).
+            TropicalWorld.Tiki(d, "HeroTikiPole_1", f.L(-2.4f, 0.8f), FaceStart(f.L(-2.4f, 0.8f)), root, 0.2f, 1.7f);
+            TropicalWorld.Tiki(d, "HeroTikiMask_0", f.L(5.6f, 8.6f), FaceStart(f.L(5.6f, 8.6f)), root, 0.07f, 1.7f);
+
+            // Torches: the tee, the basin's two ends, and the final lane.
+            foreach (var (x, z) in new[] { (-1.2f, 1.6f), (1.2f, 1.6f), (-1.9f, 9.8f), (5.3f, 9.8f), (-2.0f, 13.2f), (0.8f, 13.2f) })
+                d.Torch(f.L(x, z));
+
+            bool haveTrees = d.HasModel("HeroJungleTree_0") && d.HasModel("HeroJungleTree_1");
+            var trees = new (float x, float z, int v, float s)[]
+            {
+                (-4.2f, 2.0f, 0, 1.0f), (-4.6f, 8.0f, 1, 1.1f), (7.0f, 1.5f, 1, 1.0f), (7.6f, 7.5f, 0, 1.1f), (7.0f, 13.0f, 1, 0.95f),
+                (-4.4f, 13.5f, 0, 1.0f), (1.5f, 17.5f, 1, 1.0f), (2.0f, -4.0f, 0, 1.0f), (9.5f, 4.0f, 1, 1.1f), (4.0f, 16.0f, 0, 0.9f),
+            };
+            foreach (var t in trees)
+            {
+                var p = f.L(t.x, t.z);
+                if (!d.IsFree(new Vector2(p.x, p.z)) || d.Ground(p.x, p.z) < 0.3f) continue;
+                if (haveTrees) d.Model($"HeroJungleTree_{t.v}", p, Yaw360(), t.s, sink: 0.25f, parent: root, cull: 0.005f, seat: true, seatExtraSink: 0.3f);
+                else d.Model($"HeroPalm_{t.v}", p, Yaw360(), 1.5f * t.s, sink: 0.06f, parent: root, cull: 0.005f);
+            }
+
+            // Boulders on the rim of the basin and the mesas on the skyline.
+            foreach (var (x, z, k) in new[] { (3.0f, 2.2f, "medium"), (-2.6f, 7.0f, "medium"), (6.2f, 5.5f, "large"), (2.2f, 12.6f, "medium"), (6.0f, 11.5f, "small") })
+                if (Free(x, z, 0.0f)) d.Rock(k, f.L(x, z), Yaw360(), k == "large" ? 0.7f : Dresser.Range(rnd, 0.8f, 1.2f), root, collider: true, outOfBounds: true, variant: rnd.Next(0, 2));
+            d.Model("HeroMesa_0", f.L(-14f, 8f), f.Yaw(70f), 1.0f, sink: 0.5f, shadows: false, parent: root, seat: true, lods: true, seatExtraSink: 0.4f);
+            d.Model("HeroMesa_1", f.L(18f, 12f), f.Yaw(200f), 1.1f, sink: 0.5f, shadows: false, parent: root, seat: true, lods: true, seatExtraSink: 0.4f);
+            d.Model("HeroMesa_0", f.L(4f, 28f), f.Yaw(300f), 0.9f, sink: 0.5f, shadows: false, parent: root, seat: true, lods: true, seatExtraSink: 0.4f);
+
+            // Layered rainforest floor, same recipe as Hole 3.
+            string[] shrubs = { "LeafBush0", "FlowerShrub0", "LeafBush1", "FlowerShrub1", "LeafBush2", "FlowerShrub2" };
+            for (int i = 0; i < 100; i++)
+            {
+                float x = Dresser.Range(rnd, -8f, 12f), z = Dresser.Range(rnd, -6f, 20f);
+                if (!Free(x, z)) continue;
+                string m = rnd.NextDouble() < 0.45 ? "Fern0" : $"GrassClump{rnd.Next(0, 2)}";
+                d.Leaf(m, f.L(x, z), Yaw360(), Dresser.Range(rnd, 0.9f, 1.7f), shadows: false, parent: root, cull: 0.014f);
+            }
+            for (int i = 0; i < 60; i++)
+            {
+                float x = Dresser.Range(rnd, -9f, 13f), z = Dresser.Range(rnd, -7f, 21f);
+                if (!Free(x, z)) continue;
+                d.Leaf(shrubs[rnd.Next(0, shrubs.Length)], f.L(x, z), Yaw360(), Dresser.Range(rnd, 1.2f, 2.0f), shadows: false, parent: root);
+            }
+            string[] tall = { "Banana0", "BigLeaf1", "BigLeaf0", "Banana0", "BigLeaf1" };
+            for (int i = 0; i < 40; i++)
+            {
+                float x = Dresser.Range(rnd, -9f, 14f), z = Dresser.Range(rnd, -7f, 22f);
+                if (!Free(x, z)) continue;
+                d.Leaf(tall[i % tall.Length], f.L(x, z), Yaw360(), Dresser.Range(rnd, 1.2f, 1.9f), shadows: false, parent: root, cull: 0.009f);
+            }
         }
 
         // ------------------------------------------------------------------ bridge supports

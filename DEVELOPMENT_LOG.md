@@ -120,3 +120,11 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - **"No sound" was a saved setting:** both volumes had been saved at 0 after the putter snapped the sliders to the left end. Reset, and the relative drag prevents a repeat. Separate user-side issue: two streaming sessions on the PC glitched the headset audio.
 - **Course plan (Andrew):** two holes per zone for zones 1-4 (Starting, Jungle, Temple, Volcanic), then one long finale hole in the Summit zone: 9 holes. Hole 4 (second Jungle hole) is next.
 - **Known flaky test:** `Swing_StrikesBallAlongFace` occasionally fails when run alone (timing-dependent); passes in the full suite.
+
+## 2026-10-04: Hole 4, score celebrations, tiki props (editor-verified; headset pending)
+
+- **Hole 4 "Hollow Drop" (par 4, Jungle Island east side):** S-shaped lane, 24 cm drop ramp, low basin, 10% climb to a raised cup; soft putts roll back without penalty. `TropicalCourse.Hole04`, `JungleIsland.DressHole4`; the ravine is now only cut for holes with a bridge. Tests: layout, no cliffs, drop, soft roll-back, firm putt tops the climb, holing out; the course-progression test plays 4 holes.
+- **`ScoreCelebration`:** tiers from `TierFor(strokes, par)`: hole in one / albatross / eagle / birdie (confetti + label + fanfare + haptics), par (small sparkle), bogey or worse (quiet label). Particles use a bright copy of `Hero_Mist`. Tests: tier mapping, burst sizes, label content and cleanup.
+- **Tiki props:** `Tools/Blender/hero_tiki.py` -> `HeroTikiPole_0/1`, `HeroTikiMask_0` (original work). Placed on holes 1, 2 and 4 via `TropicalWorld.Tiki` (capsule colliders, turned 180 degrees because of the FBX axis mapping).
+- **Course plan recorded:** 9 holes in five zones (2+2+2+2+1); see `RESUME.md`.
+- Tests: 78/78 at the last full run. Both players rebuilt.

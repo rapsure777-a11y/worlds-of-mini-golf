@@ -441,7 +441,7 @@ namespace Gamebreak.MiniGolf.Tests
                 Vector3 cup = hole.Cup.transform.position;
                 Vector3 back = hole.TeePosition - cup; back.y = 0f;
                 if (h == 1) back = Vector3.right; // dogleg: approach along the cross lane
-                if (h == 2) back = hole.transform.TransformDirection(Vector3.back); // Jungle Crossing: the cup sits at the end of a lane running along local +z
+                if (h >= 2) back = hole.transform.TransformDirection(Vector3.back); // Jungle holes: the cup sits at the end of a lane running along local +z
                 Vector3 start = cup + back.normalized * 0.4f;
                 start.y = cup.y + ball.Radius + 0.002f;
                 ball.PlaceAt(start);
