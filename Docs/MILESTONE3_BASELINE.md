@@ -48,3 +48,29 @@ Read first: **`Docs/MILESTONE3_BRIEF.md` (the HQ brief: hole designs, cluster pl
 6. Headset session with Andrew (rich, 90 Hz).
 
 Mark each checkpoint commit so it can be validated as a batch (e.g. "M3 checkpoint 1: Jungle Island + Hole 3").
+
+## Update: cluster music is already implemented (Local Claude, `8ac0042`)
+All five Tropical tracks are in. Do **not** build a second music system; extend this one.
+
+**What exists:**
+- `WorldTheme.musicClusters`: an array of `MusicCluster { name, firstHole, lastHole, clip }`, with `MusicCluster.For(clusters, hole)`.
+- Tropical clusters are set in `SceneBuilder.BuildTropicalScene` (Starting 1–2, Jungle 3–4, Temple 5–6, Volcanic 7–8, Summit 9). To regroup holes, change only those ranges.
+- `MusicPlayer` (`Runtime/Feedback`):
+  - two 2D sources;
+  - follows `CourseController.HoleStarted`;
+  - no restart within a cluster;
+  - 3 s crossfade into a new cluster;
+  - 2.5 s tail-to-start loop crossfade;
+  - a missing clip keeps the current music and logs a warning;
+  - `Volume` property, default 0.55.
+- Tests in `Tests/PlayMode/MusicTests.cs`.
+
+**Still open for Cloud Claude** (brief section 9, item 7): independent **music and sound-effects volume controls**. That means:
+- a settings store, such as PlayerPrefs;
+- `MusicPlayer.Volume`;
+- a level applied to `GolfFeedback`'s sources;
+- a way to change them in VR and on desktop.
+
+Keep golf code changes minimal.
+
+**Holes 3–9 don't exist yet.** The music switches when a hole numbered 3 or higher starts, so it will work as soon as the holes are added to `TropicalCourse`.
