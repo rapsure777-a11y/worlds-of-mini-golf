@@ -50,3 +50,6 @@ Tools/**/obj/
 # Python bytecode (Blender tool scripts)
 __pycache__/
 *.pyc
+
+# Music WAV masters (kept locally; manifest in Audio/Masters/README.md)
+/Audio/Masters/*.wav

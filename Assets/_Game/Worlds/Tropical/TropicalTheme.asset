@@ -34,3 +34,24 @@ MonoBehaviour:
   teleportLine: {fileID: 2100000, guid: 8ffdf4e10e8e34d498658d5a9908488f, type: 2}
   music: {fileID: 8300000, guid: 254f78c0a5175424986eb4aa5b12ca82, type: 3}
   musicVolume: 0.55
+  musicClusters:
+  - name: Starting Island
+    firstHole: 1
+    lastHole: 2
+    clip: {fileID: 8300000, guid: 254f78c0a5175424986eb4aa5b12ca82, type: 3}
+  - name: Jungle Island
+    firstHole: 3
+    lastHole: 4
+    clip: {fileID: 8300000, guid: 8d2592bf29811b24fa879327b5072360, type: 3}
+  - name: Temple Island
+    firstHole: 5
+    lastHole: 6
+    clip: {fileID: 8300000, guid: e5646b900c8ec8b4cba697a8044bd638, type: 3}
+  - name: Volcanic Island
+    firstHole: 7
+    lastHole: 8
+    clip: {fileID: 8300000, guid: a6a9ba6aa2c7a7d49862429b49ab0552, type: 3}
+  - name: Summit Sanctuary
+    firstHole: 9
+    lastHole: 9
+    clip: {fileID: 8300000, guid: 8d3a837d168ea0443a2c4de64770f975, type: 3}
