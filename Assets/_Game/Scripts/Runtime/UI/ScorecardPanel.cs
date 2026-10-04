@@ -6,7 +6,7 @@ namespace Gamebreak.MiniGolf
     /// <summary>Scorecard grid (hole / par / score per hole plus total). The rig toggles it and keeps it in front of the player.</summary>
     public class ScorecardPanel : MonoBehaviour
     {
-        const float Width = 1000f, Height = 580f, LabelW = 130f, TotalW = 110f, RowH = 62f, Top = 90f;
+        const float Width = 1000f, Height = 690f, LabelW = 130f, TotalW = 110f, RowH = 62f, Top = 90f;
 
         [SerializeField] CourseController course;
 

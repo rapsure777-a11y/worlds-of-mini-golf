@@ -407,12 +407,15 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 mb.With(Matrix4x4.Translate(new Vector3(x, 0f, 0.04f)), () =>
                     mb.Lathe(new[] { new Vector2(0.06f, 0f), new Vector2(0.055f, postHeight + height), new Vector2(0f, postHeight + height + 0.06f) }, 7,
                         t => Palette.UV(R.Trunk, 0.45f), t => solid));
-            int planks = Mathf.Max(2, Mathf.RoundToInt(height / 0.16f));
-            for (int i = 0; i < planks; i++)
-            {
-                float y = postHeight + (i + 0.5f) * height / planks;
-                mb.Box(new Vector3(0f, y, 0f), new Vector3(width, height / planks - 0.012f, 0.05f), Palette.UV(R.Wood, i % 2 == 0 ? 0.55f : 0.65f), solid);
-            }
+            // One solid face (text is laid over it, so no plank seams to run through the lettering) with a slightly raised frame.
+            float cy = postHeight + height * 0.5f;
+            mb.Box(new Vector3(0f, cy, 0f), new Vector3(width, height, 0.05f), Palette.UV(R.Wood, 0.68f), solid);
+            float f = 0.035f;
+            var frame = Palette.UV(R.Wood, 0.4f);
+            mb.Box(new Vector3(0f, postHeight + f * 0.5f, 0f), new Vector3(width, f, 0.06f), frame, solid);
+            mb.Box(new Vector3(0f, postHeight + height - f * 0.5f, 0f), new Vector3(width, f, 0.06f), frame, solid);
+            mb.Box(new Vector3(-width * 0.5f + f * 0.5f, cy, 0f), new Vector3(f, height, 0.06f), frame, solid);
+            mb.Box(new Vector3(width * 0.5f - f * 0.5f, cy, 0f), new Vector3(f, height, 0.06f), frame, solid);
             return mb.ToMesh($"Signboard_{width:F1}x{height:F1}");
         }
 

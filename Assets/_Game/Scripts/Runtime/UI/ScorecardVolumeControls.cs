@@ -15,7 +15,7 @@ namespace Gamebreak.MiniGolf
         /// <summary>Layout in canvas units, measured from the card's top-left corner (1000 units = 1 m).</summary>
         public const float CanvasWidth = 1000f, TrackLeft = 250f, TrackRight = 810f, RowHeight = 50f;
         public static readonly float[] RowTop = { 408f, 474f };
-        const float TouchDepth = 80f, DragDepth = 160f, HoverMargin = 28f;
+        const float TouchDepth = 160f, DragDepth = 320f, HoverMargin = 45f;
         const float PinDistance = 0.5f;
 
         [SerializeField] VRRig rig;
@@ -30,6 +30,13 @@ namespace Gamebreak.MiniGolf
         float m_BaseLevel = 0.55f;
         AudioClip m_Blip;
         Transform m_DragHand;
+        Putter m_Putter;
+        bool m_ClubCall;
+        const float ClubDwell = 0.3f, ClubPressDwell = 0.7f;
+        float m_ClubSlide, m_ClubOffset, m_ClubBtn;
+        int m_ClubBtnIndex = -1;
+        Image m_Cursor;
+        float m_CursorSeen = -10f;
 
         public int DraggingRow => m_Drag;
 
@@ -68,7 +75,11 @@ namespace Gamebreak.MiniGolf
                 m_Value[r].alignment = TextAnchor.MiddleLeft;
             }
             var hint = WorldText.CreateCell(canvas, "SettingsHint", new Rect(0f, RowTop[1] + RowHeight + 6f, CanvasWidth, 36f), 24, new Color(0.15f, 0.12f, 0.1f, 0.6f));
-            hint.text = "Touch a slider with your controller and hold the trigger to drag";
+            hint.text = "Slide with your putter, or reach a slider and hold the trigger";
+            BuildButtons(canvas);
+            m_Cursor = Bar(canvas, "Cursor", new Rect(0f, 0f, 26f, 26f), new Color(0.12f, 0.55f, 0.75f, 0.8f));
+            ((RectTransform)m_Cursor.transform).pivot = new Vector2(0.5f, 0.5f);
+            m_Cursor.enabled = false;
             Refresh();
         }
 
@@ -114,20 +125,44 @@ namespace Gamebreak.MiniGolf
         {
             if (!rig || !rig.XRActive || m_Canvas == null) return;
             bool pin = false, touching = false;
-            Touch(rig.DominantHand, ref pin, ref touching);
+            // The putter head works as a big, obvious pointer: resting it on a slider drags it (no trigger needed), and resting it
+            // on a restart button for 0.7 s presses it (Restart Course still asks for a second press).
+            bool clubTouch = false;
+            if (!m_Putter) m_Putter = FindFirstObjectByType<Putter>();
+            if (m_Putter)
+            {
+                Vector3 club = m_Putter.HeadPosition;
+                if (Vector3.Distance(club, m_Canvas.position) < PinDistance) pin = true;
+                UpdateCursor(club);
+                clubTouch = ProcessClub(club, rig.DominantHand);
+                if (clubTouch) touching = true;
+            }
+            if (!clubTouch) Touch(rig.DominantHand, ref pin, ref touching);
             Touch(rig.OffHand, ref pin, ref touching);
             if (!touching && m_Drag >= 0) EndDrag();
+            if (m_ConfirmUntil > 0f && Time.unscaledTime >= m_ConfirmUntil) { m_ConfirmUntil = 0f; RefreshButtons(); }
             rig.ScorecardPinned = pin;
         }
 
         void Touch(Transform hand, ref bool pin, ref bool touching)
         {
             if (!hand) return;
+            // The controller pose axis differs between runtimes, so use whichever of "grip point" and "8 cm ahead of it" is nearer the card.
             Vector3 tip = hand.position + hand.forward * 0.08f;
+            if (Mathf.Abs(m_Canvas.InverseTransformPoint(hand.position).z) < Mathf.Abs(m_Canvas.InverseTransformPoint(tip).z)) tip = hand.position;
             if (Vector3.Distance(tip, m_Canvas.position) < PinDistance) pin = true;
+            UpdateCursor(tip);
             // While dragging only the dragging hand counts, so the other hand cannot steal the slider.
             if (m_Drag >= 0 && hand != m_DragHand) return;
             if (ProcessTouch(tip, rig.IsTriggerPressed(hand), hand)) touching = true;
+        }
+
+        /// <summary>Feeds the putter head's world position (call once per frame). Sliders engage after a short hold and then follow relatively.</summary>
+        public bool ProcessClub(Vector3 headWorld, Transform hand = null)
+        {
+            m_ClubCall = true;
+            try { return ProcessTouch(headWorld, true, hand); }
+            finally { m_ClubCall = false; }
         }
 
         /// <summary>
@@ -148,7 +183,11 @@ namespace Gamebreak.MiniGolf
                     float margin = dragging ? 60f : HoverMargin;
                     bool inY = cy > RowTop[r] - margin && cy < RowTop[r] + RowHeight + margin;
                     bool inX = cx > TrackLeft - 40f && cx < TrackRight + 40f;
-                    if (dragging ? r == m_Drag && inY : inY && inX) { row = r; break; }
+                    if (dragging ? r == m_Drag && inY : inY && inX)
+                    {
+                        // Margins can overlap between the rows: take the row whose centre is nearest.
+                        if (row < 0 || Mathf.Abs(cy - (RowTop[r] + RowHeight * 0.5f)) < Mathf.Abs(cy - (RowTop[row] + RowHeight * 0.5f))) row = r;
+                    }
                 }
             // Hover belongs to the hand that started it, so the idle hand cannot clear it.
             if (row >= 0 && row != m_Hover)
@@ -162,11 +201,25 @@ namespace Gamebreak.MiniGolf
                 m_Hover = -1; m_HoverHand = null;
                 UpdateHandles();
             }
-            if (row < 0) return false;
+            // Only the club's own calls may reset its hold timer (the idle hand is processed every frame too).
+            if (row < 0 && !dragging) { if (m_ClubCall) m_ClubSlide = 0f; return ButtonTouch(cx, local.z, cy, trigger, hand); }
+            if (row < 0) { if (m_ClubCall) m_ClubSlide = 0f; return false; }
             if (!trigger) { if (dragging) EndDrag(); return true; }
-            if (!dragging) { m_Drag = row; m_DragHand = hand; m_LastStep = -1f; }
-            SetFraction(row, Fraction(cx));
-            float step = Mathf.Round(Fraction(cx) * 20f);
+            if (!dragging)
+            {
+                // The putter head only engages after a short hold, then moves the knob relative to where it already was, so
+                // brushing a slider from the side can never throw it to 0% or 100%.
+                if (m_ClubCall)
+                {
+                    m_ClubSlide += Time.unscaledDeltaTime;
+                    if (m_ClubSlide < ClubDwell) return true;
+                    m_ClubOffset = GetFraction(row) - Fraction(cx);
+                }
+                m_Drag = row; m_DragHand = hand; m_LastStep = -1f;
+            }
+            float frac = Mathf.Clamp01(Fraction(cx) + (m_ClubCall ? m_ClubOffset : 0f));
+            SetFraction(row, frac);
+            float step = Mathf.Round(frac * 20f);
             if (!Mathf.Approximately(step, m_LastStep))
             {
                 m_LastStep = step;
@@ -175,10 +228,99 @@ namespace Gamebreak.MiniGolf
             return true;
         }
 
+        // ------------------------------------------------------------------ restart buttons
+
+        /// <summary>Button layout in canvas units: Restart Hole (left) and Restart Course (right).</summary>
+        public const float ButtonTop = 588f, ButtonHeight = 76f;
+        public static readonly Rect HoleButton = new Rect(40f, ButtonTop, 430f, ButtonHeight), CourseButton = new Rect(530f, ButtonTop, 430f, ButtonHeight);
+        readonly Image[] m_ButtonBg = new Image[2];
+        readonly Text[] m_ButtonText = new Text[2];
+        int m_ButtonHover = -1;
+        bool m_ButtonLatched;
+        float m_ConfirmUntil;
+
+        void BuildButtons(Transform canvas)
+        {
+            string[] names = { "Restart Hole", "Restart Course" };
+            var rects = new[] { HoleButton, CourseButton };
+            for (int b = 0; b < 2; b++)
+            {
+                m_ButtonBg[b] = Bar(canvas, "Button" + b, rects[b], new Color(0.15f, 0.12f, 0.1f, 0.18f));
+                m_ButtonText[b] = WorldText.CreateCell(canvas, "ButtonText" + b, rects[b], 36, new Color(0.15f, 0.12f, 0.1f));
+                m_ButtonText[b].fontStyle = FontStyle.Bold;
+                m_ButtonText[b].text = names[b];
+            }
+        }
+
+        static bool Inside(Rect r, float cx, float cy, float margin) =>
+            cx > r.xMin - margin && cx < r.xMax + margin && cy > r.yMin - margin && cy < r.yMax + margin;
+
+        /// <summary>Fingertip over a restart button? Returns true while touching one; a trigger pull presses it once.</summary>
+        bool ButtonTouch(float cx, float localZ, float cy, bool trigger, Transform hand)
+        {
+            int b = -1;
+            if (Mathf.Abs(localZ) < TouchDepth)
+                b = Inside(HoleButton, cx, cy, 30f) ? 0 : Inside(CourseButton, cx, cy, 30f) ? 1 : -1;
+            if (b != m_ButtonHover)
+            {
+                m_ButtonHover = b;
+                if (b >= 0 && hand && rig) rig.HapticFor(hand, 0.2f, 0.02f);
+                RefreshButtons();
+            }
+            if (m_ClubCall)
+            {
+                // The putter head presses a button by resting on it for a moment; the button fills as it charges.
+                m_ClubBtn = b < 0 || b != m_ClubBtnIndex ? 0f : m_ClubBtn + Time.unscaledDeltaTime;
+                m_ClubBtnIndex = b;
+                trigger = m_ClubBtn >= ClubPressDwell;
+                if (b >= 0 && !m_ButtonLatched)
+                    m_ButtonBg[b].color = Color.Lerp(new Color(0.12f, 0.55f, 0.75f, 0.3f), new Color(0.12f, 0.8f, 0.45f, 0.75f), Mathf.Clamp01(m_ClubBtn / ClubPressDwell));
+            }
+            if (b < 0) { m_ButtonLatched = false; return false; }
+            if (!trigger) { m_ButtonLatched = false; return true; }
+            if (m_ButtonLatched) return true;
+            m_ButtonLatched = true;
+            PressButton(b);
+            if (hand && rig) rig.HapticFor(hand, 0.6f, 0.06f);
+            return true;
+        }
+
+        /// <summary>Restart Hole acts at once; Restart Course (it wipes the scorecard) needs a second press within 3 seconds.</summary>
+        public void PressButton(int b)
+        {
+            var course = FindFirstObjectByType<CourseController>();
+            if (!course) return;
+            if (b == 0) { course.RestartHole(); return; }
+            if (Time.unscaledTime < m_ConfirmUntil) { m_ConfirmUntil = 0f; course.StartCourse(0); }
+            else m_ConfirmUntil = Time.unscaledTime + 3f;
+            RefreshButtons();
+        }
+
+        void RefreshButtons()
+        {
+            if (m_ButtonBg[0] == null) return;
+            bool confirm = Time.unscaledTime < m_ConfirmUntil;
+            for (int b = 0; b < 2; b++)
+                m_ButtonBg[b].color = b == m_ButtonHover ? new Color(0.12f, 0.55f, 0.75f, 0.45f) : new Color(0.15f, 0.12f, 0.1f, 0.18f);
+            m_ButtonText[1].text = confirm ? "Press again to confirm" : "Restart Course";
+        }
+
+        /// <summary>A small dot on the card where the nearest controller points, so the player can see where they are touching.</summary>
+        void UpdateCursor(Vector3 tipWorld)
+        {
+            if (m_Cursor == null) return;
+            Vector3 local = m_Canvas.InverseTransformPoint(tipWorld);
+            float cx = local.x + CanvasWidth * 0.5f, cy = m_CanvasHeight * 0.5f - local.y;
+            bool near = Mathf.Abs(local.z) < 400f && cx > 0f && cx < CanvasWidth && cy > 0f && cy < m_CanvasHeight;
+            if (near) { m_CursorSeen = Time.unscaledTime; ((RectTransform)m_Cursor.transform).anchoredPosition = new Vector2(cx, -cy); }
+            m_Cursor.enabled = Time.unscaledTime - m_CursorSeen < 0.15f;
+            m_Cursor.color = m_Drag >= 0 ? new Color(1f, 0.78f, 0.25f, 0.95f) : new Color(0.12f, 0.55f, 0.75f, 0.8f);
+        }
+
         void EndDrag()
         {
             int row = m_Drag;
-            m_Drag = -1; m_DragHand = null;
+            m_Drag = -1; m_DragHand = null; m_ClubSlide = 0f;
             UpdateHandles();
             if (row == 1 && m_Blip) AudioSource.PlayClipAtPoint(m_Blip, m_Canvas.position, 0.7f * GolfAudio.SfxVolume);
         }

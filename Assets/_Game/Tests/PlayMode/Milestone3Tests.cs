@@ -380,6 +380,54 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.AreEqual(0.4f, GolfAudio.SfxVolume, 0.02f);
         }
 
+        [UnityTest]
+        public IEnumerator Scorecard_PutterHead_HoldsThenSlidesRelatively_WithoutJumping()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            yield return null;
+            Object.FindFirstObjectByType<VRRig>().ToggleScorecard();
+            yield return null;
+            var c = FindControls();
+            GolfAudio.MusicScale = 1f;
+            float start = c.GetFraction(0);
+            // Rest the head on the far-left end of the music track: nothing may jump, even while holding.
+            var left = c.TrackWorldPoint(0, 0f);
+            for (int i = 0; i < 12; i++) { c.ProcessClub(left); yield return null; }
+            Assert.AreEqual(start, c.GetFraction(0), 0.02f, "holding the club at the track end must not throw the slider to 0");
+            // The idle hand is processed every frame too; it must not cancel the club's hold.
+            float t0 = Time.unscaledTime;
+            while (Time.unscaledTime - t0 < 0.5f) { c.ProcessClub(left); c.ProcessTouch(left + Vector3.up * 5f, false); yield return null; }
+            c.ProcessClub(left);
+            Assert.AreEqual(0, c.DraggingRow, "the club should be dragging the music slider after its hold");
+            // Sliding the head 10% of the track to the right moves the slider by about 10%.
+            c.ProcessClub(c.TrackWorldPoint(0, 0.1f));
+            Assert.AreEqual(start + 0.1f, c.GetFraction(0), 0.03f);
+            // Leaving the slider reports "not touching"; the component's Update then ends the drag.
+            Assert.IsFalse(c.ProcessClub(c.TrackWorldPoint(0, 0.1f) + Vector3.up * 5f));
+        }
+
+        [UnityTest]
+        public IEnumerator Scorecard_RestartButtons_RestartHoleAtOnce_AndCourseOnConfirm()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            yield return null;
+            Object.FindFirstObjectByType<VRRig>().ToggleScorecard();
+            yield return null;
+            var c = FindControls();
+            var course = Object.FindFirstObjectByType<CourseController>();
+            course.StartHole(1, true);
+            yield return null;
+            c.PressButton(0); // Restart Hole: immediate, stays on hole 2
+            Assert.AreEqual(1, course.CurrentIndex);
+            c.PressButton(1); // Restart Course: the first press only arms the confirmation
+            Assert.AreEqual(1, course.CurrentIndex, "restart course must need a second press");
+            c.PressButton(1);
+            Assert.AreEqual(0, course.CurrentIndex);
+            Assert.IsFalse(course.Finished);
+        }
+
         // ------------------------------------------------------------------ area title card
 
         [Test]

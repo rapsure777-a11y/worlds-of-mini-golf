@@ -108,3 +108,15 @@ Branch `cloud/graphical-pass-2-integration`, written by Cloud Claude with no Uni
 
 ## 2026-10-04: Milestone 3 checkpoint 1 (UNVERIFIED)
 Branch `milestone-3-island-hopping`, written by Cloud Claude (no Unity/Blender). Cluster music system (`MusicDirector`, `GolfAudio`), island clusters as data, Jungle Island terrain with a ravine, Hole 3 "Jungle Crossing" with a playable wooden bridge, island pier, transition fade, Milestone 3 tests. Syntax-parsed only. See `Docs/MILESTONE3_HANDOFF.md`.
+
+## 2026-10-03 (night): headset feedback round (M3 checkpoint 1)
+
+Feedback from Andrew's first Jungle Island headset session. All fixes below are verified by tests (70/70) and screenshots; VR feel confirmed by Andrew for sliders, restart and trees.
+
+- **Barrels and crates:** new Blender hero props (`Tools/Blender/hero_props.py` -> `HeroBarrel_0`, `HeroCrate_0/1`; original work, no third-party assets). Primitive colliders. Small crate now stacks on the big crate's actual position (was floating); pier crate no longer sunk into the planks; second barrel moved off the pier.
+- **Jungle trees:** about 10 outward/upward-facing cards per branch cluster with minimum spacing and one shared, gentler wind weight per cluster (cards no longer slide through each other); clusters centred on the branch tips plus cards along the outer branch so foliage reads as attached.
+- **Signs:** one solid board with a frame instead of gapped planks (the text no longer runs across seams).
+- **Scorecard:** forgiving touch zones, a cursor dot, and Restart Hole / Restart Course buttons (course restart needs a second press within 3 s). The putter head is a pointer: rest it on a slider for 0.3 s and it slides relatively (never jumps to an end); rest it on a button for 0.7 s to press. Bug fixed: the idle hand was resetting the club's hold timer every frame.
+- **"No sound" was a saved setting:** both volumes had been saved at 0 after the putter snapped the sliders to the left end. Reset, and the relative drag prevents a repeat. Separate user-side issue: two streaming sessions on the PC glitched the headset audio.
+- **Course plan (Andrew):** two holes per zone for zones 1-4 (Starting, Jungle, Temple, Volcanic), then one long finale hole in the Summit zone: 9 holes. Hole 4 (second Jungle hole) is next.
+- **Known flaky test:** `Swing_StrikesBallAlongFace` occasionally fails when run alone (timing-dependent); passes in the full suite.

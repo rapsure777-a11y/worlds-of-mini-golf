@@ -275,6 +275,32 @@ namespace Gamebreak.MiniGolf.Editor.Art
         /// beach palms and a sea arch standing in the water. Heroes come from Blender (HeroKit); the kit still supplies
         /// signs, torches, crates and the pier.
         /// </summary>
+        /// <summary>
+        /// Barrel / crate from the Blender hero props (HeroBarrel_0, HeroCrate_0/1), with a simple primitive collider so the ball
+        /// does not catch on the stave grooves. Falls back to the procedural kit mesh when the FBX has not been generated.
+        /// </summary>
+        static GameObject HeroProp(Dresser d, string kitName, Vector3 pos, float yaw, float scale, bool collider, Transform parent)
+        {
+            string model = kitName == "Barrel" ? "HeroBarrel_0" : kitName == "Crate0" ? "HeroCrate_0" : "HeroCrate_1";
+            if (!d.HasModel(model))
+                return d.Place(kitName, d.Kit.Solid, pos, yaw, scale, snap: collider, collider: collider, parent: parent);
+            bool snap = collider; // stacked / deck-placed props pass an explicit height
+            var go = d.Model(model, pos, yaw, scale, snap: snap, sink: 0.02f, parent: parent);
+            if (!collider || go == null) return go;
+            if (kitName == "Barrel")
+            {
+                var cap = go.AddComponent<CapsuleCollider>();
+                cap.radius = 0.31f; cap.height = 0.88f; cap.center = new Vector3(0f, 0.44f, 0f);
+            }
+            else
+            {
+                float s = kitName == "Crate0" ? 0.6f : 0.45f;
+                var box = go.AddComponent<BoxCollider>();
+                box.size = Vector3.one * s; box.center = new Vector3(0f, s * 0.5f, 0f);
+            }
+            return go;
+        }
+
         static void DressHole1(Dresser d, HoleFrame f, HoleDefinition def)
         {
             var root = new GameObject("Hole01_Dressing").transform;
@@ -298,10 +324,12 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var hutPos = f.L(hutLocal.x, hutLocal.y);
             d.Model("HeroTikiClubhouse", hutPos, FaceStart(hutPos), 1f, sink: 0.12f, colliders: true, parent: root);
             // Crates and barrel on the beach side of the tee (the old spot is under the new deck).
-            d.Place("Barrel", d.Kit.Solid, f.L(0.9f, -2.7f), 20f, 1f, collider: true, parent: root);
-            d.Place("Crate0", d.Kit.Solid, f.L(1.3f, -3.5f), 12f, 1f, collider: true, parent: root);
-            d.Place("Crate1", d.Kit.Solid, f.L(1.3f, -3.5f) + Vector3.up * 0.6f, 40f, 1f, snap: false, parent: root);
-            d.Place("Barrel", d.Kit.Solid, f.L(1.8f, -1.9f), 70f, 0.9f, collider: true, parent: root);
+            HeroProp(d, "Barrel", f.L(0.9f, -2.7f), 20f, 1f, true, root);
+            var bottomCrate = HeroProp(d, "Crate0", f.L(1.3f, -3.5f), 12f, 1f, true, root);
+            // Stack the small crate on the big one's actual position (the terrain height differs from the hole's height there).
+            var stackPos = bottomCrate.transform.position + Vector3.up * 0.607f;
+            HeroProp(d, "Crate1", stackPos, 40f, 1f, false, root);
+            HeroProp(d, "Barrel", f.L(2.3f, -3.0f), 70f, 0.9f, true, root); // the pier runs z -2.1..-0.7 from x 1.7: keep clear of the planks
 
             // Welcome / controls board and the hole sign.
             var signPos = f.L(-1.7f, -1.1f);
@@ -341,7 +369,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             d.Torch(new Vector3(pierEnd.x, deckY + 0.35f, pierEnd.z) + side * 0.55f);
             d.Torch(new Vector3(pierEnd.x, deckY + 0.35f, pierEnd.z) - side * 0.55f);
             var cratePos = f.L(pierX0 + pierLen - 1.4f, pierZ + 0.35f);
-            d.Place("Crate1", d.Kit.Solid, new Vector3(cratePos.x, deckY + 0.35f, cratePos.z), 25f, 1f, snap: false, parent: root);
+            HeroProp(d, "Crate1", new Vector3(cratePos.x, deckY + 0.58f, cratePos.z), 25f, 1f, false, root);
             var mid = f.L(pierX0 + pierLen * 0.5f, pierZ);
             d.KeepOut(new Vector2(mid.x, mid.z), new Vector2(0.9f, pierLen * 0.5f), f.Yaw(90f), 0.2f);
 

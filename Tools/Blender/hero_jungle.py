@@ -147,6 +147,7 @@ def jungle_tree(index, height, seed, canopy_r, buttresses):
     parts = [trunk]
     # Branches reaching canopy clusters.
     tips = []
+    branch_paths = []
     nb = rnd.randint(4, 5)
     for k in range(nb):
         ang = k * math.tau / nb + rnd.uniform(-0.3, 0.3)
@@ -161,18 +162,43 @@ def jungle_tree(index, height, seed, canopy_r, buttresses):
             bp.append(start.lerp(end, u) + Vector((0, 0, math.sin(u * math.pi) * 0.45)))
         parts.append(tube("Branch", bp, lambda th, t, i: 0.19 * (1.0 - 0.7 * t), sides=9, tile=1.4))
         tips.append(end)
+        branch_paths.append(bp)
     tips.append(path[-1] + Vector((0, 0, 0.3)))
     bark = gb.join(parts, f"HeroJungleTree_{index}__Bark")
 
     cards = []
     cells = ["broadleaf", "monstera", "bush_b", "broadleaf"]
+    # Fewer, larger cards per cluster. Each card faces outward and up from its cluster centre (so neighbours are near-parallel and
+    # rarely cut through each other), positions keep a minimum spacing, and a whole cluster shares one wind weight so its cards sway
+    # together instead of sliding through one another.
     for tip in tips:
-        centre = tip + Vector((0, 0, 0.5))
-        for _ in range(34):
-            d = Vector((rnd.uniform(-1, 1), rnd.uniform(-1, 1), rnd.uniform(-0.15, 1.0))).normalized()
-            pos = centre + Vector((d.x * 1.0, d.y * 1.0, d.z * 0.7)) * rnd.uniform(0.5, 1.5)
-            size = rnd.uniform(1.4, 2.4)
-            cards.append(card(pos, d, size, rnd.choice(cells), rnd.uniform(0, math.tau), min(1.0, 0.45 + 0.4 * (pos.z / height))))
+        # Centred on the branch tip itself (not above it) with a tight radius, so the foliage wraps the wood it grows from.
+        centre = tip + Vector((0, 0, 0.1))
+        wind = min(1.0, 0.2 + 0.25 * (centre.z / height))  # gentle: the bark does not move, so strong leaf sway looks detached
+        placed = []
+        for _ in range(80):
+            if len(placed) >= 10:
+                break
+            d = Vector((rnd.uniform(-1, 1), rnd.uniform(-1, 1), rnd.uniform(-0.25, 1.0)))
+            if d.length < 0.2:
+                continue
+            d.normalize()
+            pos = centre + Vector((d.x * 1.0, d.y * 1.0, d.z * 0.75)) * rnd.uniform(0.2, 1.1)
+            size = rnd.uniform(1.9, 2.7)
+            if any((pos - q).length < size * 0.32 for q, _ in placed):
+                continue
+            n = (pos - centre).normalized() * 0.65 + Vector((0, 0, 0.35))  # outward and up
+            placed.append((pos, size))
+            cards.append(card(pos, n.normalized(), size, rnd.choice(cells), rnd.uniform(-0.6, 0.6), wind))
+    # Leaf cards along the outer half of every branch, so the foliage visibly grows out of the wood rather than floating at the tips.
+    for bp in branch_paths:
+        for j in (5, 7, 9):
+            out = Vector((bp[j].x - bp[0].x, bp[j].y - bp[0].y, 0))
+            out = out.normalized() if out.length > 0.01 else Vector((1, 0, 0))
+            pos = bp[j] + out * 0.15 + Vector((0, 0, 0.2))
+            size = rnd.uniform(1.5, 2.1)
+            n = (out * 0.5 + Vector((rnd.uniform(-0.3, 0.3), rnd.uniform(-0.3, 0.3), 0.6))).normalized()
+            cards.append(card(pos, n, size, rnd.choice(cells), rnd.uniform(-0.6, 0.6), 0.2))
     # Hanging vines from the branch tips and the trunk.
     for tip in tips[:-1]:
         for k in range(3):
