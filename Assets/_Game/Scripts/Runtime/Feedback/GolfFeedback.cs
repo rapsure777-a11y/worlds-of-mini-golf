@@ -61,7 +61,7 @@ namespace Gamebreak.MiniGolf
         {
             if (!m_ReturnClip) m_ReturnClip = SynthReturn();
             m_BallSource.pitch = outOfBounds ? 0.8f : 1f;
-            m_BallSource.PlayOneShot(m_ReturnClip, 0.6f);
+            m_BallSource.PlayOneShot(m_ReturnClip, 0.6f * GolfAudio.SfxVolume);
             if (rig) rig.Haptic(0.3f, 0.05f);
         }
 
@@ -88,7 +88,7 @@ namespace Gamebreak.MiniGolf
         {
             float k = Mathf.Clamp01(speed / 4f);
             m_BallSource.pitch = 0.9f + 0.3f * k;
-            m_BallSource.PlayOneShot(strikeClip, 0.25f + 0.75f * k);
+            m_BallSource.PlayOneShot(strikeClip, (0.25f + 0.75f * k) * GolfAudio.SfxVolume);
             if (rig) rig.Haptic(0.25f + 0.75f * k, 0.03f + 0.05f * k);
         }
 
@@ -97,12 +97,12 @@ namespace Gamebreak.MiniGolf
             if (impact < 0.05f) return;
             float k = Mathf.Clamp01(impact / 3f);
             m_BallSource.pitch = 0.85f + 0.3f * k;
-            m_BallSource.PlayOneShot(wallClip, 0.15f + 0.85f * k);
+            m_BallSource.PlayOneShot(wallClip, (0.15f + 0.85f * k) * GolfAudio.SfxVolume);
         }
 
         void OnHoleFinished(CourseController c, HoleController hole)
         {
-            if (hole.Cup) AudioSource.PlayClipAtPoint(cupClip, hole.Cup.transform.position, 1f);
+            if (hole.Cup) AudioSource.PlayClipAtPoint(cupClip, hole.Cup.transform.position, GolfAudio.SfxVolume);
             if (rig) rig.Haptic(0.6f, 0.15f);
         }
 

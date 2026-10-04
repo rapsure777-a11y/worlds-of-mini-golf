@@ -63,7 +63,7 @@ namespace Gamebreak.MiniGolf
             {
                 new Stage { name = "baseline", apply = () => { } },
                 new Stage { name = "shadows off (distance 0.1 m)", apply = () => m_Asset.shadowDistance = 0.1f },
-                new Stage { name = "terrain does not cast shadows", apply = () => SetShadows(new[] { "IslandTerrain" }, false) },
+                new Stage { name = "terrain does not cast shadows", apply = () => SetShadows(new[] { "IslandTerrain", "IslandTerrain2" }, false) },
                 // MSAA cannot change while XR is running (URP throws and the camera data breaks), so those stages are desktop only.
                 new Stage { name = "MSAA off", desktopOnly = true, apply = () => m_Asset.msaaSampleCount = 1 },
                 new Stage { name = "MSAA 2x", desktopOnly = true, apply = () => m_Asset.msaaSampleCount = 2 },
@@ -72,7 +72,7 @@ namespace Gamebreak.MiniGolf
                 new Stage { name = "no depth/opaque copies (water fallback)", apply = () => { m_Asset.supportsCameraDepthTexture = false; m_Asset.supportsCameraOpaqueTexture = false; QualityPreset.SetWaterDepth(false); } },
                 new Stage { name = "hide leaf cards (alpha-tested foliage)", apply = () => Hide(r => HasMat(r, "Hero_Leaves") || HasMat(r, "Kit_Foliage")) },
                 new Stage { name = "hide hero rocks", apply = () => Hide(r => HasMat(r, "Hero_Rock")) },
-                new Stage { name = "hide terrain", apply = () => Hide(r => r.name == "IslandTerrain") },
+                new Stage { name = "hide terrain", apply = () => Hide(r => r.name.StartsWith("IslandTerrain")) },
                 new Stage { name = "hide water (ocean, pool, waterfall, mist)", apply = () => Hide(r => HasMat(r, "Kit_Water") || HasMat(r, "Hero_PoolWater") || HasMat(r, "Hero_Waterfall") || HasMat(r, "Hero_Mist")) },
                 new Stage { name = "hide all dressing (green, rails, sky, ball only)", apply = () => Hide(r => InDressing(r.transform)) },
             };

@@ -408,12 +408,14 @@ namespace Gamebreak.MiniGolf.Tests
             SceneManager.LoadScene("TropicalAdventure");
             yield return null;
             yield return null;
-            var player = Object.FindFirstObjectByType<MusicPlayer>();
-            Assert.IsNotNull(player, "no MusicPlayer in the scene");
-            var source = player.GetComponent<AudioSource>();
+            var director = Object.FindFirstObjectByType<MusicDirector>();
+            Assert.IsNotNull(director, "no MusicDirector in the scene");
+            var source = director.ActiveSource;
+            Assert.IsNotNull(source, "no active music source");
             Assert.IsNotNull(source.clip, "no music clip assigned");
             Assert.IsTrue(source.loop && source.isPlaying, "music should loop and be playing");
             Assert.AreEqual(0f, source.spatialBlend, "music should be 2D");
+            Assert.AreEqual(TropicalCourse.StartCluster, director.CurrentClusterId, "the first hole is on the Starting Island");
         }
 
         /// <summary>
@@ -435,14 +437,14 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [UnityTest]
-        public IEnumerator TropicalScene_ProgressesToHoleTwoAndFinishes()
+        public IEnumerator TropicalScene_ProgressesThroughAllHolesAndFinishes()
         {
             Time.timeScale = 3f;
             SceneManager.LoadScene("TropicalAdventure");
             yield return null;
             yield return null;
             var course = Object.FindFirstObjectByType<CourseController>();
-            Assert.GreaterOrEqual(course.Holes.Length, 2, "scene should have at least two holes");
+            Assert.GreaterOrEqual(course.Holes.Length, 3, "scene should have at least three holes");
             course.AdvanceDelay = 0.5f;
 
             for (int h = 0; h < course.Holes.Length; h++)
@@ -455,6 +457,7 @@ namespace Gamebreak.MiniGolf.Tests
                 Vector3 cup = hole.Cup.transform.position;
                 Vector3 back = hole.TeePosition - cup; back.y = 0f;
                 if (h == 1) back = Vector3.right; // dogleg: approach along the cross lane
+                if (h == 2) back = hole.transform.TransformDirection(Vector3.back); // Jungle Crossing: the cup sits at the end of a lane running along local +z
                 Vector3 start = cup + back.normalized * 0.4f;
                 start.y = cup.y + ball.Radius + 0.002f;
                 ball.PlaceAt(start);

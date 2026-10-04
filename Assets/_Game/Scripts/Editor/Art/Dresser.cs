@@ -57,6 +57,16 @@ namespace Gamebreak.MiniGolf.Editor.Art
         }
 
         /// <summary>Place a Blender hero model, snapped to the ground unless <paramref name="snap"/> is false.</summary>
+        readonly HashSet<string> m_MissingWarned = new HashSet<string>();
+
+        /// <summary>True if the generated FBX exists. New Blender assets are optional until Local Claude has run their scripts.</summary>
+        public bool HasModel(string model)
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>($"{HeroKit.ModelDir}/{model}.fbx")) return true;
+            if (m_MissingWarned.Add(model)) Debug.LogWarning($"[Gamebreak] Hero model '{model}' not found; skipped (run Tools/Blender scripts, see Docs/MILESTONE3_HANDOFF.md).");
+            return false;
+        }
+
         /// <param name="seat">After placing, re-seat the model so its lowest vertices sit just under the ground everywhere (no floating edges, no over-burial).</param>
         /// <param name="lods">Rock LODs + distance culling (rock models only).</param>
         /// <param name="yStretch">Vertical stretch applied after placement (boulders read as flat slabs at 1).</param>

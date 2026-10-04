@@ -105,3 +105,6 @@ Branch `cloud/graphical-pass-2-integration`, written by Cloud Claude with no Uni
 - Hole 1 rebuilt around Blender hero assets: tiki clubhouse, palms, terraced cliff wall with raycast-fitted waterfall, carved plunge pool, mist, mesas, boulders, sea arch, five-layer leaf-card jungle.
 - Rendering: three URP presets (Lean = the old measured settings, Balanced = +depth/opaque, Rich = +HDR/post/4 cascades) with a runtime `QualityPreset` (`-quality`, F9); post-processing Volume; water depth keyword with a no-depth fallback; new `Gamebreak/Mist` shader.
 - **Status:** syntax-parsed only (tree-sitter). Not compiled, not rendered, tests not run (41/41 baseline remains on `main`), no build, no benchmark, no headset. See `Docs/CLOUD_RETURN_REPORT.md` and handoff section G.
+
+## 2026-10-04: Milestone 3 checkpoint 1 (UNVERIFIED)
+Branch `milestone-3-island-hopping`, written by Cloud Claude (no Unity/Blender). Cluster music system (`MusicDirector`, `GolfAudio`), island clusters as data, Jungle Island terrain with a ravine, Hole 3 "Jungle Crossing" with a playable wooden bridge, island pier, transition fade, Milestone 3 tests. Syntax-parsed only. See `Docs/MILESTONE3_HANDOFF.md`.

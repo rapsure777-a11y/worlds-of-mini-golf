@@ -17,6 +17,8 @@ namespace Gamebreak.MiniGolf
         public Material wall;
         public Material cup;
         public Material flag;
+        [Tooltip("Wooden bridge/boardwalk surface for GreenLayout.deckAreas; null falls back to the green material.")]
+        public Material deck;
         public Material tee;
 
         [Header("Ball and putter")]

@@ -21,6 +21,13 @@ namespace Gamebreak.MiniGolf.Editor.Art
             public Vector3 L(float x, float z) => origin + Quaternion.Euler(0f, yaw, 0f) * new Vector3(x, 0f, z);
             public Vector2 L2(float x, float z) { var p = L(x, z); return new Vector2(p.x, p.z); }
             public float Yaw(float localYaw) => yaw + localYaw;
+            /// <summary>World XZ to hole-local (x across the lane, z down the lane); inverse of <see cref="L2"/>.</summary>
+            public Vector2 ToLocal2(Vector2 world)
+            {
+                Vector2 d = world - new Vector2(origin.x, origin.z);
+                float rad = yaw * Mathf.Deg2Rad;
+                return new Vector2(d.x * Mathf.Cos(rad) - d.y * Mathf.Sin(rad), d.x * Mathf.Sin(rad) + d.y * Mathf.Cos(rad));
+            }
         }
 
         /// <summary>Hole 1 hero set-piece, in Hole 1's local frame (x across the lane, + = sea side; z down the lane).</summary>
@@ -31,15 +38,18 @@ namespace Gamebreak.MiniGolf.Editor.Art
         /// <summary>Palm fronds lean toward Blender +X. Flip to -1 if the lean arrives mirrored after FBX import.</summary>
         const float PalmLeanSign = 1f;
 
-        public static void Build(TropicalKit kit, HeroKit hero, List<HoleDefinition> defs, Transform parent)
+        public static void Build(TropicalKit kit, HeroKit hero, List<HoleDefinition> defs, List<IslandCluster> clusters, Transform parent)
         {
-            var island = new IslandGen { centre = Vector2.zero, radius = 34f, seed = 7, splat = true };
             var frames = new List<HoleFrame>();
             foreach (var d in defs) frames.Add(new HoleFrame(d));
+            bool IsJungle(HoleDefinition d) => d.cluster == TropicalCourse.JungleCluster;
 
+            // ---- Starting Island: holes 1-2 (unchanged from the approved visual baseline).
+            var island = new IslandGen { centre = Vector2.zero, radius = 34f, seed = 7, splat = true };
             // Flatten every hole site (layout bounds + walk-around margin) to its green's ground height.
             for (int i = 0; i < defs.Count; i++)
             {
+                if (IsJungle(defs[i])) continue;
                 var (centre, half) = LayoutBounds(defs[i].layout);
                 var f = frames[i];
                 island.zones.Add(new IslandGen.Zone
@@ -48,9 +58,10 @@ namespace Gamebreak.MiniGolf.Editor.Art
                     height = defs[i].origin.y - TropicalCourse.GreenElevation - 0.06f, feather = 3.5f,
                 });
             }
-            // Path from each cup to the next tee.
+            // Path from each cup to the next tee (within an island only; islands are linked by the pier and the hole transition).
             for (int i = 0; i + 1 < defs.Count; i++)
             {
+                if (IsJungle(defs[i]) || IsJungle(defs[i + 1])) continue;
                 var a = frames[i].L2(defs[i].layout.cup.Value.x, defs[i].layout.cup.Value.y + 1.2f);
                 var b = frames[i + 1].L2(defs[i + 1].tee.x, defs[i + 1].tee.y - 1.2f);
                 AddPath(island, a, b, 0.8f, Mathf.Min(defs[i].origin.y, defs[i + 1].origin.y) - TropicalCourse.GreenElevation - 0.08f);
@@ -63,26 +74,53 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // Plunge pool carved into the backdrop mound (the water disc is added in DressHole1).
             if (defs.Count > 0) island.basins.Add((frames[0].L2(PoolLocal.x, PoolLocal.y), PoolRadius, PoolDepth));
 
+            // ---- Jungle Island: holes 3-4 (only when the course has them).
+            IslandGen jungle = null;
+            for (int i = 0; i < defs.Count; i++)
+            {
+                if (!IsJungle(defs[i])) continue;
+                if (jungle == null) jungle = JungleIsland.CreateIsland();
+                JungleIsland.ConfigureTerrain(jungle, frames[i], defs[i]);
+            }
+
             var world = new GameObject("World").transform;
             world.SetParent(parent, false);
-            BuildTerrainAndSea(kit, hero, island, world);
+            var islands = new List<IslandGen> { island };
+            if (jungle != null) islands.Add(jungle);
+            BuildTerrainAndSea(kit, hero, islands, world);
             SetupLighting(kit);
 
-            var dresser = new Dresser(kit, hero, island, new GameObject("Dressing").transform);
-            dresser.Root.SetParent(world, false);
+            // ---- Dressing: one Dresser per island (ground queries differ), one shared root so the obstruction scan covers everything.
+            var dressingRoot = new GameObject("Dressing").transform;
+            dressingRoot.SetParent(world, false);
+            var dresser = new Dresser(kit, hero, island, dressingRoot);
+            Dresser jungleDresser = jungle != null ? new Dresser(kit, hero, jungle, dressingRoot) : null;
             for (int i = 0; i < defs.Count; i++)
             {
                 var (centre, half) = LayoutBounds(defs[i].layout);
+                var dr = IsJungle(defs[i]) ? jungleDresser : dresser;
                 // Generous clearance: holes get hand-placed dressing; random island cover stays back.
-                dresser.KeepOut(frames[i].L2(centre.x, centre.y), half + new Vector2(0.9f, 1.2f), frames[i].yaw, 2.6f);
+                dr.KeepOut(frames[i].L2(centre.x, centre.y), half + new Vector2(0.9f, 1.2f), frames[i].yaw, 2.6f);
             }
             foreach (var z in island.zones) if (z.path) dresser.KeepOut(z.centre, z.halfSize, z.yaw, 0.2f);
 
-            if (defs.Count > 0) DressHole1(dresser, frames[0], defs[0]);
-            if (defs.Count > 1) DressHole2(dresser, frames[1], defs[1]);
+            if (jungleDresser != null) JungleIsland.BuildPier(dresser, jungleDresser, dressingRoot);
+            for (int i = 0; i < defs.Count; i++)
+            {
+                switch (defs[i].number)
+                {
+                    case 1: DressHole1(dresser, frames[i], defs[i]); break;
+                    case 2: DressHole2(dresser, frames[i], defs[i]); break;
+                    case 3: JungleIsland.DressHole3(jungleDresser, frames[i], defs[i]); break;
+                    default: Debug.LogWarning($"[Gamebreak] No dressing for hole {defs[i].number} yet."); break;
+                }
+            }
             DressIsland(dresser, defs.Count > 0 ? new Vector2(frames[0].origin.x, frames[0].origin.z) : Vector2.zero);
+            if (jungleDresser != null)
+                for (int i = 0; i < defs.Count; i++)
+                    if (defs[i].number == 3) { JungleIsland.DressIsland(jungleDresser, frames[i]); break; }
             BuildHorizon(kit, island, world);
-            RemoveObstructions(dresser.Root);
+            RemoveObstructions(dressingRoot);
         }
 
         /// <summary>
@@ -118,21 +156,39 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         // ------------------------------------------------------------------ terrain, sea, sky
 
-        static void BuildTerrainAndSea(TropicalKit kit, HeroKit hero, IslandGen island, Transform world)
+        static void BuildTerrainAndSea(TropicalKit kit, HeroKit hero, List<IslandGen> islands, Transform world)
         {
-            var terrainMesh = island.BuildTerrain();
-            SaveMesh(terrainMesh, "IslandTerrain");
-            var terrain = new GameObject("IslandTerrain");
-            terrain.transform.SetParent(world, false);
-            terrain.AddComponent<MeshFilter>().sharedMesh = terrainMesh;
-            var tr = terrain.AddComponent<MeshRenderer>();
-            tr.sharedMaterial = hero.Terrain; // TerrainSplat: vertex colour = layer weights (IslandGen.splat)
-            tr.shadowCastingMode = ShadowCastingMode.On;
-            terrain.AddComponent<MeshCollider>().sharedMesh = terrainMesh;
-            terrain.AddComponent<OutOfBoundsSurface>();
-            GameObjectUtility.SetStaticEditorFlags(terrain, StaticEditorFlags.BatchingStatic);
+            for (int i = 0; i < islands.Count; i++)
+            {
+                string name = i == 0 ? "IslandTerrain" : $"IslandTerrain{i + 1}";   // the first keeps its historic name (probe, docs)
+                var terrainMesh = islands[i].BuildTerrain();
+                SaveMesh(terrainMesh, name);
+                var terrain = new GameObject(name);
+                terrain.transform.SetParent(world, false);
+                terrain.AddComponent<MeshFilter>().sharedMesh = terrainMesh;
+                var tr = terrain.AddComponent<MeshRenderer>();
+                tr.sharedMaterial = hero.Terrain; // TerrainSplat: vertex colour = layer weights (IslandGen.splat)
+                tr.shadowCastingMode = ShadowCastingMode.On;
+                terrain.AddComponent<MeshCollider>().sharedMesh = terrainMesh;
+                terrain.AddComponent<OutOfBoundsSurface>();
+                GameObjectUtility.SetStaticEditorFlags(terrain, StaticEditorFlags.BatchingStatic);
+            }
 
-            var oceanMesh = island.BuildOcean();
+            // One ocean for the whole archipelago, centred between the islands. Depth = the shallowest of the islands' own depths.
+            Vector2 centre = Vector2.zero;
+            foreach (var g in islands) centre += g.centre;
+            centre /= islands.Count;
+            float Depth(float x, float z)
+            {
+                float depth = 4f;
+                foreach (var g in islands)
+                    if (Mathf.Abs(x - g.centre.x) < g.extent && Mathf.Abs(z - g.centre.y) < g.extent)
+                        depth = Mathf.Min(depth, -g.Height(x, z));
+                return depth;
+            }
+            var oceanMesh = islands.Count == 1
+                ? islands[0].BuildOcean()
+                : islands[0].BuildOcean(centre, 480f, 110, 220, 1.7f, Depth);
             SaveMesh(oceanMesh, "Ocean");
             var ocean = new GameObject("Ocean");
             ocean.transform.SetParent(world, false);
@@ -142,7 +198,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             orr.shadowCastingMode = ShadowCastingMode.Off;
         }
 
-        static void SaveMesh(Mesh mesh, string name)
+        internal static void SaveMesh(Mesh mesh, string name)
         {
             string path = $"{TropicalKit.Root}/Meshes/{name}.asset";
             var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
@@ -208,7 +264,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             }
         }
 
-        static Vector3 WithY(this Vector3 v, float y) { v.y = y; return v; }
+        internal static Vector3 WithY(this Vector3 v, float y) { v.y = y; return v; }
 
         // ------------------------------------------------------------------ holes
 
@@ -669,7 +725,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
         }
 
         /// <summary>Boulders and crags along the shoreline, some standing in the shallows.</summary>
-        static void DressCoast(Dresser d, Transform root)
+        internal static void DressCoast(Dresser d, Transform root)
         {
             var rnd = new System.Random(77);
             for (float a = 0f; a < 360f; a += Dresser.Range(rnd, 9f, 20f))
@@ -700,7 +756,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             "<b>Left grip:</b> drag to move   <b>Right grip + stick:</b> putter\n" +
             "<b>Look at your free wrist</b> for your score";
 
-        static void AddSignText(Transform sign, Vector3 localPos, Vector2 sizeMetres, string text, int fontSize)
+        internal static void AddSignText(Transform sign, Vector3 localPos, Vector2 sizeMetres, string text, int fontSize)
         {
             var canvas = WorldText.CreateCanvas("SignText", sign, sizeMetres * 1000f, new Color(0, 0, 0, 0));
             canvas.transform.localPosition = localPos;
@@ -710,7 +766,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             t.lineSpacing = 1.05f;
         }
 
-        static (Vector2 centre, Vector2 half) LayoutBounds(GreenLayout l)
+        internal static (Vector2 centre, Vector2 half) LayoutBounds(GreenLayout l)
         {
             float minX = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxZ = float.MinValue;
             foreach (var a in l.areas)

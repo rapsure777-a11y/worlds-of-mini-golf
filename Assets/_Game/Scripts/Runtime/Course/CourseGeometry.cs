@@ -12,6 +12,8 @@ namespace Gamebreak.MiniGolf
     {
         public float cell = 0.1f;
         public readonly List<Rect> areas = new List<Rect>();
+        /// <summary>Sub-areas drawn with the theme's deck material (wooden bridge planks) instead of turf. Visual only: same collider, same physics.</summary>
+        public readonly List<Rect> deckAreas = new List<Rect>();
         public Func<float, float, float> height = (x, z) => 0f;
         public Vector2? cup;
         /// <summary>Square of cells around the cup, kept flat. Even: cup snaps to a grid vertex. Odd: to a cell centre.</summary>
@@ -60,6 +62,7 @@ namespace Gamebreak.MiniGolf
             var verts = new List<Vector3>();
             var uvs = new List<Vector2>();
             var green = new List<int>();
+            var deck = new List<int>();
             var cupTris = new List<int>();
             var map = new Dictionary<long, int>();
 
@@ -97,8 +100,9 @@ namespace Gamebreak.MiniGolf
             {
                 if (!g.inside[i, j] || InCupTile(i, j)) continue;
                 int a = Vtx(i, j), b = Vtx(i + 1, j), c = Vtx(i, j + 1), d = Vtx(i + 1, j + 1);
-                AddTri(green, verts, a, c, d, Vector3.up);
-                AddTri(green, verts, a, d, b, Vector3.up);
+                var target = IsDeck(l, g, i, j) ? deck : green;
+                AddTri(target, verts, a, c, d, Vector3.up);
+                AddTri(target, verts, a, d, b, Vector3.up);
             }
 
             if (hasCup)
@@ -145,13 +149,22 @@ namespace Gamebreak.MiniGolf
             mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             mesh.SetVertices(verts);
             mesh.SetUVs(0, uvs);
-            mesh.subMeshCount = 2;
+            mesh.subMeshCount = deck.Count > 0 ? 3 : 2;
             mesh.SetTriangles(green, 0);
             mesh.SetTriangles(cupTris, 1);
+            if (deck.Count > 0) mesh.SetTriangles(deck, 2);
             mesh.RecalculateNormals();
             mesh.RecalculateTangents();
             mesh.RecalculateBounds();
             return mesh;
+        }
+
+        static bool IsDeck(GreenLayout l, Grid g, int i, int j)
+        {
+            if (l.deckAreas.Count == 0) return false;
+            var c = new Vector2(g.X(i) + g.cell * 0.5f, g.Z(j) + g.cell * 0.5f);
+            foreach (var r in l.deckAreas) if (r.Contains(c)) return true;
+            return false;
         }
 
         /// <summary>Rails around every outside edge of the green. Flat-shaded; the collider welds duplicates.</summary>
@@ -232,6 +245,11 @@ namespace Gamebreak.MiniGolf
         /// </summary>
         public static GameObject CreateGreen(string name, GreenLayout layout, GolfTuning tuning, Transform parent,
             Material greenMat, Material cupMat, Material wallMat, Material flagMat, out Cup cup)
+            => CreateGreen(name, layout, tuning, parent, greenMat, cupMat, wallMat, flagMat, null, out cup);
+
+        /// <param name="deckMat">Material for <see cref="GreenLayout.deckAreas"/> (null: turf).</param>
+        public static GameObject CreateGreen(string name, GreenLayout layout, GolfTuning tuning, Transform parent,
+            Material greenMat, Material cupMat, Material wallMat, Material flagMat, Material deckMat, out Cup cup)
         {
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
@@ -240,7 +258,9 @@ namespace Gamebreak.MiniGolf
             var greenGo = new GameObject("Surface");
             greenGo.transform.SetParent(root.transform, false);
             greenGo.AddComponent<MeshFilter>().sharedMesh = surface;
-            greenGo.AddComponent<MeshRenderer>().sharedMaterials = new[] { greenMat, cupMat };
+            greenGo.AddComponent<MeshRenderer>().sharedMaterials = surface.subMeshCount > 2
+                ? new[] { greenMat, cupMat, deckMat ? deckMat : greenMat }
+                : new[] { greenMat, cupMat };
             var mc = greenGo.AddComponent<MeshCollider>();
             mc.sharedMesh = surface;
             mc.sharedMaterial = GolfMaterials.Course;

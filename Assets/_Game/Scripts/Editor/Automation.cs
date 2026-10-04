@@ -186,7 +186,18 @@ namespace Gamebreak.MiniGolf.Editor
                 shots.Add(($"{n}_d_side_left", mid - right * 6f + Vector3.up * 2.4f + line * 1f, mid + Vector3.up * 0.4f));
                 shots.Add(($"{n}_e_from_cup", cupPos + line * 1.6f + Vector3.up * 1.5f, tee + Vector3.up * 0.3f));
                 shots.Add(($"{n}_f_cup", cupPos + new Vector3(0.25f, 0.25f, -0.35f), cupPos));
+                if (h.HoleNumber == 3)
+                {
+                    // Jungle Crossing: the bridge from the side, and from the elbow looking across it (hole-local coordinates).
+                    var t = h.transform;
+                    shots.Add(($"{n}_g_bridge_side", t.TransformPoint(new Vector3(5.2f, 1.7f, -3.2f)), t.TransformPoint(new Vector3(5.2f, 0.1f, 4.6f))));
+                    shots.Add(($"{n}_h_bridge_from_elbow", t.TransformPoint(new Vector3(1.6f, 1.5f, 4.6f)), t.TransformPoint(new Vector3(8f, 0.4f, 4.6f))));
+                    shots.Add(($"{n}_i_ravine_below", t.TransformPoint(new Vector3(5.2f, -0.2f, -1.5f)), t.TransformPoint(new Vector3(5.2f, 1.6f, 4.6f))));
+                }
             }
+            // Archipelago: both islands and the channel pier from the air.
+            shots.Add(("archipelago_aerial", new Vector3(30f, 70f, -120f), new Vector3(32f, 0f, -38f)));
+            shots.Add(("archipelago_from_start_island", new Vector3(14f, 3.2f, -22f), new Vector3(58f, 2f, -60f)));
             var level = CaptureQuality();
             var go = new GameObject("ReviewCamera");
             var cam = go.AddComponent<Camera>();

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -30,6 +31,7 @@ namespace Gamebreak.MiniGolf.Editor
             var hero = Art.HeroKit.Build(kit);
             var theme = CreateTropicalTheme();
             // Putting surface and rails use the Blender-baked PBR sets (Hero_Turf: low bump, Hero_Rail: wood). The cup, flag and tee stay on the kit.
+            theme.deck = hero.Deck;
             theme.green = hero.Turf; theme.wall = hero.Rail; theme.cup = kit.Cup; theme.flag = kit.Flag; theme.tee = kit.Tee;
             theme.water = kit.Water;
             theme.music = AssetDatabase.LoadAssetAtPath<AudioClip>(MusicPath);
@@ -74,12 +76,13 @@ namespace Gamebreak.MiniGolf.Editor
             // Course.
             var courseRoot = new GameObject("Course").transform;
             var defs = TropicalCourse.Holes();
+            var clusters = TropicalCourse.Clusters();
             var holes = new HoleController[defs.Count];
             for (int i = 0; i < defs.Count; i++)
                 holes[i] = HoleFactory.Build(defs[i], theme, tuning, courseRoot, ball);
             if (holes.Length > 0) ballGo.transform.position = holes[0].TeePosition;
 
-            Art.TropicalWorld.Build(kit, hero, defs, null);
+            Art.TropicalWorld.Build(kit, hero, defs, clusters, null);
 
             // Player rig.
             var rigGo = new GameObject("PlayerRig");
@@ -98,9 +101,6 @@ namespace Gamebreak.MiniGolf.Editor
             volume.isGlobal = true;
             volume.sharedProfile = BuildPostProfile();
             cam.GetUniversalAdditionalCameraData().renderPostProcessing = false;
-            var music = new GameObject("Music");
-            music.AddComponent<AudioSource>();
-            music.AddComponent<MusicPlayer>().Configure(theme.music, theme.musicVolume);
             var quality = new GameObject("QualityPreset").AddComponent<QualityPreset>();
             quality.Configure(
                 AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(ProjectSetup.LeanAssetPath),
@@ -142,6 +142,20 @@ namespace Gamebreak.MiniGolf.Editor
             var rig = rigGo.AddComponent<VRRig>();
             rig.Configure(offset, cam, left, right, putter, course, line, reticle.transform, cardGo);
             course.Configure(TropicalCourse.Name, holes, ball, rig);
+
+            // Music by island cluster: continuous within a cluster, crossfaded between clusters. A cluster whose track has not been
+            // imported yet (Assets/_Game/Audio/Music/<name>.ogg) has a null clip and simply keeps the current music playing.
+            var entries = new List<MusicEntry>();
+            foreach (var c in clusters)
+            {
+                var clip = c.MusicAssetPath != null ? AssetDatabase.LoadAssetAtPath<AudioClip>(c.MusicAssetPath) : null;
+                if (!clip) Debug.LogWarning($"[Gamebreak] Cluster '{c.id}': music {c.MusicAssetPath} not imported yet.");
+                entries.Add(new MusicEntry { clusterId = c.id, holes = c.holes, clip = clip });
+            }
+            new GameObject("Music").AddComponent<MusicDirector>().Configure(course, entries.ToArray(), theme.music);
+            var fadeMat = new Material(Shader.Find("Gamebreak/Mist")) { name = "TransitionFade" };
+            fadeMat.SetColor("_BaseColor", new Color(0f, 0f, 0f, 0f));
+            new GameObject("TransitionFade").AddComponent<TransitionFade>().Configure(course, cam, fadeMat, clusters);
             if (holes.Length > 0)
             {
                 rigGo.transform.SetPositionAndRotation(holes[0].PlayerStart.position, holes[0].PlayerStart.rotation);

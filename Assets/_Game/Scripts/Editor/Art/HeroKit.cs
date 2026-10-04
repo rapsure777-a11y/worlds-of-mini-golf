@@ -42,7 +42,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
         const string MatDir = TropicalKit.Root + "/Materials";
         const string MeshDir = TropicalKit.Root + "/Meshes";
 
-        public Material Terrain, Rock, Wood, Thatch, Bamboo, Bark, Totem, Lantern, Paint, Leaves, Turf, Rail, Waterfall, PoolWater, Mist;
+        public Material Terrain, Rock, Wood, Thatch, Bamboo, Bark, Totem, Lantern, Paint, Leaves, Turf, Rail, Deck, Waterfall, PoolWater, Mist;
         readonly Dictionary<string, Material> m_BySuffix = new Dictionary<string, Material>();
         readonly Dictionary<string, Mesh> m_Foliage = new Dictionary<string, Mesh>();
 
@@ -138,6 +138,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Totem = Surface("Hero_Totem", "wood", new Color(0.82f, 0.62f, 0.48f), 0.4f, 0.1f, 1.2f, new Vector2(0.8f, 0.8f));
             // Low bump strength and smoothness: this is the putting surface, so it must not shimmer or hide the ball line.
             Turf = Surface("Hero_Turf", "turf", new Color(1f, 1.05f, 1f), 0.08f, 0.02f, 0.5f, new Vector2(1.2f, 1.2f));
+            // Wooden bridge deck (GreenLayout.deckAreas): same collider as the turf, plank-like wood, low bump so the ball line stays readable.
+            Deck = Surface("Hero_Deck", "wood", new Color(0.92f, 0.8f, 0.62f), 0.3f, 0.06f, 0.7f, new Vector2(1.5f, 1.5f));
             Rail = Surface("Hero_Rail", "wood", new Color(1.05f, 0.95f, 0.85f), 0.5f, 0.12f, 1f, new Vector2(0.7f, 0.9f));
 
             Paint = LoadOrCreate("Hero_Paint", Sh("Gamebreak/StylizedLit"));
