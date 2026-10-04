@@ -10,7 +10,7 @@ Written by Local Claude, 2026-10-03, before Milestone 3 development starts.
 | Validated state | 43/43 PlayMode tests; PCVR and desktop builds; smoke test PASS; Steam Frame at 90 Hz on rich, 100% full-rate frames (fresh SteamVR session) |
 | Not merged | `main` is still the older showcase checkpoint (`9001494`); PR #1 (`cloud/graphical-pass-2-integration`) is open. Merging is Andrew's call. |
 
-Read first:
+Read first: **`Docs/MILESTONE3_BRIEF.md` (the HQ brief: hole designs, cluster plan, music requirements)**, then
 - `Docs/CLOUD_HANDOFF_PASS2.md` (system overview, sections A–G);
 - `Docs/HQ_REPORT_PASS2_HEADSET.md` (headset results and round 2 update);
 - `Docs/LOCAL_VALIDATION_G5.md` (local fixes and probe results);
