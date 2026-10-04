@@ -25,6 +25,7 @@ namespace Gamebreak.MiniGolf.Tests
         {
             var p = new GameObject("TestMusic").AddComponent<MusicPlayer>();
             p.Configure(clusters, null, 0.55f, null);
+            p.FadeInSeconds = 0.05f; // tests check levels right away, not the 4 s in-game fade-in
             return p;
         }
 

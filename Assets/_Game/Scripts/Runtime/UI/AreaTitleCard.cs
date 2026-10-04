@@ -100,7 +100,7 @@ namespace Gamebreak.MiniGolf
             var sb = new System.Text.StringBuilder();
             foreach (char ch in s.ToUpperInvariant())
             {
-                if (ch == ' ') sb.Append("   ");
+                if (ch == ' ') sb.Append("  "); // plus the letter's trailing space = 3 between words
                 else { sb.Append(ch); sb.Append(' '); }
             }
             return sb.ToString().TrimEnd();

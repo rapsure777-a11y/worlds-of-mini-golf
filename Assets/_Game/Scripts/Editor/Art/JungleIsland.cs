@@ -53,7 +53,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 if (isDeck) continue;
                 island.zones.Add(new IslandGen.Zone
                 {
-                    centre = f.L2(r.center.x, r.center.y), halfSize = r.size * 0.5f + new Vector2(0.5f, 0.5f), yaw = f.yaw, feather = 2.2f,
+                    // Tight blend (Local, M3 cp1): a 2.2 m feather from the lanes at both bridge ends filled the ravine under the deck to 1.6 m.
+                    centre = f.L2(r.center.x, r.center.y), halfSize = r.size * 0.5f + new Vector2(0.3f, 0.3f), yaw = f.yaw, feather = 1.0f,
                     heightFn = w => { var l = f.ToLocal2(w); return originY + layout.Height(l.x, l.y) - TropicalCourse.GreenElevation - 0.06f; },
                 });
             }

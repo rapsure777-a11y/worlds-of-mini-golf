@@ -34,6 +34,9 @@ namespace Gamebreak.MiniGolf
         public AudioSource ActiveSource => m_Active >= 0 ? m_Sources[m_Active] : null;
         public int PlayingSourceCount { get { int n = 0; foreach (var s in m_Sources) if (s && s.isPlaying) n++; return n; } }
 
+        /// <summary>Fade-in used for the first track (seconds). Set before the first frame.</summary>
+        public float FadeInSeconds { get => m_FadeInSeconds; set => m_FadeInSeconds = Mathf.Max(0f, value); }
+
         /// <summary>Music level (0..1). Defaults to the world's level (0.55).</summary>
         public float Volume
         {

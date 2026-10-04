@@ -290,6 +290,7 @@ namespace Gamebreak.MiniGolf.Tests
         {
             var p = new GameObject("TestMusic").AddComponent<MusicPlayer>();
             p.Configure(new[] { new MusicCluster { name = "A", firstHole = 1, lastHole = 1, clip = Tone("a") } }, null, 0.55f, null);
+            p.FadeInSeconds = 0.05f; // check levels right away, not the 4 s in-game fade-in
             yield return null;
             p.PlayFor(1, 0.05f);
             yield return new WaitForSecondsRealtime(0.4f);
@@ -345,6 +346,9 @@ namespace Gamebreak.MiniGolf.Tests
         {
             SceneManager.LoadScene("TropicalAdventure");
             yield return null;
+            yield return null;
+            // The scorecard starts hidden and builds its sliders on first show: open it like pressing X.
+            Object.FindFirstObjectByType<VRRig>().ToggleScorecard();
             yield return null;
             var c = FindControls();
             Assert.IsNotNull(c, "the scorecard has no volume controls");
