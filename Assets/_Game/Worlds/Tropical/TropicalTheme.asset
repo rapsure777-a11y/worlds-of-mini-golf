@@ -18,6 +18,7 @@ MonoBehaviour:
   wall: {fileID: 2100000, guid: a5af6daa9ab188141bf8bb0f74f5b39a, type: 2}
   cup: {fileID: 2100000, guid: 00a02ee572fdca84290c425bb3515e89, type: 2}
   flag: {fileID: 2100000, guid: 49408e720db6ec443a4373ebe3a6ff16, type: 2}
+  deck: {fileID: 2100000, guid: 69e61d9e429cebc4f8c5664d33016917, type: 2}
   tee: {fileID: 2100000, guid: fe9d30e398dfd0c42afe064e2857cd85, type: 2}
   ball: {fileID: 2100000, guid: 3edb15d90867a2a4fa1b68c6572e8095, type: 2}
   putterShaft: {fileID: 2100000, guid: fd49e39cab3a55446a920ff9d4182ce9, type: 2}

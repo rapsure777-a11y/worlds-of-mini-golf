@@ -1,0 +1,7 @@
+﻿GPU benchmark 2026-10-03 21:50  AMD Radeon RX 7900 XT  4320x2160 offscreen, FOV 100 (approx. both Steam Frame eyes)
+  tee          GPU median 2.92  p95 3.17 ms   CPU main median 3.27  p95 3.48 ms
+  from_cup     GPU median 2.62  p95 2.75 ms   CPU main median 2.97  p95 3.11 ms
+  jungle_side  GPU median 2.81  p95 3.14 ms   CPU main median 3.16  p95 3.52 ms
+  sea_side     GPU median 2.67  p95 2.93 ms   CPU main median 2.12  p95 3.14 ms
+  ALL          GPU median 2.78  p95 3.02 ms
+Budget reference: 120 Hz = 8.33 ms, 90 Hz = 11.1 ms, 72 Hz = 13.9 ms (VR adds compositor/streaming overhead).
