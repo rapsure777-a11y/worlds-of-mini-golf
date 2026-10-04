@@ -143,11 +143,11 @@ def pole(tiers, tier_h, base_r, bands, wings, crown):
         box("Paint", (0, -0.2, top + 0.1), (0.1, 0.2, 0.09), rot=(math.radians(20), 0, 0), color=YELLOW, bevel=0.015)
         box("Paint", (0, -0.31, top + 0.03), (0.07, 0.1, 0.07), rot=(math.radians(50), 0, 0), color=ORANGE, bevel=0.01)
         for side in (-1, 1):
-            box("Paint", (side * 0.1, -0.15, top + 0.2), (0.07, 0.03, 0.07), color=CREAM)
-            box("Paint", (side * 0.1, -0.165, top + 0.2), (0.035, 0.03, 0.035), color=DARK)
+            box("Paint", (side * 0.1, -0.18, top + 0.2), (0.07, 0.03, 0.07), color=CREAM)
+            box("Paint", (side * 0.1, -0.195, top + 0.2), (0.035, 0.03, 0.035), color=DARK)
         for k in range(5):
             a = math.radians(-60 + k * 30)
-            m = Matrix.Translation((math.sin(a) * 0.08, 0.0, top + 0.27)) @ Matrix.Rotation(-a, 4, "Y")
+            m = Matrix.Translation((math.sin(a) * 0.08, 0.0, top + 0.27)) @ Matrix.Rotation(a, 4, "Y")
             box("Paint", m.to_translation(), (0.05, 0.03, 0.32), rot=m.to_euler(),
                 color=(RED, YELLOW, TEAL, YELLOW, RED)[k], bevel=0.008)
     else:
@@ -181,7 +181,7 @@ def mask():
     # Feather crest.
     for k in range(7):
         a = math.radians(-66 + k * 22)
-        m = Matrix.Translation((math.sin(a) * 0.12, 0.0, z0 + 0.96 + math.cos(a) * 0.03)) @ Matrix.Rotation(-a, 4, "Y")
+        m = Matrix.Translation((math.sin(a) * 0.12, 0.0, z0 + 0.96 + math.cos(a) * 0.03)) @ Matrix.Rotation(a, 4, "Y")
         box("Paint", m.to_translation(), (0.06, 0.025, 0.34), rot=m.to_euler(), color=(RED, YELLOW, TEAL, ORANGE, TEAL, YELLOW, RED)[k], bevel=0.008)
 
 
