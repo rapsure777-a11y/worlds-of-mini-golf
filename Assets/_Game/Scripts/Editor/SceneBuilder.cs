@@ -20,12 +20,13 @@ namespace Gamebreak.MiniGolf.Editor
         const string ScenePath = WorldDir + "/Scenes/TropicalAdventure.unity";
         const string TuningPath = "Assets/_Game/Resources/GolfTuning.asset";
         const string ThemePath = WorldDir + "/TropicalTheme.asset";
-        const string MusicPath = "Assets/_Game/Audio/Music/IslandExploration.ogg";
+        const string MusicDir = "Assets/_Game/Audio/Music/";
 
         [MenuItem("Gamebreak/Build Tropical Scene")]
         public static void BuildTropicalScene()
         {
             var tuning = LoadOrCreate<GolfTuning>(TuningPath);
+            var clusters = TropicalCourse.Clusters();
             ProjectSetup.EnsureQualityAssets();
             var kit = Art.TropicalKit.Build();
             var hero = Art.HeroKit.Build(kit);
@@ -34,9 +35,13 @@ namespace Gamebreak.MiniGolf.Editor
             theme.deck = hero.Deck;
             theme.green = hero.Turf; theme.wall = hero.Rail; theme.cup = kit.Cup; theme.flag = kit.Flag; theme.tee = kit.Tee;
             theme.water = kit.Water;
-            theme.music = AssetDatabase.LoadAssetAtPath<AudioClip>(MusicPath);
+            // Music clusters come from the archipelago data (TropicalCourse.Clusters): one track per island cluster.
+            var musicClusters = new List<MusicCluster>();
+            foreach (var c in clusters)
+                musicClusters.Add(Cluster(c.displayName, c.holes[0], c.holes[c.holes.Length - 1], c.musicName));
+            theme.musicClusters = musicClusters.ToArray();
+            theme.music = theme.musicClusters[0].clip;
             theme.musicVolume = 0.55f; // Andrew, headset: 0.3 was too quiet ("almost twice as loud")
-            if (!theme.music) Debug.LogWarning($"[Gamebreak] Missing world music {MusicPath}.");
             EditorUtility.SetDirty(theme);
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -76,7 +81,6 @@ namespace Gamebreak.MiniGolf.Editor
             // Course.
             var courseRoot = new GameObject("Course").transform;
             var defs = TropicalCourse.Holes();
-            var clusters = TropicalCourse.Clusters();
             var holes = new HoleController[defs.Count];
             for (int i = 0; i < defs.Count; i++)
                 holes[i] = HoleFactory.Build(defs[i], theme, tuning, courseRoot, ball);
@@ -143,16 +147,6 @@ namespace Gamebreak.MiniGolf.Editor
             rig.Configure(offset, cam, left, right, putter, course, line, reticle.transform, cardGo);
             course.Configure(TropicalCourse.Name, holes, ball, rig);
 
-            // Music by island cluster: continuous within a cluster, crossfaded between clusters. A cluster whose track has not been
-            // imported yet (Assets/_Game/Audio/Music/<name>.ogg) has a null clip and simply keeps the current music playing.
-            var entries = new List<MusicEntry>();
-            foreach (var c in clusters)
-            {
-                var clip = c.MusicAssetPath != null ? AssetDatabase.LoadAssetAtPath<AudioClip>(c.MusicAssetPath) : null;
-                if (!clip) Debug.LogWarning($"[Gamebreak] Cluster '{c.id}': music {c.MusicAssetPath} not imported yet.");
-                entries.Add(new MusicEntry { clusterId = c.id, holes = c.holes, clip = clip });
-            }
-            new GameObject("Music").AddComponent<MusicDirector>().Configure(course, entries.ToArray(), theme.music);
             var fadeMat = new Material(Shader.Find("Gamebreak/Mist")) { name = "TransitionFade" };
             fadeMat.SetColor("_BaseColor", new Color(0f, 0f, 0f, 0f));
             new GameObject("TransitionFade").AddComponent<TransitionFade>().Configure(course, cam, fadeMat, clusters);
@@ -169,6 +163,8 @@ namespace Gamebreak.MiniGolf.Editor
             overlay.Configure(course, rig);
             var sessionLog = courseGo.AddComponent<SessionLog>();
             sessionLog.Configure(course, rig);
+            // Music by island cluster (one track per range of holes), following the course.
+            new GameObject("Music").AddComponent<MusicPlayer>().Configure(theme.musicClusters, theme.music, theme.musicVolume, course);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -264,6 +260,13 @@ namespace Gamebreak.MiniGolf.Editor
             theme.fogDensity = 0.004f;
             EditorUtility.SetDirty(theme);
             return theme;
+        }
+
+        static MusicCluster Cluster(string name, int firstHole, int lastHole, string track)
+        {
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>($"{MusicDir}{track}.ogg");
+            if (!clip) Debug.LogWarning($"[Gamebreak] Music cluster '{name}': missing {MusicDir}{track}.ogg");
+            return new MusicCluster { name = name, firstHole = firstHole, lastHole = lastHole, clip = clip };
         }
 
         static Material Mat(string name, Color color, float smoothness, float metallic = 0f)

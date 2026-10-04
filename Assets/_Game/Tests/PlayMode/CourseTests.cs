@@ -402,22 +402,6 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.AreEqual(0, blocked, "scenery on greens:\n" + report);
         }
 
-        [UnityTest]
-        public IEnumerator TropicalScene_PlaysWorldMusic()
-        {
-            SceneManager.LoadScene("TropicalAdventure");
-            yield return null;
-            yield return null;
-            var director = Object.FindFirstObjectByType<MusicDirector>();
-            Assert.IsNotNull(director, "no MusicDirector in the scene");
-            var source = director.ActiveSource;
-            Assert.IsNotNull(source, "no active music source");
-            Assert.IsNotNull(source.clip, "no music clip assigned");
-            Assert.IsTrue(source.loop && source.isPlaying, "music should loop and be playing");
-            Assert.AreEqual(0f, source.spatialBlend, "music should be 2D");
-            Assert.AreEqual(TropicalCourse.StartCluster, director.CurrentClusterId, "the first hole is on the Starting Island");
-        }
-
         /// <summary>
         /// Course surfaces must not use vertex wind sway: green and rail meshes have no wind weights, so any
         /// sway moves the whole visible surface while the collider stays still.

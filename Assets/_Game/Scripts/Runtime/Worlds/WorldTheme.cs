@@ -41,7 +41,30 @@ namespace Gamebreak.MiniGolf
         public Material teleportLine;
 
         [Header("Audio")]
+        [Tooltip("Fallback track for holes not covered by any cluster.")]
         public AudioClip music;
         [Range(0f, 1f)] public float musicVolume = 0.55f;
+        [Tooltip("Island/area clusters: one track shared by a range of holes (one, two or three holes each).")]
+        public MusicCluster[] musicClusters = new MusicCluster[0];
+    }
+
+    /// <summary>A musical environment: one looping track for a contiguous range of holes (1-based, inclusive).</summary>
+    [System.Serializable]
+    public class MusicCluster
+    {
+        public string name;
+        public int firstHole;
+        public int lastHole;
+        public AudioClip clip;
+
+        public bool Contains(int holeNumber) => holeNumber >= firstHole && holeNumber <= lastHole;
+
+        /// <summary>The cluster for a hole, or null if none covers it.</summary>
+        public static MusicCluster For(MusicCluster[] clusters, int holeNumber)
+        {
+            if (clusters == null) return null;
+            foreach (var c in clusters) if (c != null && c.Contains(holeNumber)) return c;
+            return null;
+        }
     }
 }

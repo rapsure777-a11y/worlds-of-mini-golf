@@ -14,18 +14,18 @@ Running document, one section per checkpoint. Brief: `Docs/MILESTONE3_BRIEF.md`;
 ### Then, in order
 1. Compile (`error CS`, `Shader error`).
 2. `Tools\art-shots.ps1 -Quality rich` (new shots: `hole03_*` including `_g_bridge_side`, `_h_bridge_from_elbow`, `_i_ravine_below`, plus `archipelago_aerial`, `archipelago_from_start_island`). Log lines to look for: `Clubhouse site:` (Hole 1, unchanged), `Waterfall: ... raycast-fitted`, `Hero model '...' not found` (Blender not run yet), `Music ... not imported yet` (expected until Andrew's files exist).
-3. `Tools\run-tests.ps1` (SteamVR closed): previous 43 + new `Milestone3Tests` (22) + the renamed `TropicalScene_ProgressesThroughAllHolesAndFinishes` (now plays 3 holes). `TropicalScene_PlaysWorldMusic` now checks `MusicDirector`.
+3. `Tools\run-tests.ps1` (SteamVR closed): Local's `MusicTests` + the existing suite + new `Milestone3Tests` (16) + the renamed `TropicalScene_ProgressesThroughAllHolesAndFinishes` (now plays 3 holes).
 4. Builds, smoke test (it plays Holes 1-2: check it still advances, and that hole 3 follows), benchmark.
 5. Headset with Andrew: bridge feel, the fade into the Jungle Island, crossfade (needs `JungleTheme.ogg`).
 
-### Music files (Local Claude converts Andrew's WAVs)
-In-project names (OGG Vorbis q6, streamed; `MusicImporter` applies the settings): `Assets/_Game/Audio/Music/JungleTheme.ogg` (Jungle Island, holes 3-4), later `TempleTheme.ogg`, `VolcanicTheme.ogg`, `SummitTheme.ogg`. `IslandExploration.ogg` is the Starting Island. **After importing, rebuild the scene** (`Automation.Setup`) so the entries bind to the clips. Until then the Jungle cluster has a null clip: the Starting Island music keeps playing and one warning is logged.
+### Music (already imported by Local Claude, commit `8ac0042`)
+All five tracks are in `Assets/_Game/Audio/Music` (`IslandExploration`, `JungleTheme`, `TempleTheme`, `VolcanicTheme`, `SummitTheme`). Rebuild the scene (`Automation.Setup`) so `WorldTheme.musicClusters` is regenerated from `TropicalCourse.Clusters()`; the Jungle cluster then plays from hole 3 with a crossfade (3 s, plus the 2.5 s loop crossfade).
 
 ### What was built
 | Area | Files | Notes |
 |---|---|---|
 | Cluster data | `Course/IslandCluster.cs`, `Course/HoleDefinition.cs` (`TropicalCourse.Clusters()`, `ClusterOf`, `HoleDefinition.cluster`) | `start` = holes 1-2, `jungle` = holes 3-4 (hole 4 next checkpoint). Clusters hold id, name, hole numbers, music file name, island centre/radius. Reusable by every world |
-| Music | `Feedback/MusicDirector.cs`, `Feedback/GolfAudio.cs` (replaces `MusicPlayer`) | Two ping-pong sources. Same-cluster holes: no restart. New cluster: 3.5 s crossfade; first start fades in over 4 s. Missing clip: keep current music, warn once. Level = `GolfAudio.MusicVolume` (default **0.55**) x entry gain, followed live. Independent `GolfAudio.SfxVolume` (default 1) applied in `GolfFeedback`. Desktop keys: F5/F6 music -/+, F7/F8 effects -/+; both saved in PlayerPrefs. **No VR settings UI yet** (decision below) |
+| Music | Local's `Feedback/MusicPlayer.cs` + `WorldTheme.musicClusters` (adopted; my duplicate `MusicDirector` was dropped in the merge with `8ac0042`), `Feedback/GolfAudio.cs` (new) | `SceneBuilder` now derives `theme.musicClusters` from `TropicalCourse.Clusters()` (one source of truth for hole grouping and track names; Temple/Volcanic/Summit are registered as data only). `GolfAudio.MusicScale` (default 1, max 1.8) multiplies the world's 0.55 level live in `MusicPlayer` (default behaviour and Local's tests unchanged); `GolfAudio.SfxVolume` (default 1) scales every effect in `GolfFeedback`. Desktop keys (in `MusicPlayer`): F5/F6 music -/+, F7/F8 effects -/+, saved in PlayerPrefs. **No VR settings UI yet** (decision below) |
 | Transition | `UI/TransitionFade.cs` | When the next hole is in another cluster: fade to black 0.5 s just before the teleport, fade in 0.9 s after. Unlit quad on the camera using `Gamebreak/Mist` |
 | Surface | `Course/CourseGeometry.cs`, `HoleFactory.cs`, `WorldTheme.deck`, `GreenLayout.deckAreas` | A third submesh with the bridge-deck material (`Hero_Deck`). Same collider/physics; rails unchanged. Existing holes unaffected (2 submeshes) |
 | Hole 3 | `HoleDefinition.cs` `Hole03()` | Par 3, 12 cm rails. Lane: A tee lane (1.2 x 3.4 m, +z) -> B wide elbow (4.0 x 2.4 m) -> **bridge** (3.6 x 1.2 m along +x, crest +0.18 m, i.e. needs about 1.6 m/s to cross) -> D landing pad (3 x 3 m) -> final lane (1.2 x 2.8 m) with a 2.5% lean toward the east rail. The cup (9.4, 8.5) is not in line from the pad: aim up the pad's east side or bank off the lane's east rail (test: `Hole3_BankShotOffTheLaneRail_EntersTheFinalLane`). A soft putt rolls back into the elbow without penalty; leaving the course costs the usual +1 and returns the ball |
@@ -35,7 +35,7 @@ In-project names (OGG Vorbis q6, streamed; `MusicImporter` applies the settings)
 | Jungle dressing | `JungleIsland.DressHole3`, `DressIsland` | Name board and hole sign, torches at the bridge ends, canopy trees (hero trees or palms), ravine-rim boulders, terraced cliff wall behind the landing pad, mesas, hanging vines, five layers of ground cover/shrubs/bananas/big leaves, shoulder foliage. Foliage stays 0.9 m clear of every lane area |
 | Pier | `JungleIsland.BuildPier` | Boardwalk across the channel between the islands with torches (visual/teleport-walkable). Players are carried between islands by the hole transition (fade + teleport), so nothing can strand them |
 | Tools | `Automation.cs`, `FrameCostProbe.cs` | New capture shots; the probe treats `IslandTerrain*` |
-| Tests | `Tests/PlayMode/Milestone3Tests.cs` | Cluster data, music crossfade/missing clip/live volume, Hole 3 layout (connectivity, bridge width, no cliffs, hump, lean), bridge physics (firm putt crosses; +-14 deg putts stay on the deck; soft putt rolls back; final-lane cup; bank shot), scene wiring (3 materials on the surface, 2 m of ravine under the deck, a music entry for every hole) |
+| Tests | `Tests/PlayMode/Milestone3Tests.cs` | Cluster data and music names, user music scale + volume independence, Hole 3 layout (connectivity, bridge width, no cliffs, hump, lean), bridge physics (firm putt crosses; +-14 deg putts stay on the deck; soft putt rolls back; final-lane cup; bank shot), scene wiring (3 materials on the surface, 2 m of ravine under the deck,  |
 
 ### Design choices to review
 - Hole 3 faces east (yaw 90) so the player looks away from the Starting Island and can look back at it. Origin (46, 2.6, -56).
@@ -44,12 +44,11 @@ In-project names (OGG Vorbis q6, streamed; `MusicImporter` applies the settings)
 - New meshes use the `Hero_` prefix (`Hero_BridgeWood`, `Hero_BridgeRope`); the Jungle terrain asset is `IslandTerrain2` (Pass 2 lesson).
 
 ### Known risks / likely first fixes
-- Compile: `JungleIsland.cs` (tuple-array foreach deconstruction, local functions), `IslandGen` channel code, `MusicDirector`, `TransitionFade` (`Configure` signature), `Milestone3Tests`.
+- Compile: `JungleIsland.cs` (tuple-array foreach deconstruction, local functions), `IslandGen` channel code, `MusicPlayer` (scale/hotkeys), `TransitionFade` (`Configure` signature), `Milestone3Tests`.
 - The plateau/lane zones and the ravine are tuned blind: check the ravine walls (steepness, rock splat), the abutment gap where lane B/D meet the deck, and that the tee area is not on a steep embankment. Tunables: `RavineHalfWidth/Depth`, plateau `feather`/`height`, lane zone margin in `JungleIsland.ConfigureTerrain`.
 - Bridge supports: posts run to `Ground()` - 0.3 m; if the floor is under water they should still read as piles.
 - Jungle tree/vine FBX orientation and scale are unchecked (same conventions as the palms).
 - `TransitionFade` quad: should be invisible when alpha is 0 (renderer disabled). In VR confirm it fades in both eyes and does not clip.
-- Crossfade audio has not been heard; seamless looping depends on Andrew's files being loop-friendly.
 - Frame cost: the Jungle Island adds terrain (skipDeepSea trims it), about 300 leaf-card objects (each with a cull LODGroup), 3 hero rocks groups and 9 trees. No LOD for trees yet. Compare `Logs/scene-stats.txt` with the 2.06M-triangle Pass 2 figure.
 
 ### Decisions for Andrew / HQ

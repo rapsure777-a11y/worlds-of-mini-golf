@@ -36,7 +36,7 @@ namespace Gamebreak.MiniGolf
             };
         }
 
-        public const string StartCluster = "start", JungleCluster = "jungle";
+        public const string StartCluster = "start", JungleCluster = "jungle", TempleCluster = "temple";
 
         /// <summary>
         /// The archipelago: island clusters with their holes, music and position. Holes 1-2 share the Starting Island,
@@ -48,6 +48,10 @@ namespace Gamebreak.MiniGolf
             {
                 new IslandCluster { id = StartCluster, displayName = "Starting Island", holes = new[] { 1, 2 }, musicName = "IslandExploration", centre = Vector2.zero, radius = 34f },
                 new IslandCluster { id = JungleCluster, displayName = "Jungle Island", holes = new[] { 3, 4 }, musicName = "JungleTheme", centre = JungleCentre, radius = 26f },
+                // Planned clusters: music is imported, islands and holes are built in later checkpoints/milestones (centre/radius unset).
+                new IslandCluster { id = TempleCluster, displayName = "Temple Island", holes = new[] { 5, 6 }, musicName = "TempleTheme" },
+                new IslandCluster { id = "volcanic", displayName = "Volcanic Island", holes = new[] { 7, 8 }, musicName = "VolcanicTheme" },
+                new IslandCluster { id = "summit", displayName = "Summit Sanctuary", holes = new[] { 9 }, musicName = "SummitTheme" },
             };
         }
 

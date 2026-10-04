@@ -61,12 +61,15 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [Test]
-        public void MusicFiles_UseTheDocumentedInProjectNames()
+        public void MusicFiles_UseTheImportedInProjectNames()
         {
             var expected = new Dictionary<string, string>
             {
                 [TropicalCourse.StartCluster] = "Assets/_Game/Audio/Music/IslandExploration.ogg",
                 [TropicalCourse.JungleCluster] = "Assets/_Game/Audio/Music/JungleTheme.ogg",
+                [TropicalCourse.TempleCluster] = "Assets/_Game/Audio/Music/TempleTheme.ogg",
+                ["volcanic"] = "Assets/_Game/Audio/Music/VolcanicTheme.ogg",
+                ["summit"] = "Assets/_Game/Audio/Music/SummitTheme.ogg",
             };
             foreach (var c in TropicalCourse.Clusters())
                 if (expected.TryGetValue(c.id, out var path)) Assert.AreEqual(path, c.MusicAssetPath, c.id);
@@ -278,94 +281,42 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.That(b.hole.IsComplete || b.ball.Position.z > 6.5f, $"the bank shot did not reach the final lane, ball at {b.ball.Position}");
         }
 
-        // ------------------------------------------------------------------ music director
+        // ------------------------------------------------------------------ audio settings
 
-        static AudioClip Tone(string name) => AudioClip.Create(name, 44100 * 4, 1, 44100, false);
-
-        static MusicDirector NewDirector(MusicEntry[] entries, AudioClip fallback = null)
-        {
-            var go = new GameObject("TestMusic");
-            var d = go.AddComponent<MusicDirector>();
-            d.Configure(null, entries, fallback);
-            return d;
-        }
+        static AudioClip Tone(string name) => AudioClip.Create(name, 22050 * 30, 1, 22050, false);
 
         [UnityTest]
-        public IEnumerator Music_StaysContinuousWithinACluster_AndCrossfadesBetweenClusters()
+        public IEnumerator Music_UserScaleMultipliesTheWorldLevel_Live()
         {
-            var a = Tone("a"); var b = Tone("b");
-            var d = NewDirector(new[]
-            {
-                new MusicEntry { clusterId = "one", holes = new[] { 1, 2 }, clip = a },
-                new MusicEntry { clusterId = "two", holes = new[] { 3 }, clip = b },
-            });
+            var p = new GameObject("TestMusic").AddComponent<MusicPlayer>();
+            p.Configure(new[] { new MusicCluster { name = "A", firstHole = 1, lastHole = 1, clip = Tone("a") } }, null, 0.55f, null);
             yield return null;
-            d.NotifyHole(1);
-            var first = d.ActiveSource;
-            Assert.AreSame(a, first.clip);
-            yield return new WaitForSecondsRealtime(0.3f);
-            float t = first.time;
-            d.NotifyHole(2); // same cluster: nothing happens
-            Assert.AreSame(first, d.ActiveSource, "same-cluster hole must not switch sources");
-            Assert.GreaterOrEqual(first.time, t, "same-cluster hole must not restart the track");
-            Assert.AreEqual(1, d.PlayingSourceCount);
-
-            d.NotifyHole(3); // new cluster: crossfade
-            Assert.AreNotSame(first, d.ActiveSource);
-            Assert.AreSame(b, d.ActiveSource.clip);
-            Assert.AreEqual(2, d.PlayingSourceCount, "both tracks should overlap during the crossfade");
-            yield return new WaitForSecondsRealtime(4.2f);
-            Assert.AreEqual(1, d.PlayingSourceCount, "the old track should stop after the fade");
-            Assert.IsTrue(d.ActiveSource.loop);
-            Assert.AreEqual(GolfAudio.DefaultMusic, d.ActiveSource.volume, 0.02f, "settled level should be the default music volume");
-            Object.Destroy(d.gameObject);
-        }
-
-        [UnityTest]
-        public IEnumerator Music_MissingClip_KeepsPlayingTheCurrentTrack_AndWarnsOnce()
-        {
-            var a = Tone("a");
-            var d = NewDirector(new[]
-            {
-                new MusicEntry { clusterId = "one", holes = new[] { 1 }, clip = a },
-                new MusicEntry { clusterId = "later", holes = new[] { 3 }, clip = null },
-            });
-            yield return null;
-            d.NotifyHole(1);
-            var src = d.ActiveSource;
-            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("Music for cluster 'later' is missing"));
-            d.NotifyHole(3);
-            d.NotifyHole(3); // no second warning
-            Assert.AreSame(src, d.ActiveSource);
-            Assert.IsTrue(src.isPlaying);
-            Assert.AreEqual("one", d.CurrentClusterId);
-            Object.Destroy(d.gameObject);
-        }
-
-        [UnityTest]
-        public IEnumerator Music_FollowsTheLiveMusicVolume()
-        {
-            var d = NewDirector(new[] { new MusicEntry { clusterId = "one", holes = new[] { 1 }, clip = Tone("a"), gain = 1f } });
-            yield return null;
-            d.NotifyHole(1);
-            yield return new WaitForSecondsRealtime(4.3f);
-            GolfAudio.MusicVolume = 0.2f;
+            p.PlayFor(1, 0.05f);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Assert.AreEqual(0.55f, p.ActiveSource.volume, 0.01f, "default scale keeps the world's 0.55");
+            GolfAudio.MusicScale = 0.5f;
             yield return null; yield return null;
-            Assert.AreEqual(0.2f, d.ActiveSource.volume, 0.02f);
-            Object.Destroy(d.gameObject);
+            Assert.AreEqual(0.275f, p.ActiveSource.volume, 0.01f, "scale 0.5 halves it");
+            GolfAudio.MusicScale = 10f;
+            yield return null; yield return null;
+            Assert.AreEqual(Mathf.Clamp01(0.55f * GolfAudio.MaxMusicScale), p.ActiveSource.volume, 0.01f, "scale is capped");
+            Object.Destroy(p.gameObject);
         }
 
         [Test]
-        public void GolfAudio_MusicAndEffectsVolumesAreIndependentAndClamped()
+        public void GolfAudio_MusicAndEffectsAreIndependentAndClamped()
         {
-            Assert.AreEqual(0.55f, GolfAudio.MusicVolume, 1e-4f, "default music volume");
+            Assert.AreEqual(1f, GolfAudio.MusicScale, 1e-4f, "default music scale (keeps the 0.55 world level)");
+            Assert.AreEqual(1f, GolfAudio.SfxVolume, 1e-4f);
             GolfAudio.SfxVolume = 0.25f;
-            Assert.AreEqual(0.55f, GolfAudio.MusicVolume, 1e-4f, "changing effects must not change music");
-            GolfAudio.MusicVolume = 3f;
-            Assert.AreEqual(1f, GolfAudio.MusicVolume, 1e-4f);
+            Assert.AreEqual(1f, GolfAudio.MusicScale, 1e-4f, "changing effects must not change music");
+            GolfAudio.MusicScale = 5f;
+            Assert.AreEqual(GolfAudio.MaxMusicScale, GolfAudio.MusicScale, 1e-4f);
             Assert.AreEqual(0.25f, GolfAudio.SfxVolume, 1e-4f);
             GolfAudio.SfxVolume = -1f;
             Assert.AreEqual(0f, GolfAudio.SfxVolume, 1e-4f);
+            GolfAudio.ResetToDefaults();
+            Assert.AreEqual(1f, GolfAudio.MusicScale, 1e-4f);
         }
 
         // ------------------------------------------------------------------ the generated scene
@@ -400,24 +351,6 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.IsFalse(float.IsNaN(deckY), "no deck under the bridge centre");
             Assert.IsFalse(float.IsNaN(groundY), "no terrain under the bridge");
             Assert.Greater(deckY - groundY, 2.0f, $"expected at least 2 m of ravine under the bridge, got {deckY - groundY:F2} m");
-        }
-
-        [UnityTest]
-        public IEnumerator TropicalScene_MusicDirectorKnowsEveryCluster()
-        {
-            SceneManager.LoadScene("TropicalAdventure");
-            yield return null;
-            var director = Object.FindFirstObjectByType<MusicDirector>();
-            Assert.IsNotNull(director);
-            foreach (var c in TropicalCourse.Clusters())
-            {
-                foreach (int h in c.holes)
-                {
-                    var e = director.Find(h);
-                    Assert.IsNotNull(e, $"no music entry for hole {h}");
-                    Assert.AreEqual(c.id, e.clusterId);
-                }
-            }
         }
     }
 }
