@@ -10,7 +10,7 @@ Nine holes in five zones, one music track per zone (all five tracks are imported
 
 ## First thing to do next session
 1. Ask Andrew how Hole 4, the tiki props and the celebrations felt in the headset (launch with `Builds\Windows\WorldsOfMiniGolf.exe`, SteamVR streaming first, ONE streaming session only: two sessions made the headset audio cut out).
-2. Things to judge: Hole 4 pace on the drop and the climb; confetti amount/size and label readability (hole in one on Hole 1; a birdie on Hole 3 is 2 strokes); tiki pole and mask look and placement.
+2. Andrew tested Hole 4 (2026-10-04): too long, too many turns for par 4, too generic/flat, no obstacles. Redesign waits for the cloud design sprint review (`Docs/HOLE_DESIGN_SPRINT_001.md`).
 3. Then continue: Temple Island holes 5-6 (new island, `TropicalCourse.Clusters()` needs centre/radius, new `Hole05/06`, a `TempleIsland` class like `JungleIsland`, tests like the Hole 3/4 ones).
 
 ## Built this session (details in `DEVELOPMENT_LOG.md`)

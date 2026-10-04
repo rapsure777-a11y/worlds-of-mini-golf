@@ -128,3 +128,9 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - **Tiki props:** `Tools/Blender/hero_tiki.py` -> `HeroTikiPole_0/1`, `HeroTikiMask_0` (original work). Placed on holes 1, 2 and 4 via `TropicalWorld.Tiki` (capsule colliders, turned 180 degrees because of the FBX axis mapping).
 - **Course plan recorded:** 9 holes in five zones (2+2+2+2+1); see `RESUME.md`.
 - Tests: 78/78 at the last full run. Both players rebuilt.
+
+## 2026-10-04 (later): Hole 4 confirmed, pushed; tiki fix; headset feedback
+
+- **Hole 4 "Hollow Drop" exists and is on GitHub** (`milestone-3-island-hopping`; code in `HoleDefinition.Hole04`, dressing in `JungleIsland.DressHole4`, tests in the Milestone 3 suite). Holes 1-3 unchanged. 78/78 PlayMode tests pass, both players build with 0 errors. The cloud could not see it earlier only because it had never been pushed.
+- **Tiki fix:** crest feathers (mask and bird-head pole) were tilted inward and crossed; the bird's eyes were buried in the head. Fixed in `hero_tiki.py`, models regenerated.
+- **Andrew's headset feedback on Hole 4 (for the design sprint, nothing changed yet):** too long with too many turns to reach the cup in 4 strokes (not hard, just long); holes feel flat, generic, and lack obstacles. Hole redesign is deferred until the cloud reviews the real hole.
