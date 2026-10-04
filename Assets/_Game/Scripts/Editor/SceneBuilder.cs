@@ -19,6 +19,7 @@ namespace Gamebreak.MiniGolf.Editor
         const string ScenePath = WorldDir + "/Scenes/TropicalAdventure.unity";
         const string TuningPath = "Assets/_Game/Resources/GolfTuning.asset";
         const string ThemePath = WorldDir + "/TropicalTheme.asset";
+        const string MusicPath = "Assets/_Game/Audio/Music/IslandExploration.ogg";
 
         [MenuItem("Gamebreak/Build Tropical Scene")]
         public static void BuildTropicalScene()
@@ -31,6 +32,8 @@ namespace Gamebreak.MiniGolf.Editor
             // Putting surface and rails use the Blender-baked PBR sets (Hero_Turf: low bump, Hero_Rail: wood). The cup, flag and tee stay on the kit.
             theme.green = hero.Turf; theme.wall = hero.Rail; theme.cup = kit.Cup; theme.flag = kit.Flag; theme.tee = kit.Tee;
             theme.water = kit.Water;
+            theme.music = AssetDatabase.LoadAssetAtPath<AudioClip>(MusicPath);
+            if (!theme.music) Debug.LogWarning($"[Gamebreak] Missing world music {MusicPath}.");
             EditorUtility.SetDirty(theme);
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -94,6 +97,9 @@ namespace Gamebreak.MiniGolf.Editor
             volume.isGlobal = true;
             volume.sharedProfile = BuildPostProfile();
             cam.GetUniversalAdditionalCameraData().renderPostProcessing = false;
+            var music = new GameObject("Music");
+            music.AddComponent<AudioSource>();
+            music.AddComponent<MusicPlayer>().Configure(theme.music, theme.musicVolume);
             var quality = new GameObject("QualityPreset").AddComponent<QualityPreset>();
             quality.Configure(
                 AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(ProjectSetup.LeanAssetPath),

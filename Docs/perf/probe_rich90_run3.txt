@@ -1,0 +1,15 @@
+﻿Frame-cost probe 2026-10-03 19:35  preset Rich  AMD Radeon RX 7900 XT
+XR True  eye 2160x2160  refresh 90 Hz   (stand still at the tee; lower interval / higher full-rate share = that feature was costing time)
+stage                                                interval med      p95  full-rate  half-rate  frames
+baseline                                                  0.01 ms 311.11 ms       50 %        0 %  78
+shadows off (distance 0.1 m)                              0.01 ms 311.11 ms       50 %        0 %  78
+terrain does not cast shadows                             0.01 ms 311.11 ms       50 %        0 %  78
+MSAA off                                             (skipped in XR)
+MSAA 2x                                              (skipped in XR)
+render scale 0.7                                          0.01 ms 311.11 ms       50 %        0 %  78
+no depth/opaque copies (water fallback)                   0.01 ms 311.11 ms       50 %        0 %  78
+hide leaf cards (alpha-tested foliage)                    0.01 ms 311.11 ms       50 %        0 %  78
+hide hero rocks                                           0.01 ms 311.11 ms       50 %        0 %  78
+hide terrain                                              0.01 ms 311.11 ms       50 %        0 %  78
+hide water (ocean, pool, waterfall, mist)                 0.01 ms 311.11 ms       50 %        0 %  78
+hide all dressing (green, rails, sky, ball only)          0.01 ms 311.11 ms       50 %        0 %  78
