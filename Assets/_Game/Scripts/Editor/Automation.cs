@@ -2,6 +2,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace Gamebreak.MiniGolf.Editor
 {
@@ -117,6 +118,7 @@ namespace Gamebreak.MiniGolf.Editor
             {
                 var mf = r.GetComponent<MeshFilter>();
                 if (!mf || !mf.sharedMesh || !r.enabled) continue;
+                if (r.name.StartsWith("LOD")) continue; // simplified LOD children (HeroKit rock LODs): count LOD0 only, i.e. worst case at close range
                 renderers++;
                 if (GameObjectUtility.AreStaticEditorFlagsSet(r.gameObject, StaticEditorFlags.BatchingStatic)) staticRenderers++;
                 var m = mf.sharedMesh;
@@ -140,6 +142,21 @@ namespace Gamebreak.MiniGolf.Editor
             Setup();
             BuildPlayer();
             BuildDesktopPlayer();
+        }
+
+        /// <summary>
+        /// Edit-mode captures do not run QualityPreset, so select the preset here: env var GB_QUALITY = lean | balanced | rich
+        /// (default balanced). Swaps the editor's active URP asset and the water-depth keyword to match the runtime.
+        /// </summary>
+        static QualityLevel CaptureQuality()
+        {
+            var level = System.Enum.TryParse(System.Environment.GetEnvironmentVariable("GB_QUALITY"), true, out QualityLevel l) ? l : QualityLevel.Balanced;
+            string path = level == QualityLevel.Lean ? ProjectSetup.LeanAssetPath : level == QualityLevel.Rich ? ProjectSetup.RichAssetPath : ProjectSetup.BalancedAssetPath;
+            var asset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(path);
+            if (asset) QualitySettings.renderPipeline = asset;
+            QualityPreset.SetWaterDepth(level != QualityLevel.Lean);
+            Debug.Log($"[Gamebreak] Capture quality preset: {level}");
+            return level;
         }
 
         /// <summary>Renders review shots of the first scene to Screenshots/. Needs a graphics device (no -nographics).</summary>
@@ -170,8 +187,10 @@ namespace Gamebreak.MiniGolf.Editor
                 shots.Add(($"{n}_e_from_cup", cupPos + line * 1.6f + Vector3.up * 1.5f, tee + Vector3.up * 0.3f));
                 shots.Add(($"{n}_f_cup", cupPos + new Vector3(0.25f, 0.25f, -0.35f), cupPos));
             }
+            var level = CaptureQuality();
             var go = new GameObject("ReviewCamera");
             var cam = go.AddComponent<Camera>();
+            cam.GetUniversalAdditionalCameraData().renderPostProcessing = level == QualityLevel.Rich;
             cam.fieldOfView = 70f;
             cam.nearClipPlane = 0.01f;
             var rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };

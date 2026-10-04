@@ -58,29 +58,64 @@ namespace Gamebreak.MiniGolf.Editor
             EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
         }
 
+        public const string BalancedAssetPath = "Assets/Settings/PC_RPAsset.asset";       // the PC quality level's asset
+        public const string LeanAssetPath = "Assets/Settings/PC_Lean_RPAsset.asset";
+        public const string RichAssetPath = "Assets/Settings/PC_Rich_RPAsset.asset";
+
+        /// <summary>
+        /// Creates (if missing) and configures the three URP assets that <see cref="QualityPreset"/> swaps between.
+        /// VR budget at 120 Hz is 8.3 ms for two 2160x2160 views. The URP template's PC settings (SSAO, depth + opaque
+        /// copies, HDR, 4 soft cascades) measured 6.5 ms median / 10.8 ms p99 GPU on a greybox scene, so SteamVR halved
+        /// the frame rate. Hence a lean preset (the old settings) stays available and each costly feature is introduced
+        /// by a separate tier so it can be benchmarked on its own (Tools/benchmark.ps1 -Quality lean|balanced|rich).
+        /// </summary>
+        public static void EnsureQualityAssets()
+        {
+            var balanced = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(BalancedAssetPath);
+            if (!balanced) { Debug.LogError($"[Gamebreak] {BalancedAssetPath} not found; cannot create quality presets."); return; }
+            foreach (var path in new[] { LeanAssetPath, RichAssetPath })
+                if (!File.Exists(path)) AssetDatabase.CopyAsset(BalancedAssetPath, path);
+            ApplyLevel(balanced, QualityLevel.Balanced);
+            ApplyLevel(AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(LeanAssetPath), QualityLevel.Lean);
+            ApplyLevel(AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(RichAssetPath), QualityLevel.Rich);
+            AssetDatabase.SaveAssets();
+        }
+
+        static void ApplyLevel(UniversalRenderPipelineAsset asset, QualityLevel level)
+        {
+            if (!asset) return;
+            asset.msaaSampleCount = 4;
+            asset.renderScale = 1f;
+            switch (level)
+            {
+                case QualityLevel.Lean:      // the pre-Pass-2 configuration: measured flat 8.33 ms at 120 Hz
+                    asset.shadowDistance = 25f; asset.shadowCascadeCount = 2;
+                    asset.supportsHDR = false; asset.supportsCameraDepthTexture = false; asset.supportsCameraOpaqueTexture = false;
+                    break;
+                case QualityLevel.Balanced:  // + depth/opaque copies for real water depth, refraction and soft mist
+                    asset.shadowDistance = 30f; asset.shadowCascadeCount = 3;
+                    asset.supportsHDR = false; asset.supportsCameraDepthTexture = true; asset.supportsCameraOpaqueTexture = true;
+                    break;
+                default:                     // + HDR colour buffer (tonemap/bloom) and 4 longer cascades
+                    asset.shadowDistance = 40f; asset.shadowCascadeCount = 4;
+                    asset.supportsHDR = true; asset.supportsCameraDepthTexture = true; asset.supportsCameraOpaqueTexture = true;
+                    break;
+            }
+            var so = new SerializedObject(asset);
+            var soft = so.FindProperty("m_SoftShadowQuality");
+            if (soft != null) soft.intValue = level == QualityLevel.Rich ? 2 : 1; // Medium (2) / Low (1); the template used High (3)
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(asset);
+        }
+
         static void ConfigureQuality()
         {
+            EnsureQualityAssets();
             foreach (var guid in AssetDatabase.FindAssets("t:UniversalRenderPipelineAsset"))
             {
                 var asset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(AssetDatabase.GUIDToAssetPath(guid));
                 if (!asset || !asset.name.StartsWith("PC")) continue;
-                // VR budget at 120 Hz is 8.3 ms for two 2160x2160 views. The template's PC settings
-                // (SSAO, depth + opaque copies, HDR, 4 soft cascades) measured 6.5 ms median /
-                // 10.8 ms p99 GPU on a greybox scene, so SteamVR halved the frame rate.
-                asset.msaaSampleCount = 4;
-                asset.renderScale = 1f;
-                asset.shadowDistance = 25f;
-                asset.shadowCascadeCount = 2;
-                asset.supportsHDR = false;          // no post-processing uses it; halves colour bandwidth
-                asset.supportsCameraDepthTexture = false;
-                asset.supportsCameraOpaqueTexture = false;
-                var so = new SerializedObject(asset);
-                var soft = so.FindProperty("m_SoftShadowQuality");
-                if (soft != null) soft.intValue = 1; // Low (1) instead of High (3)
-                so.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(asset);
-
-                // Screen-space ambient occlusion is a full-screen pass per eye; disable it for VR.
+                // Screen-space ambient occlusion is a full-screen pass per eye; disable it for VR (shared PC renderer).
                 foreach (var r in asset.rendererDataList)
                 {
                     if (!r) continue;

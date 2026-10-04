@@ -403,6 +403,38 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [UnityTest]
+        public IEnumerator TropicalScene_PlaysWorldMusic()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            yield return null;
+            var player = Object.FindFirstObjectByType<MusicPlayer>();
+            Assert.IsNotNull(player, "no MusicPlayer in the scene");
+            var source = player.GetComponent<AudioSource>();
+            Assert.IsNotNull(source.clip, "no music clip assigned");
+            Assert.IsTrue(source.loop && source.isPlaying, "music should loop and be playing");
+            Assert.AreEqual(0f, source.spatialBlend, "music should be 2D");
+        }
+
+        /// <summary>
+        /// Course surfaces must not use vertex wind sway: green and rail meshes have no wind weights, so any
+        /// sway moves the whole visible surface while the collider stays still.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TropicalScene_CourseSurfacesDoNotSway()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            var report = new System.Text.StringBuilder();
+            foreach (var hole in Object.FindObjectsByType<HoleController>(FindObjectsSortMode.None))
+            foreach (var r in hole.GetComponentsInChildren<MeshRenderer>())
+            foreach (var m in r.sharedMaterials)
+                if (m && m.HasProperty("_WindStrength") && m.GetFloat("_WindStrength") != 0f)
+                    report.AppendLine($"{r.name}: {m.name} _WindStrength {m.GetFloat("_WindStrength")}");
+            Assert.IsEmpty(report.ToString(), "swaying course surfaces:\n" + report);
+        }
+
+        [UnityTest]
         public IEnumerator TropicalScene_ProgressesToHoleTwoAndFinishes()
         {
             Time.timeScale = 3f;

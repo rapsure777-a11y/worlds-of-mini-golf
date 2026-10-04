@@ -1,9 +1,11 @@
 // Gamebreak tropical ocean / lagoon (v2).
-// Uses the camera depth and opaque textures (enabled in the URP asset) for:
+// With the global keyword _GB_WATER_DEPTH (set by QualityPreset for Balanced/Rich, which enable the URP depth
+// and opaque textures) it uses the camera depth and opaque textures for:
 //  - depth-based colour absorption (clear turquoise shallows -> deep blue),
 //  - refraction of the seabed through the surface,
 //  - intersection foam wherever the water meets sand, rocks or the pier.
-// Vertex colour R still carries a baked shore distance for broad surf bands and wave damping.
+// Without the keyword (Lean preset) it falls back to the baked shore distance: no texture copies are needed.
+// Vertex colour R carries baked depth/2.2 m (0 at the shore, 1 = deep): surf bands, wave damping and the fallback depth.
 // Single Pass Instanced safe (XR-aware screen UVs and texture-array sampling).
 Shader "Gamebreak/StylizedWater"
 {
@@ -48,6 +50,7 @@ Shader "Gamebreak/StylizedWater"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _GB_WATER_DEPTH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -106,6 +109,7 @@ Shader "Gamebreak/StylizedWater"
                 half3 nTS = normalize(half3(n1.xy + n2.xy, n1.z * n2.z));
                 half3 n = normalize(half3(nTS.x, nTS.z, nTS.y));
 
+#if defined(_GB_WATER_DEPTH)
                 // Depth of water behind this pixel, from the camera depth texture.
                 float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
                 float sceneEye = LinearEyeDepth(SampleSceneDepth(screenUV), _ZBufferParams);
@@ -117,6 +121,11 @@ Shader "Gamebreak/StylizedWater"
                 float refrEye = LinearEyeDepth(SampleSceneDepth(refrUV), _ZBufferParams);
                 if (refrEye < surfaceEye) refrUV = screenUV;
                 half3 below = SampleSceneColor(refrUV);
+#else
+                // Fallback (no depth/opaque textures): depth from the baked shore value, seabed faked from the shallow colour.
+                half waterDepth = saturate(input.shore) * 2.2h;
+                half3 below = _ShallowColor.rgb * 0.9h;
+#endif
 
                 half absorb = 1.0h - exp(-waterDepth * _Absorption);
                 half3 waterTint = lerp(_ShallowColor.rgb, _DeepColor.rgb, absorb);

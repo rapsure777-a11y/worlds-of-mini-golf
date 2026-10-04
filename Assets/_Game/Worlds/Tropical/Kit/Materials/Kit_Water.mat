@@ -33,10 +33,14 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Absorption: 0.55
+    - _Clarity: 0.75
     - _FoamWidth: 0.07
     - _Gloss: 320
+    - _IntersectFoam: 0.35
     - _NormalScale: 0.18
     - _NormalStrength: 0.45
+    - _Refraction: 0.03
     - _ScrollSpeed: 0.03
     - _SpecStrength: 0.35
     - _WaveHeight: 0.04

@@ -97,3 +97,11 @@
 - Cups snapped to cell centres (5 cm off the requested spot). An even cup tile now snaps to grid vertices exactly.
 
 **Not yet verified:** anything in the headset (tracking, putter orientation on Frame controllers, SPI rendering of all materials, comfort, frame rate).
+
+## 2026-10-03: Graphical Pass 2, cloud integration (UNVERIFIED)
+Branch `cloud/graphical-pass-2-integration`, written by Cloud Claude with no Unity/Blender/GPU available.
+
+- HeroKit connected to `SceneBuilder`/`TropicalWorld`; splat terrain (`Hero_Terrain`); `Hero_Turf`/`Hero_Rail` on the course.
+- Hole 1 rebuilt around Blender hero assets: tiki clubhouse, palms, terraced cliff wall with raycast-fitted waterfall, carved plunge pool, mist, mesas, boulders, sea arch, five-layer leaf-card jungle.
+- Rendering: three URP presets (Lean = the old measured settings, Balanced = +depth/opaque, Rich = +HDR/post/4 cascades) with a runtime `QualityPreset` (`-quality`, F9); post-processing Volume; water depth keyword with a no-depth fallback; new `Gamebreak/Mist` shader.
+- **Status:** syntax-parsed only (tree-sitter). Not compiled, not rendered, tests not run (41/41 baseline remains on `main`), no build, no benchmark, no headset. See `Docs/CLOUD_RETURN_REPORT.md` and handoff section G.

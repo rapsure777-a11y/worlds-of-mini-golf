@@ -23,9 +23,17 @@ namespace Gamebreak.MiniGolf.Editor.Art
             public float Yaw(float localYaw) => yaw + localYaw;
         }
 
-        public static void Build(TropicalKit kit, List<HoleDefinition> defs, Transform parent)
+        /// <summary>Hole 1 hero set-piece, in Hole 1's local frame (x across the lane, + = sea side; z down the lane).</summary>
+        static readonly Vector2 CliffLocal = new Vector2(-9.5f, -2.5f);   // HeroCliffWall origin, front faces the lane (+x)
+        static readonly Vector2 PoolLocal = new Vector2(-7.4f, 1.0f);     // plunge pool in front of the cliff
+        const float PoolRadius = 2.0f, PoolDepth = 0.8f;
+        const float CliffScale = 0.85f;
+        /// <summary>Palm fronds lean toward Blender +X. Flip to -1 if the lean arrives mirrored after FBX import.</summary>
+        const float PalmLeanSign = 1f;
+
+        public static void Build(TropicalKit kit, HeroKit hero, List<HoleDefinition> defs, Transform parent)
         {
-            var island = new IslandGen { centre = Vector2.zero, radius = 34f, seed = 7 };
+            var island = new IslandGen { centre = Vector2.zero, radius = 34f, seed = 7, splat = true };
             var frames = new List<HoleFrame>();
             foreach (var d in defs) frames.Add(new HoleFrame(d));
 
@@ -52,13 +60,15 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // Central jungle mountain: the island's landmark and backdrop from every hole.
             island.mounds.Add((new Vector2(-2f, 9f), 17f, 6.5f));
             island.mounds.Add((new Vector2(-12f, 1f), 9f, 2.6f));
+            // Plunge pool carved into the backdrop mound (the water disc is added in DressHole1).
+            if (defs.Count > 0) island.basins.Add((frames[0].L2(PoolLocal.x, PoolLocal.y), PoolRadius, PoolDepth));
 
             var world = new GameObject("World").transform;
             world.SetParent(parent, false);
-            BuildTerrainAndSea(kit, island, world);
+            BuildTerrainAndSea(kit, hero, island, world);
             SetupLighting(kit);
 
-            var dresser = new Dresser(kit, island, new GameObject("Dressing").transform);
+            var dresser = new Dresser(kit, hero, island, new GameObject("Dressing").transform);
             dresser.Root.SetParent(world, false);
             for (int i = 0; i < defs.Count; i++)
             {
@@ -70,7 +80,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
             if (defs.Count > 0) DressHole1(dresser, frames[0], defs[0]);
             if (defs.Count > 1) DressHole2(dresser, frames[1], defs[1]);
-            DressIsland(dresser);
+            DressIsland(dresser, defs.Count > 0 ? new Vector2(frames[0].origin.x, frames[0].origin.z) : Vector2.zero);
             BuildHorizon(kit, island, world);
             RemoveObstructions(dresser.Root);
         }
@@ -108,7 +118,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         // ------------------------------------------------------------------ terrain, sea, sky
 
-        static void BuildTerrainAndSea(TropicalKit kit, IslandGen island, Transform world)
+        static void BuildTerrainAndSea(TropicalKit kit, HeroKit hero, IslandGen island, Transform world)
         {
             var terrainMesh = island.BuildTerrain();
             SaveMesh(terrainMesh, "IslandTerrain");
@@ -116,7 +126,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             terrain.transform.SetParent(world, false);
             terrain.AddComponent<MeshFilter>().sharedMesh = terrainMesh;
             var tr = terrain.AddComponent<MeshRenderer>();
-            tr.sharedMaterial = kit.Terrain;
+            tr.sharedMaterial = hero.Terrain; // TerrainSplat: vertex colour = layer weights (IslandGen.splat)
             tr.shadowCastingMode = ShadowCastingMode.On;
             terrain.AddComponent<MeshCollider>().sharedMesh = terrainMesh;
             terrain.AddComponent<OutOfBoundsSurface>();
@@ -202,19 +212,39 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         // ------------------------------------------------------------------ holes
 
+        /// <summary>
+        /// Hole 1 "Beach Warm-up". Composition, from the player's tee looking down the lane (left = inland, right = sea):
+        /// foreground = sandstone rail, ground cover and shrubs; middle = bananas, ferns, boulders, hero palms and the tiki
+        /// clubhouse; back = the terraced cliff wall with its waterfall and plunge pool, sandstone mesas behind it; lagoon side =
+        /// beach palms and a sea arch standing in the water. Heroes come from Blender (HeroKit); the kit still supplies
+        /// signs, torches, crates and the pier.
+        /// </summary>
         static void DressHole1(Dresser d, HoleFrame f, HoleDefinition def)
         {
             var root = new GameObject("Hole01_Dressing").transform;
             root.SetParent(d.Root, false);
             Vector3 start = f.L(0f, -0.3f);
             float FaceStart(Vector3 p) => Quaternion.LookRotation((p - start).WithY(0f)).eulerAngles.y;
+            var rnd = new System.Random(101);
 
-            // Clubhouse tiki hut at the start, bar facing the tee.
-            var hutPos = f.L(-4.4f, -1.6f);
-            d.Place("TikiHut", d.Kit.Solid, hutPos, FaceStart(hutPos), 1f, collider: true, parent: root);
-            d.Place("Barrel", d.Kit.Solid, f.L(-2.6f, -2.6f), 20f, 1f, collider: true, parent: root);
-            d.Place("Crate0", d.Kit.Solid, f.L(-2.7f, -3.4f), 12f, 1f, collider: true, parent: root);
-            d.Place("Crate1", d.Kit.Solid, f.L(-2.7f, -3.4f) + Vector3.up * 0.6f, 40f, 1f, snap: false, parent: root);
+            // Clubhouse site: behind the tee, well clear of the cliff, plunge pool/waterfall and Hole 2's tee (which lies at
+            // roughly local x -5..-10, z 8..10). The first candidate whose whole deck is on dry land and out of the pool's way wins.
+            var hutLocal = ChooseClubhouseSite(d, f, FaceStart);
+
+            // Keep-outs for the set-piece volumes, registered first so every scatter below respects them.
+            d.KeepOut(f.L2(hutLocal.x, hutLocal.y), new Vector2(3.0f, 3.0f), f.yaw, 0.4f);          // clubhouse deck (rotated footprint, conservative)
+            d.KeepOut(f.L2(CliffLocal.x - 1.7f, CliffLocal.y), new Vector2(2.8f, 7.2f), f.yaw, 0.3f); // cliff wall volume
+            d.KeepOut(f.L2(PoolLocal.x, PoolLocal.y), new Vector2(PoolRadius + 0.4f, PoolRadius + 0.4f), f.yaw, 0.2f);
+            d.KeepOut(f.L2(-15.5f, 3f), new Vector2(3f, 3f), f.yaw, 0.5f);                          // mesas
+            d.KeepOut(f.L2(-13.5f, -7.5f), new Vector2(3f, 3f), f.yaw, 0.5f);
+
+            // Clubhouse tiki hut, front (model -Z) facing the tee. Deck is 4.6 x 3.6 m on 0.75 m stilts.
+            var hutPos = f.L(hutLocal.x, hutLocal.y);
+            d.Model("HeroTikiClubhouse", hutPos, FaceStart(hutPos), 1f, sink: 0.12f, colliders: true, parent: root);
+            // Crates and barrel on the beach side of the tee (the old spot is under the new deck).
+            d.Place("Barrel", d.Kit.Solid, f.L(0.9f, -2.7f), 20f, 1f, collider: true, parent: root);
+            d.Place("Crate0", d.Kit.Solid, f.L(1.3f, -3.5f), 12f, 1f, collider: true, parent: root);
+            d.Place("Crate1", d.Kit.Solid, f.L(1.3f, -3.5f) + Vector3.up * 0.6f, 40f, 1f, snap: false, parent: root);
             d.Place("Barrel", d.Kit.Solid, f.L(1.8f, -1.9f), 70f, 0.9f, collider: true, parent: root);
 
             // Welcome / controls board and the hole sign.
@@ -259,52 +289,324 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var mid = f.L(pierX0 + pierLen * 0.5f, pierZ);
             d.KeepOut(new Vector2(mid.x, mid.z), new Vector2(0.9f, pierLen * 0.5f), f.Yaw(90f), 0.2f);
 
-            // Palms: a row along the beach leaning toward the sea, a few inland.
-            // Fewer, well-spaced palms so the lane stays visible; seaward ones lean out over the beach.
-            var palms = new (float x, float z, int v, float lean)[]
+            // ---- Hero palms (3 Blender variants, 4.6 / 5.6 / 3.8 m). yawOff 0 leans toward the sea, 180 toward the jungle.
+            var palms = new (float x, float z, int v, float yawOff, float s)[]
             {
-                (3.1f, 1.6f, 2, 95f), (3.9f, 5.0f, 3, 80f), (3.0f, 8.6f, 1, 105f),
-                (-3.3f, 3.2f, 1, -80f), (-3.8f, 7.0f, 2, -110f), (-6.6f, -3.2f, 3, 200f),
+                (3.5f, 1.4f, 2, 0f, 1f), (4.3f, 5.0f, 0, 15f, 1.05f), (3.7f, 8.8f, 1, -10f, 1f), (6.0f, 3.2f, 2, 25f, 1.1f),
+                (-3.7f, 0.9f, 0, 180f, 1f), (-4.2f, 6.6f, 1, 165f, 1.05f), (-8.4f, -4.6f, 2, 200f, 1f),
             };
-            foreach (var p in palms) d.Palm(p.v, f.L(p.x, p.z), f.Yaw(p.lean), 1f);
+            foreach (var p in palms)
+            {
+                var pos = f.L(p.x, p.z);
+                if (d.Ground(pos.x, pos.z) < 0.05f) continue; // would stand in the water
+                float lean = f.yaw + p.yawOff + (PalmLeanSign < 0f ? 180f : 0f);
+                d.Model($"HeroPalm_{p.v}", pos, lean, p.s, sink: 0.06f, parent: root, cull: 0.006f);
+            }
 
-            // Sandstone cliffs and boulders form the inland backdrop.
-            // Backdrop stays on Hole 1's own inland side (local z < 5); Hole 2 sits further along.
-            d.Place("Cliff1", d.Kit.Solid, f.L(-7.6f, 0.6f), f.Yaw(15f), 1f, sink: 0.3f, collider: true, outOfBounds: true, parent: root);
-            d.Place("Cliff0", d.Kit.Solid, f.L(-10.4f, 1.4f), f.Yaw(-30f), 1f, sink: 0.3f, collider: true, outOfBounds: true, parent: root);
-            d.Place("Cliff2", d.Kit.Solid, f.L(-6.2f, -4.6f), f.Yaw(70f), 1f, sink: 0.3f, collider: true, outOfBounds: true, parent: root);
-            d.Place("RockLarge0", d.Kit.Solid, f.L(-5.6f, 0.6f), f.Yaw(30f), 1f, sink: 0.35f, collider: true, outOfBounds: true, parent: root);
-            d.Place("RockMedium0", d.Kit.Solid, f.L(-4.2f, 4.4f), f.Yaw(80f), 1f, sink: 0.3f, collider: true, outOfBounds: true, parent: root);
-            d.Place("RockMedium1", d.Kit.Solid, f.L(5.2f, 4.6f), f.Yaw(10f), 0.9f, sink: 0.45f, collider: true, outOfBounds: true, parent: root);
-            var rnd = new System.Random(101);
+            // ---- Backdrop: terraced cliff wall (16 m x 7 m, scaled), mesas behind it, boulders and the sea arch.
+            var wallPos = f.L(CliffLocal.x, CliffLocal.y);
+            // Model front is -Z; yaw -90 turns it toward local +x, i.e. facing the lane. Seated so the straight bottom edge never hovers over the mound's slope.
+            var wall = d.Model("HeroCliffWall", wallPos, f.Yaw(-90f), CliffScale, sink: 0.35f, colliders: true, outOfBounds: true, parent: root,
+                seat: true, lods: true, lodScale: 0.6f, seatExtraSink: 0.3f);
+            // Mesas are skyline silhouettes: no colliders, no shadows, aggressive LODs.
+            d.Model("HeroMesa_0", f.L(-15.5f, 3f), f.Yaw(25f), 1.05f, sink: 0.5f, shadows: false, parent: root, seat: true, lods: true, colliderLod: 0, seatExtraSink: 0.4f);
+            d.Model("HeroMesa_1", f.L(-13.5f, -7.5f), f.Yaw(140f), 1f, sink: 0.5f, shadows: false, parent: root, seat: true, lods: true, seatExtraSink: 0.4f);
+            // Boulders: stretched taller so they read as rounded stones rather than slabs, then seated on the ground.
+            d.Model("HeroBoulders_0", f.L(-4.4f, -1.6f), f.Yaw(30f), 0.8f, sink: 0.1f, colliders: true, outOfBounds: true, parent: root, seat: true, lods: true, yStretch: 1.45f, seatExtraSink: 0.12f);
+            d.Model("HeroBoulders_1", f.L(-3.9f, 3.3f), f.Yaw(-50f), 0.65f, sink: 0.1f, colliders: true, outOfBounds: true, parent: root, seat: true, lods: true, yStretch: 1.45f, seatExtraSink: 0.12f);
+            d.Model("HeroBoulders_1", f.L(5.6f, 4.4f), f.Yaw(80f), 0.7f, sink: 0.1f, colliders: true, outOfBounds: true, parent: root, seat: true, lods: true, yStretch: 1.45f, seatExtraSink: 0.12f);
+            PlaceSeaArch(d, f, root);
+
+            // ---- Waterfall, plunge pool and mist.
+            BuildWaterfall(d, f, root, wall);
+
+            // ---- Layered jungle. Lane edge is at local x = +-0.6, so nothing taller than ground cover sits inside |x| < 1.2.
+            bool Free(float x, float z, float minH = 0.12f)
+            {
+                var p = f.L(x, z);
+                return d.IsFree(new Vector2(p.x, p.z)) && d.Ground(p.x, p.z) > minH;
+            }
+            float Yaw360() => Dresser.Range(rnd, 0f, 360f);
+            // Layer 1: ground cover hugging the inland rail (and a thin dune strip on the beach side).
+            for (int i = 0; i < 46; i++)
+            {
+                float x = -Dresser.Range(rnd, 1.25f, 2.7f), z = Dresser.Range(rnd, -2.5f, 8.6f);
+                if (!Free(x, z)) continue;
+                d.Leaf($"GrassClump{rnd.Next(0, 2)}", f.L(x, z), Yaw360(), Dresser.Range(rnd, 0.9f, 1.6f), shadows: false, parent: root, cull: 0.014f);
+            }
+            for (int i = 0; i < 22; i++)
+            {
+                float x = Dresser.Range(rnd, 1.35f, 3.0f), z = Dresser.Range(rnd, -0.5f, 9f);
+                if (!Free(x, z, 0.22f)) continue;
+                d.Leaf($"GrassClump{rnd.Next(0, 2)}", f.L(x, z), Yaw360(), Dresser.Range(rnd, 0.8f, 1.3f), shadows: false, parent: root);
+            }
+            // Layer 2: flowering shrubs and leaf bushes in a staggered band behind it.
+            string[] shrubs = { "LeafBush0", "FlowerShrub0", "LeafBush1", "FlowerShrub1", "LeafBush2", "FlowerShrub2" };
+            for (int i = 0; i < 12; i++)
+            {
+                float x = -(2.3f + (i % 2) * 0.55f + Dresser.Range(rnd, 0f, 0.3f)), z = -2.3f + i * 0.95f;
+                if (!Free(x, z)) continue;
+                d.Leaf(shrubs[i % shrubs.Length], f.L(x, z), Yaw360(), Dresser.Range(rnd, 1.0f, 1.4f), shadows: false, parent: root);
+            }
+            foreach (var (x, z, m) in new[] { (1.6f, 2.6f, "FlowerShrub1"), (1.9f, 5.6f, "LeafBush2"), (1.7f, 7.8f, "FlowerShrub0"), (-0.9f, -2.5f, "FlowerShrub2"), (0.9f, -2.4f, "FlowerShrub0") })
+                if (Free(x, z, 0.2f)) d.Leaf(m, f.L(x, z), Yaw360(), 1f, shadows: false, parent: root);
+            // Layer 3: bananas and big-leaf plants, taller and further back.
+            string[] tall = { "Banana0", "BigLeaf1", "BigLeaf0", "Banana0", "BigLeaf1" };
+            for (int i = 0; i < 9; i++)
+            {
+                float x = -Dresser.Range(rnd, 3.9f, 5.4f), z = -2.8f + i * 1.35f;
+                if (!Free(x, z)) continue;
+                d.Leaf(tall[i % tall.Length], f.L(x, z), Yaw360(), Dresser.Range(rnd, 0.85f, 1.2f), parent: root);
+            }
+            // Layer 4: ferns and shrubs filling the gap to the cliff (pool and boulders are keep-outs).
+            for (int i = 0; i < 36; i++)
+            {
+                float x = -Dresser.Range(rnd, 4.2f, 8.6f), z = Dresser.Range(rnd, -4.5f, 5.0f);
+                if (!Free(x, z)) continue;
+                bool fern = rnd.NextDouble() < 0.6;
+                d.Leaf(fern ? "Fern0" : shrubs[rnd.Next(0, shrubs.Length)], f.L(x, z), Yaw360(), Dresser.Range(rnd, 1.0f, fern ? 1.5f : 1.8f), shadows: false, parent: root);
+            }
+            // Layer 5: dense big foliage on the shoulders of the cliff and behind the clubhouse.
+            for (int i = 0; i < 18; i++)
+            {
+                float x = -Dresser.Range(rnd, 6.5f, 12.5f), z = Dresser.Range(rnd, -9f, 5.5f);
+                if (!Free(x, z, 0.2f)) continue;
+                d.Leaf(rnd.NextDouble() < 0.5 ? "Banana0" : "LeafBush1", f.L(x, z), Yaw360(), Dresser.Range(rnd, 1.3f, 2.0f), shadows: false, parent: root, cull: 0.01f);
+            }
+            // Small stones along the beach side.
             for (int i = 0; i < 9; i++)
             {
                 float x = Dresser.Range(rnd, 2.0f, 7.0f), z = Dresser.Range(rnd, -2.5f, 10f);
                 var p = f.L(x, z);
                 if (!d.IsFree(new Vector2(p.x, p.z))) continue;
-                d.Place(rnd.NextDouble() < 0.5 ? "RockSmall0" : "RockSmall1", d.Kit.Solid, p, Dresser.Range(rnd, 0f, 360f), Dresser.Range(rnd, 0.7f, 1.4f), sink: 0.12f, parent: root);
-            }
-
-            // Lush planting along the inland rail, lighter beach planting on the sea side.
-            string[] inland = { "BigLeaf1", "FlowerBush4", "Bush2", "FlowerBush0", "BigLeaf0", "FlowerBush6", "Bush3", "FlowerBush2", "BigLeaf2" };
-            for (int i = 0; i < 9; i++)
-            {
-                float z = -0.2f + i * 1.0f;
-                var p = f.L(-1.55f - (i % 2) * 0.35f, z);
-                d.Place(inland[i], inland[i].StartsWith("Bush") || inland[i].StartsWith("Flower") ? d.Kit.Foliage : d.Kit.Foliage, p, Dresser.Range(rnd, 0f, 360f), Dresser.Range(rnd, 0.85f, 1.15f), parent: root);
-            }
-            foreach (var (x, z, m) in new[] { (1.5f, 2.6f, "FlowerBush3"), (1.7f, 3.4f, "FlowerBush5"), (1.6f, 5.6f, "Bush1"), (1.5f, 7.6f, "FlowerBush0"), (-1.0f, -2.4f, "FlowerBush1"), (0.9f, -2.3f, "FlowerBush6"), (-0.4f, -2.8f, "Bush0") })
-                d.Place(m, d.Kit.Foliage, f.L(x, z), Dresser.Range(rnd, 0f, 360f), 1f, parent: root);
-            for (int i = 0; i < 40; i++)
-            {
-                float sideSign = rnd.NextDouble() < 0.5 ? -1f : 1f;
-                float x = sideSign * Dresser.Range(rnd, 0.95f, 2.6f), z = Dresser.Range(rnd, -2.5f, 8.5f);
-                var p = f.L(x, z);
-                if (Mathf.Abs(x) < 1.05f && z > -0.5f && z < 7.4f) continue;
-                d.Place($"Grass{rnd.Next(0, 3)}", d.Kit.Foliage, p, Dresser.Range(rnd, 0f, 360f), Dresser.Range(rnd, 0.8f, 1.3f), shadows: false, parent: root);
+                d.Rock("small", p, Yaw360(), Dresser.Range(rnd, 0.8f, 1.4f), root, variant: rnd.Next(0, 2));
             }
             // Rope fence along the dune line on the sea side.
             d.Place("RopeFence3", d.Kit.Solid, f.L(1.95f, 1.6f), f.Yaw(0f), 1f, parent: root);
+        }
+
+        /// <summary>
+        /// Picks the clubhouse centre (hole-local x, z) behind the tee. A site is valid when every corner of the 5 x 4 m
+        /// deck footprint is on dry land and free of keep-outs, is at least PoolRadius + 4 m from the plunge pool, and stays
+        /// east of the cliff wall's volume. Falls back to the first candidate with a warning.
+        /// </summary>
+        static Vector2 ChooseClubhouseSite(Dresser d, HoleFrame f, System.Func<Vector3, float> faceStart)
+        {
+            var candidates = new[] { new Vector2(-2.6f, -6.2f), new Vector2(-3.4f, -6.4f), new Vector2(-1.8f, -6.8f), new Vector2(-4.0f, -6.0f), new Vector2(-0.8f, -6.8f) };
+            var rot = Quaternion.Euler(0f, f.yaw, 0f);
+            Vector3 right = rot * Vector3.right;
+            foreach (var c in candidates)
+            {
+                var centre = f.L(c.x, c.y);
+                var yawRot = Quaternion.Euler(0f, faceStart(centre), 0f);
+                bool ok = (c - PoolLocal).magnitude > PoolRadius + 4f;
+                foreach (var (sx, sz) in new[] { (1f, 1f), (1f, -1f), (-1f, 1f), (-1f, -1f), (0f, 0f) })
+                {
+                    var corner = centre + yawRot * new Vector3(sx * 2.5f, 0f, sz * 2.0f);
+                    if (d.Ground(corner.x, corner.z) < 0.15f || !d.IsFree(new Vector2(corner.x, corner.z))) ok = false;
+                    if (Vector3.Dot(corner - f.origin, right) < CliffLocal.x + 3f) ok = false;
+                }
+                if (ok) { Debug.Log($"[Gamebreak] Clubhouse site: hole-local ({c.x:F1}, {c.y:F1})."); return c; }
+            }
+            Debug.LogWarning("[Gamebreak] No clear clubhouse site found; using the first candidate. Check the layout.");
+            return candidates[0];
+        }
+
+        /// <summary>Sea arch standing in the lagoon off Hole 1. Legs sink 1.2 m below the model origin; we seat them on the seabed.</summary>
+        static void PlaceSeaArch(Dresser d, HoleFrame f, Transform root)
+        {
+            const float z = 3.5f;
+            float x = 9f;
+            for (float tx = 8f; tx < 26f; tx += 0.25f)
+            {
+                var c = f.L(tx, z);
+                if (d.Ground(c.x, c.z) < -0.6f) { x = tx; break; }
+            }
+            // Model X (span axis) -> local z, so the arch is seen face-on from the lane. Legs at +-3.5 m along the span.
+            var legA = f.L(x, z - 3.5f); var legB = f.L(x, z + 3.5f);
+            float seabed = Mathf.Min(d.Ground(legA.x, legA.z), d.Ground(legB.x, legB.z));
+            var pos = f.L(x, z);
+            pos.y = seabed + 1.2f - 0.15f;
+            // The arch is the fidelity standard for the level: LOD0 stays active out to a long distance (lodScale 0.45).
+            d.Model("HeroSeaArch", pos, f.Yaw(90f), 1f, snap: false, shadows: false, parent: root, lods: true, lodScale: 0.45f);
+        }
+
+        // ------------------------------------------------------------------ waterfall
+
+        /// <summary>
+        /// Builds the sheet, plunge pool water and mist for Hole 1. The sheet follows the actual cliff surface: rays are cast
+        /// from the lane side into the wall's MeshColliders, so it hugs whatever the Blender model really looks like.
+        /// If the wall cannot be hit (collider or placement problem) a flat fallback plane is used and a warning is logged.
+        /// </summary>
+        static void BuildWaterfall(Dresser d, HoleFrame f, Transform root, GameObject wall)
+        {
+            var hero = d.Hero;
+            var rot = Quaternion.Euler(0f, f.yaw, 0f);
+            Vector3 right = rot * Vector3.right, fwd = rot * Vector3.forward;
+            Vector3 P(float along, float lane, float up) => f.origin + right * along + fwd * lane + Vector3.up * up;
+
+            // --- Pool water level: just under the lowest point of the rim so every bank stays above the surface.
+            var pc = f.L2(PoolLocal.x, PoolLocal.y);
+            float rim = float.MaxValue;
+            for (int i = 0; i < 16; i++)
+            {
+                float a = i / 16f * Mathf.PI * 2f;
+                rim = Mathf.Min(rim, d.Ground(pc.x + Mathf.Cos(a) * PoolRadius, pc.y + Mathf.Sin(a) * PoolRadius));
+            }
+            float waterY = rim - 0.06f;
+
+            // --- Raycast the cliff face for the sheet's path: rows from the lip down to the pool.
+            Physics.SyncTransforms();
+            // Actual extents of the seated wall (renderer bounds), not the nominal model size.
+            Bounds wb = default; bool wbSet = false;
+            foreach (var wr in wall.GetComponentsInChildren<MeshRenderer>())
+                if (!wr.name.StartsWith("LOD")) { if (wbSet) wb.Encapsulate(wr.bounds); else { wb = wr.bounds; wbSet = true; } }
+            float baseY = wbSet ? wb.min.y : d.Ground(P(CliffLocal.x, CliffLocal.y, 0f).x, P(CliffLocal.x, CliffLocal.y, 0f).z);
+            float topScan = wbSet ? wb.max.y + 0.2f : baseY + 7f * CliffScale + 0.6f;
+            float lz = PoolLocal.y;             // sheet centre along the lane
+            const float half0 = 0.45f, half1 = 0.8f;
+            float CliffX(float hy, float hz)
+            {
+                var o = P(-4f, hz, hy);
+                var hits = Physics.RaycastAll(o, -right, 8f, ~0, QueryTriggerInteraction.Ignore);
+                float best = float.NaN;
+                foreach (var h in hits)
+                {
+                    if (!h.collider.transform.IsChildOf(wall.transform)) continue;
+                    float lx = Vector3.Dot(h.point - f.origin, right);
+                    if (float.IsNaN(best) || lx > best) best = lx; // outermost surface toward the lane
+                }
+                return best;
+            }
+            // Lip: highest scan height where the wall is hit; the sheet starts a little below it.
+            float lipY = float.NaN;
+            for (float y = topScan; y > baseY + 1f; y -= 0.1f)
+                if (!float.IsNaN(CliffX(y, lz))) { lipY = y - 0.25f; break; }
+            bool fallback = float.IsNaN(lipY);
+            if (fallback)
+            {
+                Debug.LogWarning("[Gamebreak] Waterfall: cliff wall not hit by raycasts; using a flat fallback sheet. Check HeroCliffWall placement/colliders.");
+                lipY = baseY + (topScan - baseY) * 0.8f;
+            }
+
+            const int rows = 28;
+            var xs = new float[rows + 1];
+            for (int r = 0; r <= rows; r++)
+            {
+                float y = Mathf.Lerp(lipY, waterY, r / (float)rows);
+                float best = float.NaN;
+                if (!fallback)
+                    foreach (var dz in new[] { -half1, 0f, half1 })
+                    {
+                        float v = CliffX(y, lz + dz);
+                        if (!float.IsNaN(v) && (float.IsNaN(best) || v > best)) best = v;
+                    }
+                xs[r] = float.IsNaN(best) ? (r > 0 ? xs[r - 1] : CliffLocal.x + 0.5f) : best;
+            }
+            // Smooth the surface (max-filter, then average) so ledges do not make the sheet zig-zag.
+            var sm = new float[rows + 1];
+            for (int r = 0; r <= rows; r++)
+            {
+                float m = xs[r];
+                for (int k = -2; k <= 2; k++) m = Mathf.Max(m, xs[Mathf.Clamp(r + k, 0, rows)]);
+                sm[r] = m;
+            }
+            var mb = new MeshBuilder();
+            var rowIdx = new int[rows + 1][];
+            for (int r = 0; r <= rows; r++)
+            {
+                float t = r / (float)rows;
+                float lx = sm[r] + 0.1f + 0.12f * t;           // stand off the rock; bows out toward the plunge
+                float half = Mathf.Lerp(half0, half1, t * t);
+                float y = Mathf.Lerp(lipY, waterY - 0.04f, t);
+                rowIdx[r] = new int[3];
+                for (int c = 0; c < 3; c++)
+                {
+                    float u = c * 0.5f;
+                    float bow = (1f - Mathf.Abs(u - 0.5f) * 2f) * 0.05f;   // centre column slightly proud
+                    rowIdx[r][c] = mb.Vertex(P(lx + bow, lz + (u - 0.5f) * 2f * half, y), right, new Vector2(u, t), Color.white);
+                }
+                if (r > 0)
+                    for (int c = 0; c < 2; c++)
+                        mb.Quad(rowIdx[r - 1][c], rowIdx[r][c], rowIdx[r][c + 1], rowIdx[r - 1][c + 1]);
+            }
+            var sheetMesh = mb.ToMesh("Waterfall");
+            SaveMesh(sheetMesh, "Waterfall");
+            var sheet = new GameObject("WaterfallSheet");
+            sheet.transform.SetParent(root, false);
+            sheet.AddComponent<MeshFilter>().sharedMesh = sheetMesh;
+            var sr = sheet.AddComponent<MeshRenderer>();
+            sr.sharedMaterial = hero.Waterfall;
+            sr.shadowCastingMode = ShadowCastingMode.Off;
+            sr.receiveShadows = false;
+            sr.lightProbeUsage = LightProbeUsage.Off;
+            sr.reflectionProbeUsage = ReflectionProbeUsage.Off;
+
+            // --- Pool water disc. Vertex colour R = baked depth / 2.2 m, as for the ocean (drives the no-depth fallback).
+            const int rings = 5, sectors = 32;
+            var pb = new MeshBuilder();
+            for (int r = 0; r <= rings; r++)
+            for (int s = 0; s <= sectors; s++)
+            {
+                float rad = PoolRadius * 1.02f * r / rings, a = s / (float)sectors * Mathf.PI * 2f;
+                float x = pc.x + Mathf.Cos(a) * rad, z = pc.y + Mathf.Sin(a) * rad;
+                float depth = Mathf.Max(0f, waterY - d.Ground(x, z));
+                pb.Vertex(new Vector3(x, waterY, z), Vector3.up, Vector2.zero, new Color(Mathf.Clamp01(depth / 2.2f), 0f, 0f, 1f));
+            }
+            for (int r = 0; r < rings; r++)
+            for (int s = 0; s < sectors; s++)
+            {
+                int a = r * (sectors + 1) + s, b = a + 1, c = a + sectors + 1, e = c + 1;
+                pb.Triangle(a, b, e);
+                pb.Triangle(a, e, c);
+            }
+            var poolMesh = pb.ToMesh("PoolWater");
+            SaveMesh(poolMesh, "PoolWater");
+            var pool = new GameObject("PlungePool");
+            pool.transform.SetParent(root, false);
+            pool.AddComponent<MeshFilter>().sharedMesh = poolMesh;
+            var pr = pool.AddComponent<MeshRenderer>();
+            pr.sharedMaterial = hero.PoolWater;
+            pr.shadowCastingMode = ShadowCastingMode.Off;
+            pr.receiveShadows = false;
+            pr.lightProbeUsage = LightProbeUsage.Off;
+            pr.reflectionProbeUsage = ReflectionProbeUsage.Off;
+
+            // --- Mist at the plunge: few, large, slow billboards (low overdraw for VR).
+            var mist = new GameObject("WaterfallMist");
+            mist.transform.SetParent(root, false);
+            mist.transform.SetPositionAndRotation(P(sm[rows] + 0.5f, lz, waterY + 0.25f), rot);
+            var ps = mist.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = true; main.prewarm = true; main.playOnAwake = true;
+            main.duration = 5f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(2f, 3f);
+            main.startSpeed = 0.05f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.6f, 1.5f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startColor = new Color(1f, 1f, 1f, 0.5f);
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.maxParticles = 40;
+            var em = ps.emission; em.enabled = true; em.rateOverTime = 14f;
+            var sh = ps.shape; sh.enabled = true; sh.shapeType = ParticleSystemShapeType.Box; sh.scale = new Vector3(1.0f, 0.15f, 1.6f);
+            var vel = ps.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.Local;
+            vel.x = 0.15f; vel.y = 0.35f; vel.z = 0f;
+            var col = ps.colorOverLifetime; col.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                         new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(0f, 1f) });
+            col.color = grad;
+            var szo = ps.sizeOverLifetime; szo.enabled = true;
+            szo.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.6f, 1f, 1.4f));
+            var prn = mist.GetComponent<ParticleSystemRenderer>();
+            prn.renderMode = ParticleSystemRenderMode.Billboard;
+            prn.sharedMaterial = hero.Mist;
+            prn.shadowCastingMode = ShadowCastingMode.Off;
+            prn.receiveShadows = false;
+            prn.lightProbeUsage = LightProbeUsage.Off;
+            prn.reflectionProbeUsage = ReflectionProbeUsage.Off;
+            Debug.Log($"[Gamebreak] Waterfall: lip y {lipY:F2}, pool water y {waterY:F2}, sheet {(fallback ? "FALLBACK plane" : "raycast-fitted")}.");
         }
 
         static void DressHole2(Dresser d, HoleFrame f, HoleDefinition def)
@@ -317,39 +619,50 @@ namespace Gamebreak.MiniGolf.Editor.Art
             AddSignText(holeSign.transform, new Vector3(0f, 0.65f + 0.225f, -0.032f), new Vector2(0.76f, 0.42f),
                 $"<size=46><b>HOLE {def.number}</b></size>\n{def.name}  ·  Par {def.par}", 34);
             foreach (var (x, z, v) in new[] { (1.6f, 1.0f, 1), (1.8f, 4.2f, 3), (-1.4f, 1.8f, 2), (-4.6f, 3.0f, 0), (-2.2f, 6.4f, 2) })
-                d.Palm(v, f.L(x, z), f.Yaw(Dresser.Range(new System.Random(x.GetHashCode()), 0f, 360f)), 1f);
+                d.Model($"HeroPalm_{v % 3}", f.L(x, z), f.Yaw(Dresser.Range(new System.Random(x.GetHashCode()), 0f, 360f)), 1f, sink: 0.06f, parent: root, cull: 0.006f);
             d.Torch(f.L(-1.05f, 0.6f));
             d.Torch(f.L(1.05f, 0.6f));
         }
 
         /// <summary>General island cover away from the holes.</summary>
-        static void DressIsland(Dresser d)
+        /// <summary>Palms near Hole 1 (what the player actually sees) are the Blender hero palms; far ones stay on the cheap kit palms.</summary>
+        static void PalmAt(Dresser d, Transform root, Vector2 focus, int variant, Vector3 pos, float yaw, float scale)
+        {
+            if ((new Vector2(pos.x, pos.z) - focus).magnitude < HeroPalmRadius && d.Ground(pos.x, pos.z) > 0.05f)
+                d.Model($"HeroPalm_{variant % 3}", pos, yaw, scale, sink: 0.06f, parent: root, cull: 0.006f);
+            else d.Palm(variant, pos, yaw, scale);
+        }
+
+        const float HeroPalmRadius = 26f;
+
+        static void DressIsland(Dresser d, Vector2 focus)
         {
             var root = new GameObject("Island_Dressing").transform;
             root.SetParent(d.Root, false);
             var rnd = new System.Random(2026);
             var c = d.Island.centre;
             float r = d.Island.radius;
-            d.Scatter(rnd, c, r * 0.95f, 46, (q, p) => { d.Palm(q.Next(0, 4), new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.85f, 1.15f)); return true; }, minHeight: 0.15f);
+            d.Scatter(rnd, c, r * 0.95f, 46, (q, p) => { PalmAt(d, root, focus, q.Next(0, 4), new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.85f, 1.15f)); return true; }, minHeight: 0.15f);
             d.Scatter(rnd, c, r * 0.9f, 60, (q, p) => { d.Place($"Bush{q.Next(0, 4)}", d.Kit.Foliage, new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.8f, 1.4f), parent: root); return true; }, minHeight: 0.3f);
             d.Scatter(rnd, c, r * 0.85f, 30, (q, p) => { d.Place($"BigLeaf{q.Next(0, 3)}", d.Kit.Foliage, new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.9f, 1.4f), parent: root); return true; }, minHeight: 0.35f);
             d.Scatter(rnd, c, r * 0.85f, 34, (q, p) => { d.Place($"FlowerBush{q.Next(0, 7)}", d.Kit.Foliage, new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.9f, 1.3f), parent: root); return true; }, minHeight: 0.35f);
             d.Scatter(rnd, c, r * 0.95f, 140, (q, p) => { d.Place($"Grass{q.Next(0, 3)}", d.Kit.Foliage, new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.8f, 1.4f), shadows: false, parent: root); return true; }, minHeight: 0.3f);
             d.Scatter(rnd, c, r * 1.02f, 26, (q, p) =>
             {
-                string m = q.NextDouble() < 0.6 ? $"RockSmall{q.Next(0, 2)}" : $"RockMedium{q.Next(0, 2)}";
-                d.Place(m, d.Kit.Solid, new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.7f, 1.5f), sink: 0.25f, collider: m.StartsWith("RockMedium"), outOfBounds: true, parent: root);
+                bool small = q.NextDouble() < 0.6;
+                d.Rock(small ? "small" : "medium", new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.7f, 1.5f), root,
+                    collider: !small, outOfBounds: true, variant: q.Next(0, 2));
                 return true;
             }, minHeight: -0.4f);
             d.Scatter(rnd, c, r * 0.6f, 4, (q, p) =>
             {
-                d.Place($"Cliff{q.Next(0, 3)}", d.Kit.Solid, new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.8f, 1.2f), sink: 0.3f, collider: true, outOfBounds: true, parent: root);
+                d.Rock("large", new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.5f, 0.75f), root, collider: true, outOfBounds: true, variant: q.Next(0, 2));
                 return true;
             }, minHeight: 0.6f);
             // Sandstone crags on the mountain slopes.
             d.Scatter(rnd, new Vector2(-2f, 9f), 12f, 4, (q, p) =>
             {
-                d.Place($"Cliff{q.Next(0, 3)}", d.Kit.Solid, new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.9f, 1.5f), sink: 0.4f, collider: true, outOfBounds: true, parent: root);
+                d.Rock("large", new Vector3(p.x, 0f, p.y), Dresser.Range(q, 0f, 360f), Dresser.Range(q, 0.55f, 0.9f), root, collider: true, outOfBounds: true, variant: q.Next(0, 2));
                 return true;
             }, minHeight: 2.2f);
             DressCoast(d, root);
@@ -371,8 +684,9 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 }
                 p += dir * Dresser.Range(rnd, -1.5f, 2.5f);
                 if (!d.IsFree(p)) continue;
-                string m = rnd.NextDouble() < 0.25 ? "Cliff2" : rnd.NextDouble() < 0.5 ? "RockLarge0" : (rnd.NextDouble() < 0.5 ? "RockLarge1" : "RockMedium1");
-                d.Place(m, d.Kit.Solid, new Vector3(p.x, 0f, p.y), Dresser.Range(rnd, 0f, 360f), Dresser.Range(rnd, 0.7f, 1.3f), sink: 0.5f, collider: true, outOfBounds: true, parent: root);
+                bool large = rnd.NextDouble() < 0.6;
+                d.Rock(large ? "large" : "medium", new Vector3(p.x, 0f, p.y), Dresser.Range(rnd, 0f, 360f),
+                    large ? Dresser.Range(rnd, 0.4f, 0.7f) : Dresser.Range(rnd, 0.8f, 1.3f), root, collider: true, outOfBounds: true, variant: rnd.Next(0, 2));
             }
         }
 

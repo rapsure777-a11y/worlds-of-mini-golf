@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Hero_Thatch
+  m_Shader: {fileID: 4800000, guid: abb4c42a1b5e5ae4489e92fe99be46fb, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _MASKMAP
+  - _NORMALMAP
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 9fff86eaf5ff78c478a4dbeeb6d3ccb0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: 038f49766b2bf534fae1a51ffa2fa29f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskMap:
+        m_Texture: {fileID: 2800000, guid: b1b610076d777da499b129b80dc18456, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaClip: 0
+    - _AmbientBoost: 1
+    - _BumpScale: 1.3
+    - _Cull: 2
+    - _Cutoff: 0.5
+    - _DetailScale: 1
+    - _DetailStrength: 0
+    - _OcclusionStrength: 0.8
+    - _RimPower: 3
+    - _Smoothness: 0.2
+    - _Specular: 0.05
+    - _Translucency: 0
+    - _UseMaskMap: 1
+    - _UseNormalMap: 1
+    - _WindSpeed: 1.2
+    - _WindStrength: 0
+    m_Colors:
+    - _BaseColor: {r: 1, g: 0.97, b: 0.9, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _RimColor: {r: 1, g: 0.95, b: 0.85, a: 0.12}
+    - _TranslucencyColor: {r: 0.8, g: 1, b: 0.39999998, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

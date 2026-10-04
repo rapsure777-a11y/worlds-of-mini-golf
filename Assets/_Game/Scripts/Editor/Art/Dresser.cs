@@ -13,13 +13,15 @@ namespace Gamebreak.MiniGolf.Editor.Art
     public class Dresser
     {
         public readonly TropicalKit Kit;
+        /// <summary>Blender-generated hero models, PBR materials and leaf-card foliage.</summary>
+        public readonly HeroKit Hero;
         public readonly IslandGen Island;
         public readonly Transform Root;
         readonly List<(Vector2 c, Vector2 half, float yaw, float margin)> m_Keepout = new List<(Vector2, Vector2, float, float)>();
 
-        public Dresser(TropicalKit kit, IslandGen island, Transform root)
+        public Dresser(TropicalKit kit, HeroKit hero, IslandGen island, Transform root)
         {
-            Kit = kit; Island = island; Root = root;
+            Kit = kit; Hero = hero; Island = island; Root = root;
         }
 
         /// <summary>Keep scatter away from an oriented rectangle (greens, paths, decks).</summary>
@@ -42,14 +44,82 @@ namespace Gamebreak.MiniGolf.Editor.Art
         public GameObject Place(string mesh, Material mat, Vector3 pos, float yaw = 0f, float scale = 1f,
             bool snap = true, float sink = 0.04f, bool shadows = true, bool collider = false, bool outOfBounds = false,
             Transform parent = null, Vector3? tilt = null)
+            => PlaceMesh(Kit[mesh], mesh, mat, pos, yaw, scale, snap, sink, shadows, collider, outOfBounds, parent, tilt);
+
+        /// <summary>Place a leaf-card foliage mesh from the hero kit (LeafBush*, FlowerShrub*, BigLeaf*, Banana0, Fern0, GrassClump*).</summary>
+        /// <param name="cull">Cull the cards once smaller than this fraction of the screen height (0 = never); leaf cards are alpha-tested overdraw.</param>
+        public GameObject Leaf(string heroMesh, Vector3 pos, float yaw = 0f, float scale = 1f, bool shadows = true,
+            float sink = 0.03f, Transform parent = null, float cull = 0.012f)
         {
-            var go = new GameObject(mesh);
+            var go = PlaceMesh(Hero.Foliage(heroMesh), heroMesh, Hero.Leaves, pos, yaw, scale, true, sink, shadows, false, false, parent, null);
+            if (cull > 0f) HeroKit.AddCull(go, cull);
+            return go;
+        }
+
+        /// <summary>Place a Blender hero model, snapped to the ground unless <paramref name="snap"/> is false.</summary>
+        /// <param name="seat">After placing, re-seat the model so its lowest vertices sit just under the ground everywhere (no floating edges, no over-burial).</param>
+        /// <param name="lods">Rock LODs + distance culling (rock models only).</param>
+        /// <param name="yStretch">Vertical stretch applied after placement (boulders read as flat slabs at 1).</param>
+        public GameObject Model(string model, Vector3 pos, float yaw = 0f, float scale = 1f, bool snap = true, float sink = 0.05f,
+            bool colliders = false, bool outOfBounds = false, bool shadows = true, Transform parent = null,
+            bool seat = false, bool lods = false, float lodScale = 1f, int colliderLod = 0, float yStretch = 1f, float seatExtraSink = 0.15f, float cull = 0f)
+        {
+            if (snap) pos.y = Ground(pos.x, pos.z) - sink * scale;
+            var go = Hero.Instantiate(model, parent ? parent : Root, pos, yaw, scale, colliders, outOfBounds, shadows, lods, lodScale, colliderLod);
+            if (!Mathf.Approximately(yStretch, 1f)) go.transform.localScale = new Vector3(scale, scale * yStretch, scale);
+            if (seat) Seat(go, seatExtraSink);
+            if (cull > 0f && !go.GetComponent<LODGroup>()) HeroKit.AddCull(go, cull);
+            return go;
+        }
+
+        /// <summary>Hero rock by size class: "small" / "medium" boulder clusters (scaled down) or "large" mesas. Cheap by default: LODs, no shadows for small.</summary>
+        public GameObject Rock(string kind, Vector3 pos, float yaw, float scale, Transform parent, bool collider = false, bool outOfBounds = false, int variant = 0)
+        {
+            bool large = kind == "large";
+            string model = large ? $"HeroMesa_{variant & 1}" : $"HeroBoulders_{variant & 1}";
+            float s = large ? scale : scale * (kind == "small" ? 0.33f : 0.55f);
+            return Model(model, pos, yaw, s, snap: true, sink: 0.1f, colliders: collider, outOfBounds: outOfBounds, shadows: large || kind == "medium",
+                parent: parent, seat: true, lods: true, colliderLod: collider ? 1 : 0, yStretch: large ? 1f : 1.4f, seatExtraSink: 0.12f);
+        }
+
+        /// <summary>
+        /// Moves a model vertically so that every vertex in its lowest 35 cm is at or just below the ground beneath it.
+        /// Fixes cliffs and boulders hovering on slopes (flat base over curved terrain) and slabs buried too deep. The shift is clamped.
+        /// </summary>
+        public float Seat(GameObject go, float extraSink = 0.15f, float maxShift = 1.6f)
+        {
+            float shift = float.MaxValue;
+            foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
+            {
+                if (!mf.sharedMesh || mf.name.StartsWith("LOD")) continue;
+                var verts = mf.sharedMesh.vertices;
+                var m = mf.transform.localToWorldMatrix;
+                float minY = float.MaxValue;
+                for (int i = 0; i < verts.Length; i += 2) minY = Mathf.Min(minY, m.MultiplyPoint3x4(verts[i]).y);
+                for (int i = 0; i < verts.Length; i += 2)
+                {
+                    var w = m.MultiplyPoint3x4(verts[i]);
+                    if (w.y > minY + 0.35f) continue;
+                    shift = Mathf.Min(shift, Ground(w.x, w.z) - w.y);
+                }
+            }
+            if (shift == float.MaxValue) return 0f;
+            shift = Mathf.Clamp(shift - extraSink, -maxShift, maxShift);
+            go.transform.position += Vector3.up * shift;
+            return shift;
+        }
+
+        public GameObject PlaceMesh(Mesh mesh, string name, Material mat, Vector3 pos, float yaw = 0f, float scale = 1f,
+            bool snap = true, float sink = 0.04f, bool shadows = true, bool collider = false, bool outOfBounds = false,
+            Transform parent = null, Vector3? tilt = null)
+        {
+            var go = new GameObject(name);
             go.transform.SetParent(parent ? parent : Root, false);
             if (snap) pos.y = Ground(pos.x, pos.z) - sink * scale;
             go.transform.position = pos;
             go.transform.rotation = Quaternion.Euler(tilt ?? Vector3.zero) * Quaternion.Euler(0f, yaw, 0f);
             go.transform.localScale = Vector3.one * scale;
-            go.AddComponent<MeshFilter>().sharedMesh = Kit[mesh];
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterial = mat;
             r.shadowCastingMode = shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
@@ -58,7 +128,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             if (collider)
             {
                 var mc = go.AddComponent<MeshCollider>();
-                mc.sharedMesh = Kit[mesh];
+                mc.sharedMesh = mesh;
                 if (outOfBounds) go.AddComponent<OutOfBoundsSurface>();
             }
             GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);

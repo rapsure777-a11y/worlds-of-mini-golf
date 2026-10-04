@@ -37,5 +37,9 @@ namespace Gamebreak.MiniGolf
 
         [Header("UI and effects")]
         public Material teleportLine;
+
+        [Header("Audio")]
+        public AudioClip music;
+        [Range(0f, 1f)] public float musicVolume = 0.55f;
     }
 }
