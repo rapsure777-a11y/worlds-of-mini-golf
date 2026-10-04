@@ -2,6 +2,8 @@
 
 Status: **DESIGN ONLY. Submitted for Andrew and ChatGPT HQ review.** Nothing was implemented. No Unity scene, playable geometry, ball physics, terrain, shader, material or asset was changed, and Graphics Pass 3 has not started. The repo additions are this document and `Tools/DesignSim/` (an offline paper model of the ball physics).
 
+> **Update:** the hole *concepts* in §4 were judged too conservative by HQ and are superseded by `HOLE_CONCEPTS_PASS2.md`. The assessment of the built holes (§3), the physics investigation (§5), the library and order (§6) and the simulator notes (§7) remain the engineering reference.
+
 Revision 2 replaces the first revision, which was written against a three-hole build. It is based on `f64c8b8` (Hole 4 "Hollow Drop" built) and includes three rounds of HQ direction: replace the "shape is the identity" approach with mechanics; keep Holes 1–4 approachable but give them *simple versions* of the interesting mechanics; make ramps, jumps, elevation, tunnels and banks part of the everyday vocabulary; and investigate what the physics needs for airborne balls, stacked surfaces and enclosed pipes.
 
 > "A hole's shape is not its gameplay identity."
