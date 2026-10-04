@@ -142,6 +142,8 @@ These absolute means are inflated by the simple policy players, but the structur
 
 **Verdict: keep Hollow Drop. Do not replace it with the tunnel idea.** The drop-and-climb is the identity and it is already built. The smallest fix that adds decisions is to turn the two elbows into **kickers** (angled bank walls) so a good shot can chain legs, and to soften the climb so the 15% peak is nearer 9%. This is a hybrid in spirit only: the tunnel concept is retired, but its idea of "a line that rewards nerve" returns as the elbow kickers and the downhill run-in.
 
+**Headset feedback (Andrew, recorded in `DEVELOPMENT_LOG.md`):** Hollow Drop is "too long with too many turns to reach the cup in 4 strokes", and the holes feel "flat, generic, and lack obstacles". This independently confirms the simulator's five-legs finding. It sharpens the recommendation: **remove a turn, do not just soften the ones that exist.** The cheapest way is to fold the tee lane and the first turn into one banked elbow (kicker) so the S becomes tee, descent, basin-and-climb, which is three to four natural strokes. If the kickers (T1a) are not ready, shorten the tee lane to about 2 m and widen the lanes to about 1.5 m, and set par 5 until it is tested.
+
 ### Course-level read of Holes 1–4
 
 Today the first four holes are four lanes with turns. Elevation is the only real mechanic, and it appears in all four. The design problem is not difficulty; it is that **no hole offers an optional unusual shot**. The smallest changes (§4) add exactly one invitation per hole.
