@@ -57,6 +57,24 @@ namespace Gamebreak.MiniGolf
         public Transform OffHand => leftHanded ? rightHand : leftHand;
         public bool XRActive { get; private set; }
 
+        /// <summary>
+        /// Set by the scorecard's volume sliders while a hand is near the card: the card then holds still (instead of following
+        /// the player) and its auto-hide timer is held back, so a slider can be dragged.
+        /// </summary>
+        public bool ScorecardPinned { get; set; }
+
+        /// <summary>True while the trigger of the controller driving <paramref name="hand"/> is pulled.</summary>
+        public bool IsTriggerPressed(Transform hand) =>
+            hand == leftHand ? m_Left != null && m_Left.Trigger : hand == rightHand && m_Right != null && m_Right.Trigger;
+
+        /// <summary>Haptic pulse on whichever controller drives <paramref name="hand"/>.</summary>
+        public void HapticFor(Transform hand, float amplitude, float duration)
+        {
+            var node = hand == leftHand ? XRNode.LeftHand : XRNode.RightHand;
+            var device = InputDevices.GetDeviceAtXRNode(node);
+            if (device.isValid) device.SendHapticImpulse(0, Mathf.Clamp01(amplitude), duration);
+        }
+
         HandInput m_Left, m_Right;
         HandInput Dom => leftHanded ? m_Left : m_Right;
         HandInput Off => leftHanded ? m_Right : m_Left;
@@ -454,13 +472,14 @@ namespace Gamebreak.MiniGolf
 
         void LateUpdate()
         {
+            if (ScorecardPinned && !float.IsPositiveInfinity(m_ScorecardHideAt)) m_ScorecardHideAt = Time.time + 2f;
             if (Time.time >= m_ScorecardHideAt)
             {
                 m_ScorecardHideAt = float.PositiveInfinity;
                 SetScorecardVisible(false);
             }
             // Keep the scorecard in front of the player when they toggle it on.
-            if (scorecard && scorecard.activeSelf && scorecard.transform.parent == null)
+            if (scorecard && scorecard.activeSelf && scorecard.transform.parent == null && !ScorecardPinned)
             {
                 ScorecardPose(out Vector3 target, out Quaternion rot);
                 scorecard.transform.position = Vector3.Lerp(scorecard.transform.position, target, 1f - Mathf.Exp(-4f * Time.deltaTime));

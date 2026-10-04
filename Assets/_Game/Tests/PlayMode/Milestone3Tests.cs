@@ -319,6 +319,117 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.AreEqual(1f, GolfAudio.MusicScale, 1e-4f);
         }
 
+        // ------------------------------------------------------------------ scorecard volume sliders
+
+        [Test]
+        public void VolumeSliders_MapFractionsToLevels()
+        {
+            Assert.AreEqual(0f, ScorecardVolumeControls.Fraction(ScorecardVolumeControls.TrackLeft - 100f), 1e-4f);
+            Assert.AreEqual(1f, ScorecardVolumeControls.Fraction(ScorecardVolumeControls.TrackRight + 100f), 1e-4f);
+            Assert.AreEqual(0.5f, ScorecardVolumeControls.Fraction((ScorecardVolumeControls.TrackLeft + ScorecardVolumeControls.TrackRight) * 0.5f), 1e-4f);
+            Assert.AreEqual(55, ScorecardVolumeControls.MusicPercent(0.55f, 1f), "default scale shows the world's 55%");
+            Assert.AreEqual(99, ScorecardVolumeControls.MusicPercent(0.55f, GolfAudio.MaxMusicScale));
+            Assert.AreEqual(0, ScorecardVolumeControls.MusicPercent(0.55f, 0f));
+            float f = ScorecardVolumeControls.MusicFractionOf(1f);
+            Assert.AreEqual(1f, ScorecardVolumeControls.MusicScaleOf(f), 1e-4f, "round trip of the default scale");
+        }
+
+        static ScorecardVolumeControls FindControls()
+        {
+            var all = Object.FindObjectsByType<ScorecardVolumeControls>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            return all.Length > 0 ? all[0] : null;
+        }
+
+        [UnityTest]
+        public IEnumerator Scorecard_HasVolumeSliders_ThatAControllerTipCanDrag()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            yield return null;
+            var c = FindControls();
+            Assert.IsNotNull(c, "the scorecard has no volume controls");
+            var canvasT = c.GetComponentInChildren<Canvas>(true).transform;
+
+            // Touch the music track at 25% and hold the trigger: music scale follows, effects are untouched.
+            c.ProcessTouch(c.TrackWorldPoint(0, 0.25f), true);
+            Assert.AreEqual(0.25f * GolfAudio.MaxMusicScale, GolfAudio.MusicScale, 0.02f);
+            Assert.AreEqual(0, c.DraggingRow);
+            Assert.AreEqual(GolfAudio.DefaultSfx, GolfAudio.SfxVolume, 1e-4f);
+            // Dragging along the track keeps following the fingertip, even slightly off the track vertically.
+            c.ProcessTouch(c.TrackWorldPoint(0, 0.75f) + canvasT.up * 0.02f, true);
+            Assert.AreEqual(0.75f * GolfAudio.MaxMusicScale, GolfAudio.MusicScale, 0.02f);
+            c.ProcessTouch(c.TrackWorldPoint(0, 0.75f), false); // release
+            Assert.AreEqual(-1, c.DraggingRow);
+            float kept = GolfAudio.MusicScale;
+
+            // A fingertip 20 cm in front of the card (not touching) changes nothing, even with the trigger down.
+            c.ProcessTouch(c.TrackWorldPoint(1, 0.1f) + canvasT.forward * 0.2f, true);
+            Assert.AreEqual(GolfAudio.DefaultSfx, GolfAudio.SfxVolume, 1e-4f, "a hovering hand must not move a slider");
+            Assert.AreEqual(kept, GolfAudio.MusicScale, 1e-4f);
+
+            // Effects slider.
+            c.ProcessTouch(c.TrackWorldPoint(1, 0.4f), true);
+            Assert.AreEqual(0.4f, GolfAudio.SfxVolume, 0.02f);
+            c.ProcessTouch(c.TrackWorldPoint(1, 0.4f), false);
+            // Touching without the trigger never changes anything.
+            c.ProcessTouch(c.TrackWorldPoint(1, 0.9f), false);
+            Assert.AreEqual(0.4f, GolfAudio.SfxVolume, 0.02f);
+        }
+
+        // ------------------------------------------------------------------ area title card
+
+        [Test]
+        public void TitleCard_Texts_AreFormattedForTheCard()
+        {
+            var jungle = TropicalCourse.Clusters().Find(c => c.id == TropicalCourse.JungleCluster);
+            Assert.AreEqual("HOLES 3 – 4", AreaTitleCard.RangeText(jungle));
+            Assert.AreEqual("HOLE 9", AreaTitleCard.RangeText(TropicalCourse.Clusters().Find(c => c.id == "summit")));
+            Assert.AreEqual("J U N G L E   I S L A N D", AreaTitleCard.Spaced("Jungle Island"));
+        }
+
+        [Test]
+        public void Clusters_HaveCardContent()
+        {
+            foreach (var c in TropicalCourse.Clusters())
+            {
+                Assert.IsFalse(string.IsNullOrEmpty(c.displayName), c.id);
+                Assert.IsFalse(string.IsNullOrEmpty(c.tagline), $"{c.id} has no tagline for its title card");
+                Assert.Greater(c.accent.maxColorComponent, 0.5f, $"{c.id} accent too dark to read");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator TitleCard_AppearsOnArrivalAndOnlyWhenTheIslandChanges()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            yield return null;
+            var card = Object.FindFirstObjectByType<AreaTitleCard>();
+            var course = Object.FindFirstObjectByType<CourseController>();
+            Assert.IsNotNull(card, "no AreaTitleCard in the scene");
+            Assert.AreEqual(TropicalCourse.StartCluster, card.LastClusterId, "the first arrival gets a card");
+            Assert.IsTrue(card.IsShowing);
+
+            course.StartHole(1, true); // hole 2: same island, no new card
+            yield return null;
+            Assert.AreEqual(TropicalCourse.StartCluster, card.LastClusterId);
+
+            course.StartHole(2, true); // hole 3: the Jungle Island
+            yield return null;
+            Assert.AreEqual(TropicalCourse.JungleCluster, card.LastClusterId);
+            yield return new WaitForSecondsRealtime(3.4f); // 1.1 s delay + 1.4 s fade-in, then fully visible
+            Assert.IsTrue(card.IsShowing);
+            Assert.Greater(card.Alpha, 0.9f, "the card should be fully visible after its fade-in");
+            Assert.AreEqual("JUNGLE ISLAND", card.TitleText.text);
+            StringAssert.Contains("secrets", card.TaglineText.text);
+            // Not interactive: it must never block the volume sliders' or anything else's raycasts.
+            var group = card.GetComponentInChildren<CanvasGroup>(true);
+            Assert.IsFalse(group.blocksRaycasts);
+            yield return new WaitForSecondsRealtime(AreaTitleCard.Hold + AreaTitleCard.FadeOut + 0.3f);
+            Assert.IsFalse(card.IsShowing, "the card should leave on its own");
+            Assert.AreEqual(0f, card.Alpha, 1e-4f);
+        }
+
         // ------------------------------------------------------------------ the generated scene
 
         [UnityTest]

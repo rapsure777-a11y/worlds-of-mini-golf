@@ -51,6 +51,23 @@ All five tracks are in `Assets/_Game/Audio/Music` (`IslandExploration`, `JungleT
 - `TransitionFade` quad: should be invisible when alpha is 0 (renderer disabled). In VR confirm it fades in both eyes and does not clip.
 - Frame cost: the Jungle Island adds terrain (skipDeepSea trims it), about 300 leaf-card objects (each with a cull LODGroup), 3 hero rocks groups and 9 trees. No LOD for trees yet. Compare `Logs/scene-stats.txt` with the 2.06M-triangle Pass 2 figure.
 
+### Addendum to checkpoint 1 (Andrew's decisions): area title cards and VR volume controls
+Both are UNVERIFIED like the rest.
+
+**Area title card** (`UI/AreaTitleCard.cs`, `UI/TitleArt.cs`, data on `IslandCluster`: `tagline`, `accent`)
+- Shown on first arrival (hole 1) and whenever the next hole is on a different island: Starting Island, Jungle Island, (planned) Temple, Volcanic, Summit. Not shown between holes of one island.
+- Look: a 2.7 m-wide world-space card about 3 m ahead and 0.55 m above eye level, placed once at arrival (it does not follow head turns): world name in letter-spaced accent capitals, the island name in 128 pt ivory serif bold with a soft drop shadow, an ornamental divider (hairline fading outward with a hollow diamond and two dots) that draws outward from the centre, an italic tagline, and "HOLES 3 - 4"; a dark soft-edged banner and a radial glow tinted with the island's accent behind it. All art is generated at runtime (`TitleArt`), no assets. Timeline: 1.1 s delay (so the fade from black finishes), 1.4 s fade-in while settling from 107% to 100%, 3.8 s hold, 1.6 s fade-out while drifting up 22 cm. A soft C-E-G-C bell arpeggio plays (synthesised, scaled by the effects volume).
+- Taglines/accents: set in `TropicalCourse.Clusters()` (e.g. Jungle: "Deep green, and deeper secrets", green accent). Font: an installed serif (Georgia, then Palatino Linotype, Book Antiqua, Times New Roman) via `Font.CreateDynamicFontFromOSFont`, else Unity's built-in; set `TitleArt.UseOsFont = false` to force the built-in.
+- To judge locally: desktop capture shows it only mid-animation, so check in the headset (or play the desktop build and advance with N). Tunables are constants at the top of `AreaTitleCard` (`CanvasW/H`, `UnitScale`, timings, distance/height in `Place()`).
+
+**VR volume controls on the scorecard** (`UI/ScorecardVolumeControls.cs`, small hooks in `VRRig`, `ScorecardPanel` is taller)
+- Press X (Frame X / off-hand primary) as usual: below the scorecard there are **Music** and **Effects** sliders. Touch a slider with the tip of either controller (about 8 cm in front of the grip) and **hold the trigger** to drag; releasing the effects slider plays a short blip so the level can be judged. Haptic ticks on touch and at each 5% step. The card holds still (no follow, no auto-hide) while a hand is within 50 cm of it.
+- The music slider shows the **audible** level: the world's 0.55 times the user scale (default shows 55%, max 99%). The effects slider is 0-100%. Both persist (`GolfAudio`, PlayerPrefs). Desktop keys remain F5/F6 and F7/F8.
+- No existing mapping changed: the trigger is only read for the sliders while a fingertip is on one; the card only moves differently while pinned. New `VRRig` members: `ScorecardPinned`, `IsTriggerPressed(hand)`, `HapticFor(hand, amp, dur)`.
+- Check in the headset: reachability and size of the sliders at the card's distance (1.1 m, 25 cm below eye height), that the fingertip offset feels right (`hand.forward * 0.08f` in `Update`), and that the hover highlight reads. Tunables: `RowTop`, `TrackLeft/Right`, `TouchDepth`, `PinDistance`.
+
+**Tests added** (`Milestone3Tests`): slider mapping; dragging both sliders with a simulated fingertip (including no change when hovering 20 cm away or without the trigger); card text formatting; every cluster has a tagline and a readable accent; the card appears on arrival, not for hole 2, appears for hole 3 with the right text, becomes fully visible, is not raycast-blocking, and leaves on its own.
+
 ### Decisions for Andrew / HQ
-1. A VR way to change music/effects volume (the desktop keys exist). Suggest a small panel on the scorecard (X) or a wrist-watch gesture; not built because it touches the approved controller mapping.
-2. Whether the transition should also show a short island title card ("Jungle Island").
+1. (Done) VR volume control on the scorecard and a title card per area, as requested. Please judge size, timing and the serif font in the headset.
+2. Whether the title card should also appear when *returning* to an earlier island (it does if a hole ever goes back; none do now).

@@ -6,7 +6,7 @@ namespace Gamebreak.MiniGolf
     /// <summary>Scorecard grid (hole / par / score per hole plus total). The rig toggles it and keeps it in front of the player.</summary>
     public class ScorecardPanel : MonoBehaviour
     {
-        const float Width = 1000f, LabelW = 130f, TotalW = 110f, RowH = 62f, Top = 90f;
+        const float Width = 1000f, Height = 580f, LabelW = 130f, TotalW = 110f, RowH = 62f, Top = 90f;
 
         [SerializeField] CourseController course;
 
@@ -20,10 +20,12 @@ namespace Gamebreak.MiniGolf
 
         void Awake()
         {
-            m_Canvas = WorldText.CreateCanvas("ScorecardCanvas", transform, new Vector2(Width, 380f), new Color(0.98f, 0.95f, 0.85f, 0.95f)).transform;
+            m_Canvas = WorldText.CreateCanvas("ScorecardCanvas", transform, new Vector2(Width, Height), new Color(0.98f, 0.95f, 0.85f, 0.95f)).transform;
             var ink = new Color(0.15f, 0.12f, 0.1f);
             m_Title = WorldText.CreateCell(m_Canvas, "Title", new Rect(0, 15, Width, 60), 40, ink);
             m_Footer = WorldText.CreateCell(m_Canvas, "Footer", new Rect(0, Top + RowH * 3 + 10, Width, 60), 34, ink);
+            // Music / effects volume sliders below the card (touch with a controller, hold the trigger).
+            gameObject.AddComponent<ScorecardVolumeControls>().Build(m_Canvas, Height);
         }
 
         void Build(int n)

@@ -150,6 +150,8 @@ namespace Gamebreak.MiniGolf.Editor
             var fadeMat = new Material(Shader.Find("Gamebreak/Mist")) { name = "TransitionFade" };
             fadeMat.SetColor("_BaseColor", new Color(0f, 0f, 0f, 0f));
             new GameObject("TransitionFade").AddComponent<TransitionFade>().Configure(course, cam, fadeMat, clusters);
+            // Cinematic title card on arriving at each island cluster (and at the start).
+            new GameObject("AreaTitleCard").AddComponent<AreaTitleCard>().Configure(course, rig, clusters);
             if (holes.Length > 0)
             {
                 rigGo.transform.SetPositionAndRotation(holes[0].PlayerStart.position, holes[0].PlayerStart.rotation);

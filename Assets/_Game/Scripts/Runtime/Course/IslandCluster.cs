@@ -20,6 +20,11 @@ namespace Gamebreak.MiniGolf
         /// <summary>Island centre and nominal radius in world XZ.</summary>
         public Vector2 centre;
         public float radius;
+        [Header("Title card (shown on arrival)")]
+        /// <summary>One line of atmosphere under the island's name.</summary>
+        public string tagline;
+        /// <summary>Colour of the card's ornaments and small caps (the title itself stays ivory).</summary>
+        public Color accent = new Color(1f, 0.82f, 0.45f);
 
         public bool Contains(int holeNumber) => Array.IndexOf(holes, holeNumber) >= 0;
         public string MusicAssetPath => string.IsNullOrEmpty(musicName) ? null : $"Assets/_Game/Audio/Music/{musicName}.ogg";

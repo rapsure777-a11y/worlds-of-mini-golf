@@ -46,12 +46,17 @@ namespace Gamebreak.MiniGolf
         {
             return new List<IslandCluster>
             {
-                new IslandCluster { id = StartCluster, displayName = "Starting Island", holes = new[] { 1, 2 }, musicName = "IslandExploration", centre = Vector2.zero, radius = 34f },
-                new IslandCluster { id = JungleCluster, displayName = "Jungle Island", holes = new[] { 3, 4 }, musicName = "JungleTheme", centre = JungleCentre, radius = 26f },
+                new IslandCluster { id = StartCluster, displayName = "Starting Island", holes = new[] { 1, 2 }, musicName = "IslandExploration", centre = Vector2.zero, radius = 34f,
+                    tagline = "Where every adventure begins", accent = new Color(1f, 0.84f, 0.42f) },
+                new IslandCluster { id = JungleCluster, displayName = "Jungle Island", holes = new[] { 3, 4 }, musicName = "JungleTheme", centre = JungleCentre, radius = 26f,
+                    tagline = "Deep green, and deeper secrets", accent = new Color(0.62f, 0.95f, 0.5f) },
                 // Planned clusters: music is imported, islands and holes are built in later checkpoints/milestones (centre/radius unset).
-                new IslandCluster { id = TempleCluster, displayName = "Temple Island", holes = new[] { 5, 6 }, musicName = "TempleTheme" },
-                new IslandCluster { id = "volcanic", displayName = "Volcanic Island", holes = new[] { 7, 8 }, musicName = "VolcanicTheme" },
-                new IslandCluster { id = "summit", displayName = "Summit Sanctuary", holes = new[] { 9 }, musicName = "SummitTheme" },
+                new IslandCluster { id = TempleCluster, displayName = "Temple Island", holes = new[] { 5, 6 }, musicName = "TempleTheme",
+                    tagline = "Ruins older than the tide", accent = new Color(0.98f, 0.8f, 0.48f) },
+                new IslandCluster { id = "volcanic", displayName = "Volcanic Island", holes = new[] { 7, 8 }, musicName = "VolcanicTheme",
+                    tagline = "Where the island still breathes fire", accent = new Color(1f, 0.55f, 0.3f) },
+                new IslandCluster { id = "summit", displayName = "Summit Sanctuary", holes = new[] { 9 }, musicName = "SummitTheme",
+                    tagline = "The whole archipelago at your feet", accent = new Color(0.82f, 0.93f, 1f) },
             };
         }
 
