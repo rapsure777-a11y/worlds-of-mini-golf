@@ -10,7 +10,7 @@ namespace Gamebreak.MiniGolf
     public class MusicPlayer : MonoBehaviour
     {
         [SerializeField] AudioClip m_Clip;
-        [SerializeField, Range(0f, 1f)] float m_Volume = 0.3f;
+        [SerializeField, Range(0f, 1f)] float m_Volume = 0.55f;
         [SerializeField] float m_FadeInSeconds = 4f;
 
         AudioSource m_Source;

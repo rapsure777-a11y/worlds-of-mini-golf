@@ -77,3 +77,22 @@ Cloud Claude cannot run Unity, Blender or the headset. Each iteration needs a lo
 1. Should the high-quality preset run at 80 Hz if 90 Hz can't be locked, or keep pushing for 90?
 2. Should arch-level fidelity extend island-wide now (still Hole 1 only for golf), or stay limited to what is visible from Hole 1?
 3. Is paid fal generation (about $5–15, `FAL_KEY` not set) still declined? The Blender route produced the arch at $0.
+
+## Update: round 2 in the headset (2026-10-03, evening)
+Round 2 (Cloud Claude `4b6ed28` plus local validation) was played by Andrew on the Steam Frame, rich preset, SteamVR at 90 Hz, after a fresh SteamVR start. Andrew: **"Everything worked perfectly. It looks great."**
+
+| Metric | Result |
+|---|---|
+| Frames at full 90 Hz | **100%** (0% half rate; 1–3 isolated hitches per minute, max 111 ms) |
+| Frame interval median / p95 / p99 | 11.11 / 11.12 / 11.13 ms |
+| CPU main thread median / p99 | 1.3–1.7 / 2.6–2.9 ms |
+| Scene at LOD0 | 2.06M triangles |
+
+**The revised target (stable 90 Hz on the high-quality preset) is met.**
+
+The VR frame-cost probe showed scene content is not what caused the earlier half-rate frames. Hiding all scenery changed nothing, and a fresh SteamVR session removed them. Practical note: restart SteamVR if half-rate pacing returns. Wireless link throttling (vrlink `THROTTLE EVENT`s) also caused stalls during one evening session.
+
+**Also added:**
+- Background music "Island Exploration": AI-generated, supplied by Andrew; licence terms to confirm before release (see ASSETS.md).
+- The music volume is now 0.55; Andrew asked for almost twice the original 0.3 after hearing it in the headset.
+- Tests: 43/43.

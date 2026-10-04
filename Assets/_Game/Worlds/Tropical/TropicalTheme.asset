@@ -33,4 +33,4 @@ MonoBehaviour:
   fogDensity: 0.004
   teleportLine: {fileID: 2100000, guid: 8ffdf4e10e8e34d498658d5a9908488f, type: 2}
   music: {fileID: 8300000, guid: 254f78c0a5175424986eb4aa5b12ca82, type: 3}
-  musicVolume: 0.3
+  musicVolume: 0.55

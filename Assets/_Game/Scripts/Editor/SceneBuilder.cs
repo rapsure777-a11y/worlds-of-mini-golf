@@ -33,6 +33,7 @@ namespace Gamebreak.MiniGolf.Editor
             theme.green = hero.Turf; theme.wall = hero.Rail; theme.cup = kit.Cup; theme.flag = kit.Flag; theme.tee = kit.Tee;
             theme.water = kit.Water;
             theme.music = AssetDatabase.LoadAssetAtPath<AudioClip>(MusicPath);
+            theme.musicVolume = 0.55f; // Andrew, headset: 0.3 was too quiet ("almost twice as loud")
             if (!theme.music) Debug.LogWarning($"[Gamebreak] Missing world music {MusicPath}.");
             EditorUtility.SetDirty(theme);
 

@@ -40,6 +40,6 @@ namespace Gamebreak.MiniGolf
 
         [Header("Audio")]
         public AudioClip music;
-        [Range(0f, 1f)] public float musicVolume = 0.3f;
+        [Range(0f, 1f)] public float musicVolume = 0.55f;
     }
 }
