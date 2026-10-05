@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Type-checks the proving-ground runtime code and its PlayMode tests against hand-written UnityEngine stubs.
+       NOT a Unity compile: it catches wrong names, signatures and syntax, not behaviour. See README.md. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework><LangVersion>latest</LangVersion><Nullable>disable</Nullable><ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0649;CS0169;CS0414;CS8632;CS0219</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="UnityStubs.cs" />
+    <Compile Include="../../Assets/_Game/Tests/PlayMode/ObstacleProvingGroundTests.cs" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Worlds/*.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/HoleDefinition.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/IslandCluster.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Obstacles/*.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfBall.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfTuning.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfMaterials.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfPhysicsBootstrap.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/HoleController.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/Cup.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/PlayableSurface.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/OutOfBoundsSurface.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/OutOfBoundsZone.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/CourseGeometry.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/HoleFactory.cs" />
+  </ItemGroup>
+</Project>

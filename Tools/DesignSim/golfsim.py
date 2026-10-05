@@ -2,7 +2,12 @@
 it ignores 3D (airborne balls), lip-outs and putter mechanics. Validate every concept in Unity before trusting it."""
 import ctypes, math, os, random
 
-_lib = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), "libgolfsim.so"))
+_here = os.path.dirname(os.path.abspath(__file__))
+_so = os.path.join(_here, "libgolfsim.so")
+if not os.path.exists(_so):  # built from source on first use (needs gcc); see README.md
+    import subprocess
+    subprocess.check_call(["gcc", "-O2", "-shared", "-fPIC", "-o", _so, os.path.join(_here, "golfsim.c"), "-lm"])
+_lib = ctypes.CDLL(_so)
 
 
 class Params(ctypes.Structure):
