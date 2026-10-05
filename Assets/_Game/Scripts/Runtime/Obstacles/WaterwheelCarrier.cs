@@ -18,7 +18,7 @@ namespace Gamebreak.MiniGolf
         [Tooltip("Angle of bucket 0 at start, degrees from local +X toward +Y.")]
         public float startAngleDegrees = -150f;
         [Tooltip("Half the width of a bucket and of the wheel (visual).")]
-        public float wheelHalfWidth = 0.45f;
+        public float wheelHalfWidth = 0.5f;
 
         [Header("Capture")]
         [Tooltip("A ball whose centre is this close to an empty bucket pocket can be scooped.")]
@@ -259,8 +259,12 @@ namespace Gamebreak.MiniGolf
                 Vector3 tang = new Vector3(-radial.y, radial.x, 0f);
                 float inner = spec.pocketRadius + ballR;               // radius of the tray floor's inner face
                 ProvingKit.Box("BucketFloor", pivot, radial * (inner + 0.012f), rot, new Vector3(0.024f, 0.16f, bw * 2f), wood, false);
+                // A scoop: the wall on the leading side (the way the bucket travels) is left out so the ball can roll in;
+                // the trailing wall is the one the ball rests against while it is carried up.
+                float trail = -Direction;
+                ProvingKit.Box("BucketBack", pivot, radial * (inner - 0.01f) + tang * (trail * 0.08f), rot, new Vector3(0.09f, 0.02f, bw * 2f), wood, false);
                 for (int sgn = -1; sgn <= 1; sgn += 2)
-                    ProvingKit.Box("BucketSide", pivot, radial * (inner - 0.013f) + tang * (sgn * 0.08f), rot, new Vector3(0.074f, 0.02f, bw * 2f), wood, false);
+                    ProvingKit.Box("BucketCheek", pivot, radial * (inner - 0.005f) + Vector3.forward * (sgn * (bw - 0.01f)), rot, new Vector3(0.07f, 0.17f, 0.02f), wood, false);
                 for (int side = -1; side <= 1; side += 2)
                     ProvingKit.Box("BucketArm", pivot, radial * (inner + 0.012f) + Vector3.forward * (side * (bw + (hw - bw) * 0.5f)), rot,
                         new Vector3(0.04f, 0.04f, hw - bw), wood, false);

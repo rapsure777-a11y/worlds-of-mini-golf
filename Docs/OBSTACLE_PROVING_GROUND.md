@@ -178,3 +178,16 @@ Stop for Local Claude integration. Do not merge into `milestone-3-island-hopping
   - Roulette bowl (shelf 0.065, cone 0.10): 4 of 8 strikes holed, 2 on the apron, 2 on the shelf, none on the cone, max energy gain 0.000 J/kg (no attraction). At 1.5 m/s a strike 4 or 8 degrees off the wall holes; 0 degrees ends on the shelf.
 - **Builds:** scene `Assets/_Game/Worlds/ProvingGround/ObstacleProvingGround.unity` (Default tuning); player `Builds/ProvingGround/ObstacleProvingGround.exe` (PCVR, 0 errors).
 - **Not yet verified:** anything in the headset (flight look, the lip, the scoop, how the bowl feels, best shelf slope, rig height at the wheel channel). Runtime behaviour above is from PlayMode tests only.
+
+### 9b. First headset session (Andrew, 2026-10-04) and the waterwheel rework
+
+**Feedback:** (1) everything looked far too high; (2) the mechanics are great but should be *features inside* holes, and the roulette bowl belongs at the *end of a course*, not as a whole hole; (3) the waterwheel buckets did not look like the ball could get in, and parts clipped.
+
+- **Height:** the session log shows eye height 0.97 m and the putter auto-sized to 0.66 m, so SteamVR's floor was calibrated while seated (the world sits about 0.7 m too high). Not a game bug: stand up, reset the floor/recenter in SteamVR, then launch. No code change.
+- **Design direction (recorded, nothing built):** launch ramp and waterwheel become obstacles within holes; the roulette bowl becomes the final stage of a course.
+- **Waterwheel changes** (no tuning-value changes beyond these):
+  - Buckets are now open scoops: the leading wall is omitted (the ball rolls in), a trailing back wall carries it, and side cheeks form the tray.
+  - Axle raised by `TrayClearance` (4.5 cm) so the tray floors pass above the dock floor instead of through it.
+  - Dock is a wide pad (`dockWidth` 1.3 m, `dockLength` 0.8 m) so the wheel's arms and rims clear the rails; `wheelHalfWidth` 0.45 -> 0.5.
+  - The full-height end rail sat right in the buckets' path, so it is gone: the dock end is an open edge closed by a 2.6 cm curb (`DockCurbHeight`: above the ball radius so the ball cannot roll over it, below the trays' lowest edge). Verified in tests: a 4 m/s putt is still stopped by the curb.
+  - Tests unchanged: 26/26, full suite 104/104. Still needs a look in the headset.
