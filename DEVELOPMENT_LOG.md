@@ -150,3 +150,7 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - **Corner sweep (second shot from the corner):** 2.4 rolls back; 3.0-3.8 fall short in the pit (+1); 4.2-5.6 land in the bowl. A firm tee putt hits the corner wall and rebounds up the drop (no penalty).
 - **Tiki crest:** the feathers radiated from one point and cut through each other; now a layered fan on a root band, and the shield diamond is thinner than the board (no shared face, no shimmer). `Tools/Blender/hero_tiki.py`.
 - Tests 107/107; scene and both players rebuilt; screenshots checked.
+
+## 2026-10-05: Hole 4 "Tiki Twister" approved in the headset
+
+- Andrew: "Feels good. That's really good." Hole 4 (drop, 90 degree turn, 0.6 m gap ramp, roulette bowl) is confirmed. `RESUME.md` is stale on Hole 4; next up is Temple Island (holes 5-6).
