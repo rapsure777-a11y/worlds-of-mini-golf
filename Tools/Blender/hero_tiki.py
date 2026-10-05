@@ -86,18 +86,21 @@ def cylinder(group, base, radius_fn, height, sides=16, rings=8, tile=1.0, color_
     return o
 
 
-def fan(hub, colors, step_deg, length, width, thick):
-    """A fan of feathers radiating from `hub` (x, y, z): each feather starts at the hub and points outward, the centre one stands
-    furthest back and the outer ones step forward so no two share a plane or cut through each other. A small band covers the roots."""
+def fan(hub, colors, step_deg, length, width, thick, band=True):
+    """A fan of feathers radiating from `hub` (x, y, z): each feather starts at the hub and points outward. The centre feather
+    stands furthest back (+Y) and each step outward moves forward by more than a feather's thickness, so no two feathers share
+    space or cut through each other. An optional small band covers the roots."""
     n = len(colors)
     mid = (n - 1) / 2.0
+    step = thick + 0.004
     for k, col in enumerate(colors):
         a = math.radians((k - mid) * step_deg)
-        layer = (mid - abs(k - mid)) * 0.0 - abs(k - mid) * 0.008   # outer feathers stand a little further forward (-Y)
+        layer = -abs(k - mid) * step
         centre = (hub[0] + math.sin(a) * length * 0.5, hub[1] + layer, hub[2] + math.cos(a) * length * 0.5)
         m = Matrix.Translation(centre) @ Matrix.Rotation(a, 4, "Y")
         box("Paint", m.to_translation(), (width, thick, length), rot=m.to_euler(), color=col, bevel=0.008)
-    box("Paint", (hub[0], hub[1] - mid * 0.008 - 0.012, hub[2] + 0.005), (width * 2.4, thick + 0.02, 0.05), color=TEAL, bevel=0.01)
+    if band:
+        box("Paint", (hub[0], hub[1] - mid * step - 0.012, hub[2] + 0.005), (width * 2.4, thick + 0.02, 0.05), color=TEAL, bevel=0.01)
 
 
 # ------------------------------------------------------------------ poles
@@ -189,8 +192,9 @@ def mask():
     box("Paint", (0, y - 0.012, zf - 0.19), (0.3, 0.03, 0.095), color=(0.55, 0.08, 0.06, 0), bevel=0.012)
     for k in range(5):
         box("Paint", (-0.1 + k * 0.05, y - 0.03, zf - 0.19), (0.036, 0.02, 0.06), color=CREAM)
-    # Feather crest: a layered fan that radiates from the diamond's tip.
-    fan((0, 0, z0 + 0.905), (RED, YELLOW, TEAL, ORANGE, TEAL, YELLOW, RED), 22, 0.34, 0.06, 0.025)
+    # Feather crest: a layered fan standing behind the shield (the front-most feather clears the board's back face at y=+0.035),
+    # rooted below the diamond tip so it grows out from behind the mask.
+    fan((0, 0.14, z0 + 0.80), (RED, YELLOW, TEAL, ORANGE, TEAL, YELLOW, RED), 22, 0.40, 0.06, 0.025, band=False)
 
 
 def finish(name):
