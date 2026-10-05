@@ -77,7 +77,8 @@ namespace Gamebreak.MiniGolf.Tests
             foreach (var def in TropicalCourse.Holes())
             {
                 if (def.number == 4) Assert.AreEqual(1, def.layout.openEdges.Count, "hole 4 has exactly one open edge: the ramp lip");
-                else Assert.AreEqual(0, def.layout.openEdges.Count, $"hole {def.number} must be unchanged by the open-edge feature");
+                else if (def.number <= 3) Assert.AreEqual(0, def.layout.openEdges.Count, $"hole {def.number} must be unchanged by the open-edge feature");
+                // Holes 5-6 (Temple Island) define their own edges (the aqueduct); they are covered by Holes56Tests.
             }
         }
 

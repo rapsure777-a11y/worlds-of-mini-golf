@@ -159,3 +159,10 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 
 - **Hole 5 "The Sun Stair" (par 4)** and **Hole 6 "The Waterwheel Mill" (par 3)** on a new Temple Island, built from the proven mechanics: one stepped green with `BankWall` kickers/rails and a launch jump (Hole 5); the proven waterwheel feeding an aqueduct and a final green, with a gentle mill road as the conventional route (Hole 6). New reusable `BankWall`; the wheel hole spec gained an optional final green and a shared `BuildWheelPieces`. Terrace steps are steep cells in one mesh, so a miss lands on a lower terrace (no penalty). `TempleIsland` is bare functional dressing.
 - No Unity here: syntax-parsed and type-checked against stubs only; `Holes56Tests` not run. Details, risks and integration steps in `Docs/HOLES_5_6.md`. The brief's "flow zones" do not exist in the repo and were not needed.
+
+## 2026-10-05: Cloud Holes 5-6 integrated locally (Sun Stair, Waterwheel Mill)
+
+- Merged `origin/feature/holes-5-6-sun-stair-waterwheel-mill` (`1617027`) into `milestone-3-island-hopping`. Compiled clean on the first try (0 errors); scene builds with 6 holes and a Temple Island; both players build (0 errors).
+- One test fix: `HolesOneToThree_HaveNoOpenEdges_AndHoleFourHasOnlyTheRampLip` asserted zero open edges on every hole except 4; Hole 6 legitimately has the wheel dock's open edge, so it now checks holes 1-3 only.
+- Full PlayMode suite **133/133** (Holes56Tests 26, proving ground and Holes 1-4 unchanged). Desktop smoke test PASS. Screenshots of holes 5-6 reviewed (rich). Headset not yet tried on 5-6.
+- Not done (out of scope): Holes 7-9, Graphics Pass 3.
