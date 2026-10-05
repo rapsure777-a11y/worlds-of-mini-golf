@@ -108,11 +108,11 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [Test]
-        public void Hole3_IsAParThreeWithAConnectedLaneFromTeeToCup()
+        public void Hole3_IsAParFourWithAConnectedLaneFromTeeToCup()
         {
             var def = Hole3();
             Assert.IsNotNull(def, "hole 3 is not defined");
-            Assert.AreEqual(3, def.par);
+            Assert.AreEqual(4, def.par);
             Assert.AreEqual(TropicalCourse.JungleCluster, def.cluster);
             Assert.IsTrue(def.layout.cup.HasValue);
             Assert.IsTrue(Connected(def.layout, def.tee, def.layout.cup.Value, out _), "tee and cup are not connected by playable surface");

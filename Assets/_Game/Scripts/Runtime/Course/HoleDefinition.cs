@@ -83,7 +83,7 @@ namespace Gamebreak.MiniGolf
         }
 
         /// <summary>
-        /// Hole 3, "Jungle Crossing" (par 3): a winding lane that crosses a small jungle ravine on a short wooden bridge, which is
+        /// Hole 3, "Jungle Crossing" (par 4): a winding lane that crosses a small jungle ravine on a short wooden bridge, which is
         /// part of the putting surface (<see cref="GreenLayout.deckAreas"/>: same collider and rails, plank material).
         /// Tee lane north, turn east across a wide elbow, over the bridge (a slight hump), onto a landing pad, then north into a
         /// short lane to the cup. The cup is not in line from the landing pad: aim straight up from the pad's east side, or bank
@@ -115,7 +115,7 @@ namespace Gamebreak.MiniGolf
             {
                 number = 3,
                 name = "Jungle Crossing",
-                par = 3,
+                par = 4,
                 layout = l,
                 tee = new Vector2(0f, 0.6f),
                 // On the Jungle Island's west side: the lane starts running east (away from the Starting Island), the bridge crosses to the south.
