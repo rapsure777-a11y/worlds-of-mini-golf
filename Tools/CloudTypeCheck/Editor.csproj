@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Type-checks the proving-ground editor scene builder against stubs of the Unity editor API and of the rig classes it configures. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework><LangVersion>latest</LangVersion><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0649;CS0169;CS8632</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="UnityStubs.cs" />
+    <Compile Include="EditorStubs.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Editor/ProvingGroundSceneBuilder.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Worlds/*.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/HoleDefinition.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/IslandCluster.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Obstacles/*.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfBall.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfTuning.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfMaterials.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfPhysicsBootstrap.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/HoleController.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/Cup.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/PlayableSurface.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/OutOfBoundsSurface.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/CourseGeometry.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/HoleFactory.cs" />
+  </ItemGroup>
+</Project>

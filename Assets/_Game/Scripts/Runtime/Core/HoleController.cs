@@ -129,6 +129,7 @@ namespace Gamebreak.MiniGolf
         {
             if (Active != this || IsComplete || !ball || !ball.InPlay) return;
             if (ball.Position.y < killY) { BallOutOfBounds(ball); return; }
+            if (ball.IsHeld) { m_MovingTime = 0f; return; } // a carrier (waterwheel bucket) owns the ball: not stuck, not at rest
 
             // Stuck-ball safeguard: a ball that creeps or rattles for too long is stopped where it is.
             m_MovingTime = ball.IsAtRest ? 0f : m_MovingTime + Time.fixedDeltaTime;

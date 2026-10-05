@@ -21,6 +21,12 @@ namespace Gamebreak.MiniGolf
         public float wallHeight = 0.09f;
         public float wallThickness = 0.08f;
         public float baseDepth = 0.35f;
+        /// <summary>
+        /// Thin rectangles (layout XZ) marking boundary edges that get no rail, e.g. the lip of a launch ramp and the near edge of its
+        /// landing pad. An edge is open when its midpoint lies inside one of these. An open edge gets a plain vertical skirt instead,
+        /// so a ball that comes up short meets a wall rather than a bare sheet. Empty by default: every existing hole is unchanged.
+        /// </summary>
+        public readonly List<Rect> openEdges = new List<Rect>();
 
         public GreenLayout Area(float x, float z, float width, float length)
         {
@@ -200,16 +206,37 @@ namespace Gamebreak.MiniGolf
                 Quad(aOut, bOut, bBase, aBase, outward);                      // outer face
             }
 
+            bool IsOpenEdge(Vector3 a, Vector3 b)
+            {
+                if (l.openEdges.Count == 0) return false;
+                float mx = (a.x + b.x) * 0.5f, mz = (a.z + b.z) * 0.5f;
+                foreach (var r in l.openEdges)
+                    if (mx >= r.xMin - 1e-4f && mx <= r.xMax + 1e-4f && mz >= r.yMin - 1e-4f && mz <= r.yMax + 1e-4f) return true;
+                return false;
+            }
+
+            void Skirt(Vector3 a, Vector3 b, Vector3 outward)
+            {
+                Vector3 aBase = new Vector3(a.x, a.y - l.baseDepth, a.z), bBase = new Vector3(b.x, b.y - l.baseDepth, b.z);
+                Quad(a, b, bBase, aBase, outward);
+            }
+
+            void EdgeOrSkirt(Vector3 a, Vector3 b, Vector3 outward)
+            {
+                if (IsOpenEdge(a, b)) Skirt(a, b, outward);
+                else Edge(a, b, outward);
+            }
+
             bool In(int i, int j) => i >= 0 && j >= 0 && i < g.nx && j < g.nz && g.inside[i, j];
 
             for (int i = 0; i < g.nx; i++)
             for (int j = 0; j < g.nz; j++)
             {
                 if (!g.inside[i, j]) continue;
-                if (!In(i - 1, j)) Edge(P(i, j), P(i, j + 1), Vector3.left);
-                if (!In(i + 1, j)) Edge(P(i + 1, j), P(i + 1, j + 1), Vector3.right);
-                if (!In(i, j - 1)) Edge(P(i, j), P(i + 1, j), Vector3.back);
-                if (!In(i, j + 1)) Edge(P(i, j + 1), P(i + 1, j + 1), Vector3.forward);
+                if (!In(i - 1, j)) EdgeOrSkirt(P(i, j), P(i, j + 1), Vector3.left);
+                if (!In(i + 1, j)) EdgeOrSkirt(P(i + 1, j), P(i + 1, j + 1), Vector3.right);
+                if (!In(i, j - 1)) EdgeOrSkirt(P(i, j), P(i + 1, j), Vector3.back);
+                if (!In(i, j + 1)) EdgeOrSkirt(P(i, j + 1), P(i + 1, j + 1), Vector3.forward);
             }
 
             // Fill the square gap at convex outer corners.

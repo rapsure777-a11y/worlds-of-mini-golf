@@ -36,6 +36,14 @@ namespace Gamebreak.MiniGolf
         public Vector3 Velocity => Body.linearVelocity;
         public Vector3 Position => Body.position;
 
+        /// <summary>
+        /// True while a carrier (e.g. a waterwheel bucket) owns the ball. The body is kinematic, the rolling model is paused,
+        /// strikes are ignored and <see cref="HoleController"/> does not run its stuck-ball safeguard. A hold never counts as a stroke.
+        /// </summary>
+        public bool IsHeld { get; private set; }
+        /// <summary>The object that called <see cref="TryHold"/> (null when not held).</summary>
+        public object Holder { get; private set; }
+
         public event Action<GolfBall> Stopped;
         public event Action<GolfBall, Vector3> Struck;
         /// <summary>Raised on a wall rebound with the impact speed along the wall normal.</summary>
@@ -227,7 +235,7 @@ namespace Gamebreak.MiniGolf
         /// <summary>Launch the ball. Counts as a stroke for whoever listens to <see cref="Struck"/>.</summary>
         public void Strike(Vector3 velocity)
         {
-            if (!InPlay) return;
+            if (!InPlay || IsHeld) return;
             float max = Tuning.maxBallSpeed;
             if (velocity.sqrMagnitude > max * max) velocity = velocity.normalized * max;
             Body.linearVelocity = velocity;
@@ -238,9 +246,59 @@ namespace Gamebreak.MiniGolf
             Struck?.Invoke(this, velocity);
         }
 
+        /// <summary>
+        /// Take over the ball for a carrier: it stops, becomes kinematic and follows <see cref="MoveHeld"/> until <see cref="EndHold"/>
+        /// (or <see cref="PlaceAt"/>, which always cancels a hold). Raises no <see cref="Struck"/>/<see cref="Stopped"/> events.
+        /// Returns false if the ball is already held, out of play or otherwise kinematic.
+        /// </summary>
+        public bool TryHold(object holder)
+        {
+            if (IsHeld || !InPlay || Body.isKinematic) return false;
+            Body.linearVelocity = Vector3.zero;
+            Body.collisionDetectionMode = CollisionDetectionMode.Discrete; // continuous-dynamic is not valid on a kinematic body
+            Body.isKinematic = true;
+            Holder = holder;
+            IsHeld = true;
+            m_PreStepVelocity = Vector3.zero;
+            m_SurfaceSpeed = 0f;
+            IsAtRest = false;
+            m_SlowTimer = 0f;
+            IsGrounded = false;
+            m_GroundContacts = 0; m_GroundNormalSum = Vector3.zero;
+            m_WallContacts = 0; m_WallNormalSum = Vector3.zero;
+            return true;
+        }
+
+        /// <summary>Move a held ball (call from FixedUpdate so the kinematic body interpolates).</summary>
+        public void MoveHeld(Vector3 position)
+        {
+            if (!IsHeld) return;
+            Body.MovePosition(position);
+        }
+
+        /// <summary>
+        /// Give the ball back to physics with <paramref name="velocity"/>. No stroke is counted; the ball is simply moving again and
+        /// will be declared at rest by the normal rules. Does nothing if the ball is not held.
+        /// </summary>
+        public void EndHold(Vector3 velocity)
+        {
+            if (!IsHeld) return;
+            IsHeld = false;
+            Holder = null;
+            Body.isKinematic = false;
+            Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            Body.linearVelocity = velocity;
+            m_PreStepVelocity = velocity;
+            m_StepStartPosition = Body.position;
+            m_SurfaceSpeed = velocity.magnitude;
+            IsAtRest = false;
+            m_SlowTimer = 0f;
+        }
+
         /// <summary>Stop the ball where it is and raise <see cref="Stopped"/> (stuck-ball safeguard).</summary>
         public void ForceStop()
         {
+            if (IsHeld) return;
             Body.linearVelocity = Vector3.zero;
             m_PreStepVelocity = Vector3.zero;
             m_SurfaceSpeed = 0f;
@@ -252,6 +310,14 @@ namespace Gamebreak.MiniGolf
         /// <summary>Teleport the ball to a resting position (tee, reset, etc.).</summary>
         public void PlaceAt(Vector3 position)
         {
+            if (IsHeld)
+            {
+                // A reset, out-of-bounds return or hole change always cancels a carrier's hold.
+                IsHeld = false;
+                Holder = null;
+                Body.isKinematic = false;
+                Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            }
             Body.position = position;
             transform.position = position;
             Body.linearVelocity = Vector3.zero;
