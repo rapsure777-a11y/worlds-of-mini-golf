@@ -26,7 +26,12 @@ namespace Gamebreak.MiniGolf
         public float WheelZ => Snap(wheelZ);
         public float LaneWidth => Mathf.Max(0.4f, Snap(laneWidth));
         /// <summary>Axle height: the lowest pocket sits one ball radius above the intake floor.</summary>
-        public Vector3 WheelCentre(float ballRadius) => new Vector3(0f, wheel.pocketRadius + ballRadius + TrayClearance, WheelZ);
+        public Vector3 WheelCentre(float ballRadius) => new Vector3(0f, wheel.pocketRadius + ballRadius + TrayClearance - TroughDepth, WheelZ);
+        /// <summary>The dock floor dips this far under the axle, sloping up at <see cref="TroughSlope"/> each way, so a ball in the dock rolls to the
+        /// pick-up spot and waits there (the slope is above the rest-hold limit, so it cannot stop part-way). The wheel is lowered by the same amount.</summary>
+        public const float TroughDepth = 0.054f, TroughSlope = 0.09f;
+        /// <summary>Dock floor height along the lane (hole space): flat, then a shallow trough centred under the axle.</summary>
+        public float DockFloor(float z) => -TroughDepth + TroughSlope * Mathf.Min(Mathf.Abs(z - WheelZ), TroughDepth / TroughSlope);
         /// <summary>The wheel sits this much higher so the tray floors pass above the dock floor instead of through it.</summary>
         public const float TrayClearance = 0.045f;
         /// <summary>Height of the curb that closes the dock: above the ball's radius (0.0214) so the ball cannot roll over it, below the trays' lowest edge.</summary>
@@ -59,7 +64,7 @@ namespace Gamebreak.MiniGolf
             l.openEdges.Add(new Rect(-DockWidth * 0.5f - 0.1f, DockEndZ - 0.005f, DockWidth + 0.2f, 0.01f));   // no rail at the dock's end: nothing in the buckets' way
             l.Area(-LaneWidth * 0.5f, z0, LaneWidth, z1 - z0);                // elevated exit channel
             l.cup = new Vector2(0f, cupZ);
-            l.height = (x, z) => z < split ? 0f : yf - exitSlope * Mathf.Clamp(z - zr, -0.5f, cupZ - 0.45f - zr);
+            l.height = (x, z) => z < split ? DockFloor(z) : yf - exitSlope * Mathf.Clamp(z - zr, -0.5f, cupZ - 0.45f - zr);
             return l;
         }
 
@@ -140,8 +145,9 @@ namespace Gamebreak.MiniGolf
 
             // A low curb closes the dock: taller than the ball's radius so the ball cannot roll over it, lower than the bucket trays so
             // nothing clips. (A full-height end rail sits right in the buckets' path.)
-            ProvingKit.Box("DockCurb", root.transform, new Vector3(0f, (WaterwheelHoleSpec.DockCurbHeight - 0.2f) * 0.5f, spec.DockEndZ + 0.03f), Quaternion.identity,
-                new Vector3(spec.DockWidth, WaterwheelHoleSpec.DockCurbHeight + 0.2f, 0.06f), mats.wall, true);
+            float curbTop = spec.DockFloor(spec.DockEndZ) + WaterwheelHoleSpec.DockCurbHeight;
+            ProvingKit.Box("DockCurb", root.transform, new Vector3(0f, (curbTop - 0.2f) * 0.5f, spec.DockEndZ + 0.03f), Quaternion.identity,
+                new Vector3(spec.DockWidth, curbTop + 0.2f, 0.06f), mats.wall, true);
 
             // Decorative supports under the elevated channel (no colliders).
             float yf = spec.ChannelFloorAtRelease(r), z0 = spec.ChannelStartZ(r), z1 = spec.ChannelEndZ(r);

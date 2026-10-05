@@ -38,6 +38,8 @@ namespace Gamebreak.MiniGolf
         [Tooltip("Safety net: a ball held this long is released regardless (e.g. a stopped wheel).")]
         public float maxHoldSeconds = 30f;
 
+        /// <summary>How far to either side of the wheel's centre line a ball can be and still be inside a bucket tray.</summary>
+        public float AxialReach => wheelHalfWidth * 0.62f - 0.05f;
         public float OmegaDegPerSecond => periodSeconds > 0.01f ? 360f / periodSeconds : 0f;
         /// <summary>Pocket position at the release angle, in the carrier's local space.</summary>
         public Vector3 ReleasePointLocal
@@ -160,9 +162,14 @@ namespace Gamebreak.MiniGolf
         {
             int best = -1;
             float bestD = spec.captureRadius;
+            // A bucket is as wide as the wheel's tray: a ball anywhere across it is scooped. The reach is measured in the wheel's plane
+            // (captureRadius) and, separately, across the tray (AxialReach), so a slightly off-line putt still counts.
+            Vector3 local = transform.InverseTransformPoint(b.Position);
+            if (Mathf.Abs(local.z) > spec.AxialReach) return;
             for (int i = 0; i < spec.bucketCount; i++)
             {
-                float d = Vector3.Distance(b.Position, PocketWorld(i));
+                Vector3 p = PocketLocal(i);
+                float d = Mathf.Sqrt((local.x - p.x) * (local.x - p.x) + (local.y - p.y) * (local.y - p.y));
                 if (d <= bestD) { bestD = d; best = i; }
             }
             if (best < 0) return;

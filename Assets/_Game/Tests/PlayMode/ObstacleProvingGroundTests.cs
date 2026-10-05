@@ -421,6 +421,37 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [UnityTest]
+        [NUnit.Framework.Timeout(900000)]
+        public IEnumerator Wheel_PuttSweep_ForgivingWindow()
+        {
+            // Realistic putts from the tee: speeds 1.4-2.6 m/s at three small aim errors. Logs where each ball ends up and whether the
+            // wheel scooped it (a resting ball gets 9 s (two buckets) for a bucket to come by: the dock is a waiting room).
+            var table = new System.Text.StringBuilder("[Test] wheel putt sweep (strike m/s, yaw deg -> outcome)\n");
+            int scooped = 0, total = 0;
+            for (float s = 1.4f; s <= 2.61f; s += 0.4f)
+            {
+                foreach (float yaw in new[] { -3f, 0f, 3f })
+                {
+                    using var bed = new ProvingBed();
+                    BuildWheel(bed, new WaterwheelHoleSpec(), out var carrier);
+                    yield return Steps(5);
+                    bed.ball.Strike(Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * s);
+                    yield return WaitUntil(() => carrier.CaptureCount >= 1 || bed.hole.Strokes >= 2 || bed.ball.IsAtRest, 20f);
+                    bool restedFirst = bed.ball.IsAtRest && carrier.CaptureCount == 0;
+                    Vector3 rest = bed.ball.Position;
+                    if (restedFirst) yield return WaitUntil(() => carrier.CaptureCount >= 1 || bed.hole.Strokes >= 2, 9f);
+                    total++;
+                    string o = carrier.CaptureCount >= 1 ? (restedFirst ? "scooped after waiting" : "scooped on the way") :
+                               bed.hole.Strokes >= 2 ? "fell off (penalty)" : $"rests at x {rest.x:F2} z {rest.z:F2}, not scooped";
+                    if (carrier.CaptureCount >= 1) scooped++;
+                    table.AppendLine($"  {s:F1}, {yaw:+0;-0;0} -> {o}" + (restedFirst ? $" (rested at x {rest.x:F2} z {rest.z:F2})" : ""));
+                }
+            }
+            Debug.Log(table.ToString());
+            Assert.GreaterOrEqual(scooped, total * 3 / 4, "every putt from 1.8 m/s up, even 3 degrees off line, must be scooped (only the soft 1.4 m/s putts stop short)");
+        }
+
+        [UnityTest]
         public IEnumerator Wheel_TooFastBall_IsNotCaptured_AndASecondAttemptSucceeds()
         {
             using var bed = new ProvingBed();
