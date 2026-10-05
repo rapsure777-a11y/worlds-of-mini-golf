@@ -72,10 +72,13 @@ namespace Gamebreak.MiniGolf.Tests
         // ------------------------------------------------------------------ geometry and regression
 
         [Test]
-        public void ExistingHoles_HaveNoOpenEdges()
+        public void HolesOneToThree_HaveNoOpenEdges_AndHoleFourHasOnlyTheRampLip()
         {
             foreach (var def in TropicalCourse.Holes())
-                Assert.AreEqual(0, def.layout.openEdges.Count, $"hole {def.number} must be unchanged by the open-edge feature");
+            {
+                if (def.number == 4) Assert.AreEqual(1, def.layout.openEdges.Count, "hole 4 has exactly one open edge: the ramp lip");
+                else Assert.AreEqual(0, def.layout.openEdges.Count, $"hole {def.number} must be unchanged by the open-edge feature");
+            }
         }
 
         [Test]
@@ -554,6 +557,39 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.That(ratio, Is.InRange(1.6f, 2.5f), "carry time scales with the wheel period");
         }
 
+
+        // ------------------------------------------------------------------ rail corner posts at an open edge
+
+        static int CountFacesAt(Mesh m, float x, float zMin, float zMax, float minNormalX)
+        {
+            var v = m.vertices; var t = m.triangles; int n = 0;
+            for (int i = 0; i < t.Length; i += 3)
+            {
+                Vector3 a = v[t[i]], b = v[t[i + 1]], c = v[t[i + 2]];
+                if (Mathf.Abs(a.x - x) > 1e-4f || Mathf.Abs(b.x - x) > 1e-4f || Mathf.Abs(c.x - x) > 1e-4f) continue;
+                if (Mathf.Min(a.z, Mathf.Min(b.z, c.z)) < zMin - 1e-4f || Mathf.Max(a.z, Mathf.Max(b.z, c.z)) > zMax + 1e-4f) continue;
+                Vector3 nrm = Vector3.Cross(b - a, c - a).normalized;
+                if (nrm.x >= minNormalX) n++;
+            }
+            return n;
+        }
+
+        [Test]
+        public void OpenEdge_CornerPosts_AreClosedOnTheOpenSide_AndClosedLayoutsAreUnchanged()
+        {
+            // A lane 0.8 m wide whose far end (z = 2) is an open edge: the rail along the left side ends in a corner post that sticks out
+            // 8 cm past the lip. Its face toward the lane must exist (it used to be hollow, so the post looked see-through).
+            var open = new GreenLayout { wallHeight = 0.12f };
+            open.Area(-0.4f, 0f, 0.8f, 2f);
+            open.openEdges.Add(new Rect(-0.5f, 1.995f, 1.0f, 0.01f));
+            Assert.Greater(CountFacesAt(CourseGeometry.BuildWalls(open), -0.4f, 2.0f, 2.08f, 0.9f), 0, "left corner post closed on its lane side");
+
+            // A layout with no open edge builds exactly the mesh it always did (same triangle count with and without the open-edge code path).
+            var closed = new GreenLayout { wallHeight = 0.12f };
+            closed.Area(-0.4f, 0f, 0.8f, 2f);
+            var m = CourseGeometry.BuildWalls(closed);
+            Assert.AreEqual(0, CountFacesAt(m, -0.4f, 2.0f, 2.08f, 0.9f), "no extra closing faces without open edges");
+        }
 
         // ------------------------------------------------------------------ D. jump into the bowl
 

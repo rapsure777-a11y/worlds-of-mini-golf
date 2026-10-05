@@ -192,7 +192,7 @@ namespace Gamebreak.MiniGolf.Tests
                 ball.SetTuning(tuning);
                 var src = TropicalCourse.Holes().Find(h => h.number == number);
                 layout = src.layout;
-                var def = new HoleDefinition { number = number, name = src.name, par = src.par, layout = src.layout, tee = src.tee, origin = Vector3.zero, yaw = 0f, cluster = src.cluster };
+                var def = new HoleDefinition { number = number, name = src.name, par = src.par, layout = src.layout, tee = src.tee, origin = Vector3.zero, yaw = 0f, cluster = src.cluster, buildExtras = src.buildExtras };
                 hole = HoleFactory.Build(def, null, tuning, m_Root.transform, ball);
                 hole.BeginHole(ball);
             }
@@ -428,93 +428,99 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.IsFalse(course.Finished);
         }
 
-        // ------------------------------------------------------------------ Hole 4 ("Hollow Drop")
+        // ------------------------------------------------------------------ Hole 4 ("Hollow Drop": drop, ramp jump, bowl)
 
         static HoleDefinition Hole4() => TropicalCourse.Holes().Find(h => h.number == 4);
 
         [Test]
-        public void Hole4_IsAParFourOnTheJungleIsland_WithAConnectedLane()
+        public void Hole4_IsAParThreeOnTheJungleIsland_WithALaneAndABowlCup()
         {
             var def = Hole4();
             Assert.IsNotNull(def, "hole 4 is not defined");
-            Assert.AreEqual(4, def.par);
+            Assert.AreEqual(3, def.par);
             Assert.AreEqual(TropicalCourse.JungleCluster, def.cluster);
             Assert.AreEqual(TropicalCourse.Holes().Find(h => h.number == 3).cluster, def.cluster, "holes 3 and 4 share an island");
-            Assert.IsTrue(Connected(def.layout, def.tee, def.layout.cup.Value, out _), "tee and cup are not connected by playable surface");
             Assert.AreEqual(0, def.layout.deckAreas.Count, "hole 4 has no bridge");
+            Assert.IsFalse(def.layout.cup.HasValue, "the cup is in the bowl, not on the lane");
+            Assert.IsNotNull(def.buildExtras, "the bowl is built as an extra piece");
+            Assert.Greater(def.layout.openEdges.Count, 0, "the ramp lip is an open edge");
+            Assert.AreEqual(1, def.extraAreas.Count, "the bowl's footprint is registered for the terrain and the foliage");
+            Assert.IsTrue(def.layout.areas.Exists(r => r.Contains(def.tee)), "the tee is on the lane");
         }
 
         [Test]
-        public void Hole4_LaneHeightHasNoCliffs_AndDropAndClimbAreModest()
+        public void Hole4_LaneHeightHasNoCliffs_AndTheDropIsModest()
         {
             var l = Hole4().layout;
             float maxStep = 0f;
-            for (float x = -1.2f; x < 4.6f; x += 0.1f)
-            for (float z = 0.05f; z < 14f; z += 0.1f)
+            for (float x = -0.6f; x < 0.5f; x += 0.1f)
+            for (float z = 0.05f; z < 5.5f; z += 0.1f)
             {
                 float h = l.Height(x, z);
                 maxStep = Mathf.Max(maxStep, Mathf.Abs(l.Height(x + 0.1f, z) - h), Mathf.Abs(l.Height(x, z + 0.1f) - h));
             }
             Assert.Less(maxStep, 0.04f, $"height jump of {maxStep:F3} m between neighbouring cells");
-            float drop = l.Height(4.0f, 5.0f) - l.Height(4.0f, 9.0f), climb = l.Height(-0.6f, 13.0f) - l.Height(-0.6f, 11.0f);
+            float drop = l.Height(0f, 1.0f) - l.Height(0f, 4.4f);
             Assert.That(drop, Is.InRange(0.15f, 0.30f), "the drop should be a visible but gentle step");
-            Assert.That(climb, Is.InRange(0.07f, 0.14f), "the climb to the cup should be a short, modest rise");
         }
 
         [UnityTest]
-        public IEnumerator Hole4_BallRollsDownTheDrop_AndStaysInPlay()
+        public IEnumerator Hole4_BuildsABowlCup_AndABallRollsDownTheDrop_AndStaysInPlay()
         {
             using var b = new Hole3Bed(4);
             yield return Steps(5);
-            b.ball.PlaceAt(b.Surface(4.0f, 5.5f));
+            Assert.IsNotNull(b.hole.Cup, "the hole needs the bowl's cup");
+            b.ball.PlaceAt(b.Surface(0f, 1.2f));
             yield return Steps(5);
-            b.ball.Strike(new Vector3(0f, 0f, 1.6f));
-            yield return WaitUntil(() => b.ball.Position.z > 9.0f, 6f);
-            Assert.Greater(b.ball.Position.z, 9.0f, $"ball did not roll down into the basin, at {b.ball.Position}");
+            b.ball.Strike(new Vector3(0f, 0f, 1.2f));
+            yield return WaitUntil(() => b.ball.Position.z > 4.2f, 8f);
+            Assert.Greater(b.ball.Position.z, 4.2f, $"ball did not roll down the drop, at {b.ball.Position}");
             Assert.AreEqual(1, b.hole.Strokes, "the drop should not cost a penalty");
             Assert.IsTrue(b.ball.InPlay);
         }
 
         [UnityTest]
-        public IEnumerator Hole4_SoftPuttRollsBackDownTheClimb_WithoutLeavingTheCourse()
+        [NUnit.Framework.Timeout(900000)]
+        public IEnumerator Hole4_TeePuttSweep_RollsBack_FallsShort_OrLandsInTheBowl()
         {
-            using var b = new Hole3Bed(4);
-            yield return Steps(5);
-            b.ball.PlaceAt(b.Surface(-0.6f, 11.0f));
-            yield return Steps(5);
-            b.ball.Strike(new Vector3(0f, 0f, 0.7f)); // too soft to top the climb
-            yield return Steps(3);
-            yield return WaitUntil(() => b.ball.IsAtRest, 8f);
-            yield return Steps(20);
-            Assert.AreEqual(1, b.hole.Strokes, "a soft putt must not cost a penalty");
-            Assert.Less(b.ball.Position.z, 12.2f, "a 0.7 m/s putt should not top the climb");
-            Assert.IsTrue(b.ball.InPlay);
+            var spec = TropicalCourse.Hole4Spec();
+            var table = new System.Text.StringBuilder("[Test] hole 4 tee putt sweep (strike m/s -> outcome)\n");
+            int landed = 0, holed = 0, gap = 0, back = 0, lost = 0;
+            foreach (float s in new[] { 1.6f, 2.2f, 2.6f, 3.0f, 3.4f, 3.8f, 4.2f, 4.6f })
+            {
+                using var b = new Hole3Bed(4);
+                yield return Steps(5);
+                b.ball.Strike(Vector3.forward * s);
+                yield return WaitUntil(() => b.hole.IsComplete || b.hole.Strokes >= 2 || (b.ball.IsAtRest && b.ball.Position.z > spec.ramp.LipZ), 60f);
+                var o = spec.BowlOrigin;
+                float r = new Vector2(b.ball.Position.x - o.x, b.ball.Position.z - o.z).magnitude;
+                string text;
+                if (b.hole.IsComplete) { text = "HOLED"; holed++; landed++; }
+                else if (b.hole.Strokes >= 2) { bool left = b.ball.Position.z > spec.ramp.LipZ + spec.ramp.Gap + 0.5f; text = left ? "left the bowl (penalty)" : "short: pit (penalty)"; if (left) lost++; else gap++; }
+                else if (r < spec.bowl.radius + 0.05f && b.ball.Position.z > spec.ramp.LipZ) { text = $"in the bowl at r {r:F2}, resting"; landed++; }
+                else { text = $"rolled back (rest z {b.ball.Position.z:F2})"; back++; }
+                table.AppendLine($"  {s:F1} -> {text} (strokes {b.hole.Strokes})");
+            }
+            Debug.Log(table.ToString());
+            Assert.GreaterOrEqual(landed, 2, "several tee putts must land in the bowl");
+            Assert.GreaterOrEqual(gap, 1, "a tee putt that is a little short must fall in the pit");
+            Assert.GreaterOrEqual(back, 1, "a soft tee putt must stay on the lane");
+            Assert.AreEqual(0, lost, "a ball that landed in the bowl must not leave it");
         }
 
         [UnityTest]
-        public IEnumerator Hole4_FirmPuttTopsTheClimb()
-        {
-            using var b = new Hole3Bed(4);
-            yield return Steps(5);
-            b.ball.PlaceAt(b.Surface(-0.6f, 10.9f));
-            yield return Steps(5);
-            b.ball.Strike(new Vector3(0f, 0f, 2.0f));
-            yield return WaitUntil(() => b.ball.Position.z > 12.5f || b.hole.IsComplete, 6f);
-            Assert.IsTrue(b.ball.Position.z > 12.5f || b.hole.IsComplete, $"a firm putt should top the climb, ball at {b.ball.Position}");
-            Assert.AreEqual(1, b.hole.Strokes);
-        }
-
-        [UnityTest]
-        public IEnumerator Hole4_Cup_CanBeHoled()
+        public IEnumerator Hole4_Cup_CanBeHoled_FromTheBowl()
         {
             using var b = new Hole3Bed(4);
             yield return Steps(5);
             var cup = b.hole.Cup.transform.position;
-            b.ball.PlaceAt(new Vector3(cup.x, b.layout.Height(cup.x, cup.z - 0.4f) + b.ball.Radius + 0.002f, cup.z - 0.4f));
+            // On the bowl's cone, 0.5 m from the cup on the lane side: a gentle putt downhill should drop.
+            var from = new Vector3(cup.x, cup.y + 0.06f, cup.z - 0.5f);
+            b.ball.PlaceAt(from);
             yield return Steps(5);
             Vector3 d = cup - b.ball.Position; d.y = 0f;
-            b.ball.Strike(d.normalized * 1.1f);
-            yield return WaitUntil(() => b.hole.IsComplete, 8f);
+            b.ball.Strike(d.normalized * 0.9f);
+            yield return WaitUntil(() => b.hole.IsComplete, 10f);
             Assert.IsTrue(b.hole.IsComplete, $"cup not holed, ball at {b.ball.Position}, cup {cup}");
         }
 

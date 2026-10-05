@@ -31,7 +31,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
         /// <summary>Flattens a plateau under the hole, makes the lane areas follow the hole's height function, and cuts the ravine under the bridge.</summary>
         public static void ConfigureTerrain(IslandGen island, HoleFrame f, HoleDefinition def)
         {
-            var (centre, half) = TropicalWorld.LayoutBounds(def.layout);
+            var (centre, half) = TropicalWorld.LayoutBounds(def);
             float baseY = def.origin.y - TropicalCourse.GreenElevation - 0.06f;
             island.zones.Add(new IslandGen.Zone
             {
@@ -176,6 +176,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
             foreach (var r in def.layout.areas)
                 d.KeepOut(f.L2(r.center.x, r.center.y), r.size * 0.5f, f.yaw, 0.9f);
+            foreach (var r in def.extraAreas)   // the bowl
+                d.KeepOut(f.L2(r.center.x, r.center.y), r.size * 0.5f, f.yaw, 0.6f);
             d.KeepOut(f.L2(-14f, 8f), new Vector2(3f, 3f), f.yaw, 0.5f);   // mesas
             d.KeepOut(f.L2(18f, 12f), new Vector2(3f, 3f), f.yaw, 0.5f);
             d.KeepOut(f.L2(4f, 28f), new Vector2(3f, 3f), f.yaw, 0.5f);
@@ -186,24 +188,24 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 return d.IsFree(new Vector2(p.x, p.z)) && d.Ground(p.x, p.z) > minH;
             }
 
-            var holeSignPos = f.L(1.7f, 0.9f);
+            var holeSignPos = f.L(1.4f, 0.9f);
             var holeSign = d.Place("SignSmall", d.Kit.Solid, holeSignPos, FaceStart(holeSignPos), 1f, parent: root);
             TropicalWorld.AddSignText(holeSign.transform, new Vector3(0f, 0.65f + 0.225f, -0.032f), new Vector2(0.76f, 0.42f),
                 $"<size=46><b>HOLE {def.number}</b></size>\n{def.name}  ·  Par {def.par}", 34);
 
-            // A tiki pole beside the tee and a mask above the basin's far end (the Starting Island's totems follow you to the jungle).
-            TropicalWorld.Tiki(d, "HeroTikiPole_1", f.L(-2.4f, 0.8f), FaceStart(f.L(-2.4f, 0.8f)), root, 0.2f, 1.7f);
-            TropicalWorld.Tiki(d, "HeroTikiMask_0", f.L(5.6f, 8.6f), FaceStart(f.L(5.6f, 8.6f)), root, 0.07f, 1.7f);
+            // A tiki pole beside the tee and a mask behind the bowl (the Starting Island's totems follow you to the jungle).
+            TropicalWorld.Tiki(d, "HeroTikiPole_1", f.L(-2.0f, 0.8f), FaceStart(f.L(-2.0f, 0.8f)), root, 0.2f, 1.7f);
+            TropicalWorld.Tiki(d, "HeroTikiMask_0", f.L(0.6f, 10.2f), FaceStart(f.L(0.6f, 10.2f)), root, 0.07f, 1.7f);
 
-            // Torches: the tee, the basin's two ends, and the final lane.
-            foreach (var (x, z) in new[] { (-1.2f, 1.6f), (1.2f, 1.6f), (-1.9f, 9.8f), (5.3f, 9.8f), (-2.0f, 13.2f), (0.8f, 13.2f) })
+            // Torches: the tee, either side of the jump, and the bowl's far side.
+            foreach (var (x, z) in new[] { (-1.1f, 1.6f), (1.1f, 1.6f), (-1.8f, 5.9f), (1.8f, 5.9f), (-1.6f, 9.4f), (2.6f, 9.4f) })
                 d.Torch(f.L(x, z));
 
             bool haveTrees = d.HasModel("HeroJungleTree_0") && d.HasModel("HeroJungleTree_1");
             var trees = new (float x, float z, int v, float s)[]
             {
-                (-4.2f, 2.0f, 0, 1.0f), (-4.6f, 8.0f, 1, 1.1f), (7.0f, 1.5f, 1, 1.0f), (7.6f, 7.5f, 0, 1.1f), (7.0f, 13.0f, 1, 0.95f),
-                (-4.4f, 13.5f, 0, 1.0f), (1.5f, 17.5f, 1, 1.0f), (2.0f, -4.0f, 0, 1.0f), (9.5f, 4.0f, 1, 1.1f), (4.0f, 16.0f, 0, 0.9f),
+                (-4.2f, 2.0f, 0, 1.0f), (-4.4f, 8.0f, 1, 1.1f), (4.6f, 1.5f, 1, 1.0f), (5.0f, 8.0f, 0, 1.1f), (4.6f, 12.5f, 1, 0.95f),
+                (-3.4f, 12.5f, 0, 1.0f), (0.8f, 15.0f, 1, 1.0f), (1.0f, -4.0f, 0, 1.0f), (7.5f, 4.0f, 1, 1.1f), (2.8f, 14.0f, 0, 0.9f),
             };
             foreach (var t in trees)
             {
@@ -213,8 +215,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 else d.Model($"HeroPalm_{t.v}", p, Yaw360(), 1.5f * t.s, sink: 0.06f, parent: root, cull: 0.005f);
             }
 
-            // Boulders on the rim of the basin and the mesas on the skyline.
-            foreach (var (x, z, k) in new[] { (3.0f, 2.2f, "medium"), (-2.6f, 7.0f, "medium"), (6.2f, 5.5f, "large"), (2.2f, 12.6f, "medium"), (6.0f, 11.5f, "small") })
+            // Boulders around the jump and the bowl, and the mesas on the skyline.
+            foreach (var (x, z, k) in new[] { (2.2f, 2.2f, "medium"), (-2.4f, 4.2f, "medium"), (3.4f, 6.4f, "large"), (-2.2f, 9.6f, "small"), (3.4f, 10.2f, "medium") })
                 if (Free(x, z, 0.0f)) d.Rock(k, f.L(x, z), Yaw360(), k == "large" ? 0.7f : Dresser.Range(rnd, 0.8f, 1.2f), root, collider: true, outOfBounds: true, variant: rnd.Next(0, 2));
             d.Model("HeroMesa_0", f.L(-14f, 8f), f.Yaw(70f), 1.0f, sink: 0.5f, shadows: false, parent: root, seat: true, lods: true, seatExtraSink: 0.4f);
             d.Model("HeroMesa_1", f.L(18f, 12f), f.Yaw(200f), 1.1f, sink: 0.5f, shadows: false, parent: root, seat: true, lods: true, seatExtraSink: 0.4f);

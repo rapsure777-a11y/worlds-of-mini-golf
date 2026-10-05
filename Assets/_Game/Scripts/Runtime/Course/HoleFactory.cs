@@ -15,6 +15,7 @@ namespace Gamebreak.MiniGolf
             CourseGeometry.CreateGreen("Green", def.layout, tuning, root.transform,
                 theme ? theme.green : null, theme ? theme.cup : null, theme ? theme.wall : null, theme ? theme.flag : null,
                 theme ? theme.deck : null, out Cup cup);
+            if (def.buildExtras != null) cup = def.buildExtras(root.transform, theme, tuning);
 
             float teeH = def.layout.Height(def.tee.x, def.tee.y);
             var tee = new GameObject("Tee").transform;
@@ -30,7 +31,9 @@ namespace Gamebreak.MiniGolf
             if (theme && theme.tee) mat.GetComponent<MeshRenderer>().sharedMaterial = theme.tee;
 
             // Player starts behind the tee looking down the line toward the cup.
-            Vector3 cupLocal = cup ? cup.transform.localPosition : tee.localPosition + Vector3.forward;
+            // (A cup built by buildExtras can sit inside a child object, so measure it in the hole's own space.)
+            Vector3 cupLocal = cup ? (def.buildExtras != null ? root.transform.InverseTransformPoint(cup.transform.position) : cup.transform.localPosition)
+                                   : tee.localPosition + Vector3.forward;
             Vector3 line = cupLocal - tee.localPosition; line.y = 0f; line.Normalize();
             var start = new GameObject("PlayerStart").transform;
             start.SetParent(root.transform, false);

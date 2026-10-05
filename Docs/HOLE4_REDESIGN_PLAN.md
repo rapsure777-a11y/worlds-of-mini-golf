@@ -1,6 +1,6 @@
 # Hole 4 redesign plan: "Hollow Drop", short drop into the bowl
 
-Status: **PLAN ONLY. Nothing below is built.** Written 2026-10-04 after Andrew approved the proving-ground feel ("pretty good", with one open report of see-through rail ends). Andrew's choices: plan first, keep the hole's valley identity, finish in the roulette bowl, and merge the proving ground into the milestone branch locally (done: `d6c5f9d`, not pushed).
+Status: **BUILT 2026-10-04 (Andrew chose: keep the drop, a smaller bowl, par 3). See DEVELOPMENT_LOG.md; the text below is the original plan.** Written 2026-10-04 after Andrew approved the proving-ground feel ("pretty good", with one open report of see-through rail ends). Andrew's choices: plan first, keep the hole's valley identity, finish in the roulette bowl, and merge the proving ground into the milestone branch locally (done: `d6c5f9d`, not pushed).
 
 ## Why change it
 

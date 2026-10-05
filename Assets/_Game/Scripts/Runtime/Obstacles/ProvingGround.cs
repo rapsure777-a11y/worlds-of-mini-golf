@@ -93,10 +93,32 @@ namespace Gamebreak.MiniGolf
         public float entryOffsetX = 0.6f;
         [Tooltip("Half-width of the notch in the bowl's wall, degrees.")]
         public float entryHalfAngle = 24f;
+        [Header("Optional drop on the lane before the ramp (the valley hole)")]
+        [Tooltip("How far the lane drops before the run-up to the ramp. 0 = a flat lane.")]
+        public float dropHeight = 0f;
+        public float dropStartZ = 1.4f, dropEndZ = 4.0f;
 
         public float EntryDz => Mathf.Sqrt(Mathf.Max(0.01f, bowl.radius * bowl.radius - entryOffsetX * entryOffsetX));
+        /// <summary>Lane level (before the ramp's own rise) at z: 0 on the flat, down to -<see cref="dropHeight"/> after the drop.</summary>
+        public float LaneBase(float z) => Slopes.RampZ(z, dropStartZ, dropEndZ, 0f, -dropHeight);
+        /// <summary>Lane surface height: the drop plus the ramp's rise.</summary>
+        public float LaneHeight(float x, float z) => LaneBase(z) + ramp.Height(x, z);
         /// <summary>The bowl's local origin in hole space: its shelf edge sits <see cref="LaunchRampSpec.padDrop"/> below the ramp lip, like the plain landing pad.</summary>
-        public Vector3 BowlOrigin => new Vector3(entryOffsetX, ramp.LipHeight - ramp.padDrop - bowl.Height(bowl.radius), ramp.LipZ + ramp.Gap + EntryDz);
+        public Vector3 BowlOrigin => new Vector3(entryOffsetX, LaneBase(ramp.LipZ) + ramp.LipHeight - ramp.padDrop - bowl.Height(bowl.radius), ramp.LipZ + ramp.Gap + EntryDz);
+        /// <summary>The ground the bowl occupies (hole space XZ): for the terrain plateau and the foliage keep-out.</summary>
+        public Rect BowlFootprint
+        {
+            get { var o = BowlOrigin; float r = bowl.radius + 0.4f; return new Rect(o.x - r, o.z - r, 2f * r, 2f * r); }
+        }
+        /// <summary>The lane as a green: run-up (with the drop) and ramp, an open lip, no cup. The bowl is added by <see cref="ProvingGround.BuildJumpBowlPieces"/>.</summary>
+        public GreenLayout LaneLayout()
+        {
+            var layout = new GreenLayout { wallHeight = ramp.railHeight };
+            layout.Area(-ramp.Width * 0.5f, 0f, ramp.Width, ramp.LipZ);
+            layout.openEdges.Add(new Rect(-ramp.Width * 0.5f - 0.1f, ramp.LipZ - 0.005f, ramp.Width + 0.2f, 0.01f));
+            layout.height = LaneHeight;
+            return layout;
+        }
         public RouletteBowlSpec BowlForHole()
         {
             var b = bowl.Clone();
@@ -204,23 +226,27 @@ namespace Gamebreak.MiniGolf
         {
             var root = NewRoot(parent, $"Hole{number:00}_JumpIntoBowl", position);
             var r = spec.ramp;
-            var layout = new GreenLayout { wallHeight = r.railHeight };
-            layout.Area(-r.Width * 0.5f, 0f, r.Width, r.LipZ);                                                   // run-up and ramp
-            layout.openEdges.Add(new Rect(-r.Width * 0.5f - 0.1f, r.LipZ - 0.005f, r.Width + 0.2f, 0.01f));     // open lip
-            layout.height = r.Height;
-            CourseGeometry.CreateGreen("JumpLane", layout, tuning, root.transform, mats.green, mats.cup, mats.wall, mats.flag, null, out Cup unused);
+            CourseGeometry.CreateGreen("JumpLane", spec.LaneLayout(), tuning, root.transform, mats.green, mats.cup, mats.wall, mats.flag, null, out Cup unused);
+            Cup cup = BuildJumpBowlPieces(root.transform, tuning, mats, spec);
+            return ProvingKit.AttachHole(root, number, 3, new Vector3(0f, spec.LaneHeight(0f, r.teeZ), r.teeZ), cup, tuning, ball, mats.tee);
+        }
 
+        /// <summary>The bowl (with its entry notch) and the pit under the gap, as children of <paramref name="root"/> (hole space). Returns the bowl's cup.</summary>
+        public static Cup BuildJumpBowlPieces(Transform root, GolfTuning tuning, ProvingMaterials mats, JumpBowlSpec spec)
+        {
+            var r = spec.ramp;
             var bowlGo = new GameObject("Bowl");
-            bowlGo.transform.SetParent(root.transform, false);
+            bowlGo.transform.SetParent(root, false);
             bowlGo.transform.localPosition = spec.BowlOrigin;
             var bowl = bowlGo.AddComponent<RouletteBowl>();
             bowl.Configure(spec.BowlForHole(), tuning, mats);
             bowl.Rebuild();
 
             // The pit under the gap: touching it is out of bounds (a short jump), as on the plain launch hole.
-            ProvingKit.Box("GapFloor", root.transform, new Vector3(0f, -r.gapDepth - 0.05f, r.LipZ + (r.Gap + 1.0f) * 0.5f), Quaternion.identity,
+            float lipLevel = spec.LaneBase(r.LipZ);
+            ProvingKit.Box("GapFloor", root, new Vector3(0f, lipLevel - r.gapDepth - 0.05f, r.LipZ + (r.Gap + 1.0f) * 0.5f), Quaternion.identity,
                 new Vector3(r.Width + 1.6f, 0.1f, r.Gap + 1.0f), mats.wood, true, false, true);
-            return ProvingKit.AttachHole(root, number, 3, new Vector3(0f, r.Height(0f, r.teeZ), r.teeZ), bowl.Cup, tuning, ball, mats.tee);
+            return bowl.Cup;
         }
 
         /// <summary>The demonstration holes in a row, plus a distant out-of-bounds ground slab.</summary>

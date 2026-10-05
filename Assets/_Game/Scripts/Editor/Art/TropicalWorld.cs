@@ -50,7 +50,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             for (int i = 0; i < defs.Count; i++)
             {
                 if (IsJungle(defs[i])) continue;
-                var (centre, half) = LayoutBounds(defs[i].layout);
+                var (centre, half) = LayoutBounds(defs[i]);
                 var f = frames[i];
                 island.zones.Add(new IslandGen.Zone
                 {
@@ -97,7 +97,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Dresser jungleDresser = jungle != null ? new Dresser(kit, hero, jungle, dressingRoot) : null;
             for (int i = 0; i < defs.Count; i++)
             {
-                var (centre, half) = LayoutBounds(defs[i].layout);
+                var (centre, half) = LayoutBounds(defs[i]);
                 var dr = IsJungle(defs[i]) ? jungleDresser : dresser;
                 // Generous clearance: holes get hand-placed dressing; random island cover stays back.
                 dr.KeepOut(frames[i].L2(centre.x, centre.y), half + new Vector2(0.9f, 1.2f), frames[i].yaw, 2.6f);
@@ -830,14 +830,19 @@ namespace Gamebreak.MiniGolf.Editor.Art
             t.lineSpacing = 1.05f;
         }
 
-        internal static (Vector2 centre, Vector2 half) LayoutBounds(GreenLayout l)
+        /// <summary>Bounds of the lane and of any pieces hung off it (<see cref="HoleDefinition.extraAreas"/>, e.g. Hole 4's bowl).</summary>
+        internal static (Vector2 centre, Vector2 half) LayoutBounds(HoleDefinition def) => LayoutBounds(def.layout, def.extraAreas);
+
+        internal static (Vector2 centre, Vector2 half) LayoutBounds(GreenLayout l, IEnumerable<Rect> extra = null)
         {
             float minX = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxZ = float.MinValue;
-            foreach (var a in l.areas)
+            void Grow(Rect a)
             {
                 minX = Mathf.Min(minX, a.xMin); minZ = Mathf.Min(minZ, a.yMin);
                 maxX = Mathf.Max(maxX, a.xMax); maxZ = Mathf.Max(maxZ, a.yMax);
             }
+            foreach (var a in l.areas) Grow(a);
+            if (extra != null) foreach (var a in extra) Grow(a);
             return (new Vector2((minX + maxX) * 0.5f, (minZ + maxZ) * 0.5f), new Vector2((maxX - minX) * 0.5f, (maxZ - minZ) * 0.5f));
         }
 

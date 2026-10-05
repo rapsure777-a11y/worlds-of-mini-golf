@@ -255,6 +255,12 @@ namespace Gamebreak.MiniGolf
                 float baseY = P(i, j).y - l.baseDepth;
                 Quad(px, pxz, new Vector3(pxz.x, baseY, pxz.z), new Vector3(px.x, baseY, px.z), oz);
                 Quad(pz, pxz, new Vector3(pxz.x, baseY, pxz.z), new Vector3(pz.x, baseY, pz.z), ox);
+                // Where the boundary edge next to this corner is an open edge (no rail), the corner post has no neighbour on that side:
+                // close its face so it is not hollow when seen from the open side. Never runs for layouts without open edges.
+                if (IsOpenEdge(P(i, j), P(i, j) + (-ox) * l.cell))
+                    Quad(p, pz, new Vector3(pz.x, baseY, pz.z), new Vector3(p.x, baseY, p.z), -ox);
+                if (IsOpenEdge(P(i, j), P(i, j) + (-oz) * l.cell))
+                    Quad(p, px, new Vector3(px.x, baseY, px.z), new Vector3(p.x, baseY, p.z), -oz);
             }
 
             var mesh = new Mesh { name = "GreenWalls" };

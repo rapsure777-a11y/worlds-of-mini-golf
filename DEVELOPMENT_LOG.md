@@ -134,3 +134,11 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - **Hole 4 "Hollow Drop" exists and is on GitHub** (`milestone-3-island-hopping`; code in `HoleDefinition.Hole04`, dressing in `JungleIsland.DressHole4`, tests in the Milestone 3 suite). Holes 1-3 unchanged. 78/78 PlayMode tests pass, both players build with 0 errors. The cloud could not see it earlier only because it had never been pushed.
 - **Tiki fix:** crest feathers (mask and bird-head pole) were tilted inward and crossed; the bird's eyes were buried in the head. Fixed in `hero_tiki.py`, models regenerated.
 - **Andrew's headset feedback on Hole 4 (for the design sprint, nothing changed yet):** too long with too many turns to reach the cup in 4 strokes (not hard, just long); holes feel flat, generic, and lack obstacles. Hole redesign is deferred until the cloud reviews the real hole.
+
+## 2026-10-04 (night): Hole 4 rebuilt as drop, ramp jump and bowl (par 3)
+
+- **Andrew's calls:** keep the drop, smaller circle, par 3. The see-through railings he saw were on the proving ground's launch-ramp hole.
+- **Hole 4 "Hollow Drop" is now:** 1.2 m lane with the 24 cm drop (z 1.4-4.0), a 1 m run-up, the 14 degree launch ramp (lip at z 5.6), a 0.3 m gap with a pit, and a 1.6 m-radius roulette bowl offset 0.5 m so the ball enters at an angle, with the cup at its lowest point. About 9 m end to end (was 14 m, five legs).
+- **Code:** `HoleDefinition.buildExtras` / `extraAreas` (a hole can hang pieces and a cup off its lane), `HoleFactory` uses them, `ProvingGround.BuildJumpBowlPieces`, `JumpBowlSpec` (drop, `LaneLayout`, `BowlFootprint`), `TropicalCourse.Hole4Spec()`. The bowl wall and notch curb now stand on a solid base. Terrain plateau and foliage keep-out cover the bowl (`TropicalWorld.LayoutBounds(def)`); `JungleIsland.DressHole4` re-placed for the new footprint.
+- **Rails:** `CourseGeometry.BuildWalls` now closes the rail corner posts where a rail meets an open edge (they were hollow, which looked see-through). Only runs for layouts with open edges, so Holes 1-3 are unchanged.
+- **Tee putt sweep (Default):** 1.6-2.2 m/s stay on the lane; 2.6-3.0 fall short in the pit (+1 stroke); **3.4-4.6 land in the bowl with 1 stroke** (two end on the apron next to the cup). Tests: 106/106, scene and both players rebuilt, screenshots checked.

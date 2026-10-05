@@ -68,6 +68,8 @@ namespace Gamebreak.MiniGolf
         [SerializeField] ProvingMaterials materials = new ProvingMaterials();
 
         const string GeometryName = "RouletteBowlGeometry";
+        /// <summary>How far the wall (and the notch curb) reach below the rim, so the bowl sits on a solid ring.</summary>
+        const float BaseDepth = 0.4f;
 
         public RouletteBowlSpec Spec => spec;
         public Cup Cup { get; private set; }
@@ -109,13 +111,15 @@ namespace Gamebreak.MiniGolf
                 if (spec.entryHalfWidthDegrees > 0f && Mathf.Abs(Mathf.DeltaAngle(a * Mathf.Rad2Deg, spec.entryAngleDegrees)) < spec.entryHalfWidthDegrees)
                 {
                     // Entry notch: a low curb instead of the wall (the same trick as the launch pad's lip).
-                    ProvingKit.Box("EntryCurb", walls, radial * (spec.radius + 0.02f) + Vector3.up * (hR + 0.01f), Quaternion.LookRotation(radial, Vector3.up),
-                        new Vector3(width, 0.02f, 0.04f), materials.wall, true);
+                    // It stands on a solid base so nothing shows under it.
+                    ProvingKit.Box("EntryCurb", walls, radial * (spec.radius + 0.02f) + Vector3.up * (hR + 0.02f - BaseDepth * 0.5f), Quaternion.LookRotation(radial, Vector3.up),
+                        new Vector3(width, BaseDepth, 0.04f), materials.wall, true);
                     continue;
                 }
-                Vector3 pos = radial * (spec.radius + spec.wallThickness * 0.5f) + Vector3.up * (hR + (spec.wallHeight - 0.05f) * 0.5f);
+                // The wall runs from BaseDepth below the rim to wallHeight above it: the bowl stands on a solid ring, with no gap under its rim.
+                Vector3 pos = radial * (spec.radius + spec.wallThickness * 0.5f) + Vector3.up * (hR + (spec.wallHeight - BaseDepth) * 0.5f);
                 ProvingKit.Box("WallSegment", walls, pos, Quaternion.LookRotation(radial, Vector3.up),
-                    new Vector3(width, spec.wallHeight + 0.05f, spec.wallThickness), materials.wall, true);
+                    new Vector3(width, spec.wallHeight + BaseDepth, spec.wallThickness), materials.wall, true);
             }
 
             var cupGo = new GameObject("Cup");

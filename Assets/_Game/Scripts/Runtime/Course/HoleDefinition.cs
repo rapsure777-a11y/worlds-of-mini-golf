@@ -18,6 +18,13 @@ namespace Gamebreak.MiniGolf
         public float yaw;
         /// <summary>Id of the <see cref="IslandCluster"/> this hole belongs to.</summary>
         public string cluster;
+        /// <summary>
+        /// Optional pieces that hang off the lane (a bowl, a ramp's pit...). Called by <see cref="HoleFactory"/> with the hole's root; it builds
+        /// the pieces and returns the hole's cup (the layout then has no cup of its own). Null for ordinary rectangle-union holes.
+        /// </summary>
+        public System.Func<Transform, WorldTheme, GolfTuning, Cup> buildExtras;
+        /// <summary>Footprints (layout XZ) of those pieces, so the terrain plateau and the foliage keep-out cover them as well as the lane.</summary>
+        public readonly List<Rect> extraAreas = new List<Rect>();
     }
 
     /// <summary>World 1: Tropical Adventure. Holes are added here as they are designed.</summary>
@@ -117,34 +124,40 @@ namespace Gamebreak.MiniGolf
         public const float JungleDeckHeight = 2.6f;
 
         /// <summary>
-        /// Hole 4, "Hollow Drop" (par 4): the valley hole. A long S-shaped lane that drops 24 cm down a ramp (the ball picks up speed,
-        /// so the lane below needs a gentle touch), turns back across a low basin, and finishes up a short 10% climb onto a raised
-        /// cup. A putt that is too soft for the climb rolls back into the basin without penalty. After Hole 3's bridge and bank
-        /// shot this one is about pace. Local axes: x across the first lane, z along it.
+        /// Hole 4, "Hollow Drop" (par 3): the valley hole, shortened. Headset feedback on the first version (a five-leg S, par 4) was "too
+        /// long, too many turns". Now: a short lane with the 24 cm drop (the ball arrives at the ramp already moving), a flat run-up, the
+        /// launch ramp over a pit, and a jump into a small roulette bowl (offset so the ball enters at an angle) with the cup at its
+        /// lowest point. A soft putt rolls back; a short jump falls in the pit (one stroke, back to the last rest spot); a ball that lands
+        /// in the bowl cannot leave it. The bowl is built by <see cref="HoleDefinition.buildExtras"/>. Local axes: x across the lane, z along it.
         /// </summary>
         static HoleDefinition Hole04()
         {
-            var l = new GreenLayout { wallHeight = 0.12f };
-            l.Area(-0.6f, 0f, 1.2f, 4.0f);       // A: tee lane, running +Z
-            l.Area(-0.6f, 4.0f, 5.2f, 1.2f);     // B: turn east, x -0.6..4.6
-            l.Area(3.4f, 5.2f, 1.2f, 4.0f);      // C: descent lane, running +Z
-            l.Area(-1.2f, 9.2f, 5.8f, 1.2f);     // D: low basin, turn back west
-            l.Area(-1.2f, 10.4f, 1.2f, 3.6f);    // E: final lane with the climb and the cup
-            l.cup = new Vector2(-0.6f, 13.0f);
-            l.height = (x, z) =>
-                Slopes.RampZ(z, 5.6f, 8.2f, 0f, -0.24f)            // the drop (about 9%)
-                + Slopes.RampZ(z, 11.4f, 12.4f, 0f, 0.10f);        // the climb to the cup (10%)
-            return new HoleDefinition
+            var spec = Hole4Spec();
+            var def = new HoleDefinition
             {
                 number = 4,
                 name = "Hollow Drop",
-                par = 4,
-                layout = l,
+                par = 3,
+                layout = spec.LaneLayout(),
                 tee = new Vector2(0f, 0.6f),
                 origin = new Vector3(69f, Hole4Height, -80f),
                 yaw = 0f,
                 cluster = JungleCluster,
+                buildExtras = (root, theme, tuning) => ProvingGround.BuildJumpBowlPieces(root, tuning, ProvingMaterials.FromTheme(theme), spec),
             };
+            def.extraAreas.Add(spec.BowlFootprint);
+            return def;
+        }
+
+        /// <summary>The numbers behind Hole 4: lane 1.2 m wide, a drop of 24 cm, a 1 m run-up, the 14 degree ramp, and a 1.6 m bowl entered at an angle.</summary>
+        public static JumpBowlSpec Hole4Spec()
+        {
+            var s = new JumpBowlSpec { dropHeight = 0.24f, dropStartZ = 1.4f, dropEndZ = 4.0f, entryOffsetX = 0.5f, entryHalfAngle = 26f };
+            s.ramp.width = 1.2f;
+            s.ramp.approachLength = 5.0f;     // flat run-up from the end of the drop (z 4.0) to the ramp (z 5.0)
+            s.bowl.radius = 1.6f;
+            s.bowl.shelfWidth = 0.45f;
+            return s;
         }
 
         /// <summary>Ground height of the Hole 4 plateau on the Jungle Island.</summary>
