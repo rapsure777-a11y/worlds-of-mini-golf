@@ -35,6 +35,7 @@ namespace Gamebreak.MiniGolf
             Vector3 cupLocal = cup ? (def.buildExtras != null ? root.transform.InverseTransformPoint(cup.transform.position) : cup.transform.localPosition)
                                    : tee.localPosition + Vector3.forward;
             Vector3 line = cupLocal - tee.localPosition; line.y = 0f; line.Normalize();
+            if (def.buildExtras != null) line = Vector3.forward;   // a composite hole faces down its first lane, not at the cup (which may be round a corner)
             var start = new GameObject("PlayerStart").transform;
             start.SetParent(root.transform, false);
             start.localPosition = tee.localPosition - line * 0.9f;

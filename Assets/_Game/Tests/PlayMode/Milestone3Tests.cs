@@ -428,7 +428,7 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.IsFalse(course.Finished);
         }
 
-        // ------------------------------------------------------------------ Hole 4 ("Hollow Drop": drop, ramp jump, bowl)
+        // ------------------------------------------------------------------ Hole 4 ("Tiki Twister": drop, turn, ramp jump, bowl)
 
         static HoleDefinition Hole4() => TropicalCourse.Holes().Find(h => h.number == 4);
 
@@ -453,9 +453,11 @@ namespace Gamebreak.MiniGolf.Tests
         {
             var l = Hole4().layout;
             float maxStep = 0f;
-            for (float x = -0.6f; x < 0.5f; x += 0.1f)
-            for (float z = 0.05f; z < 5.5f; z += 0.1f)
+            for (float x = -0.6f; x < 2.5f; x += 0.1f)
+            for (float z = 0.05f; z < 5.1f; z += 0.1f)
             {
+                // Only where the lane (and the neighbouring cell) exists: the second leg after the turn runs along +x.
+                if (!l.areas.Exists(r => r.Contains(new Vector2(x, z))) || !l.areas.Exists(r => r.Contains(new Vector2(x + 0.1f, z + 0.1f)))) continue;
                 float h = l.Height(x, z);
                 maxStep = Mathf.Max(maxStep, Mathf.Abs(l.Height(x + 0.1f, z) - h), Mathf.Abs(l.Height(x, z + 0.1f) - h));
             }
@@ -480,31 +482,54 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [UnityTest]
-        [NUnit.Framework.Timeout(900000)]
-        public IEnumerator Hole4_TeePuttSweep_RollsBack_FallsShort_OrLandsInTheBowl()
+        public IEnumerator Hole4_TeePutt_ReachesTheCorner_AndNeverLeavesTheCourse()
         {
+            // The first lane ends in a corner wall: a tee putt is stopped there (a firm one rebounds up the drop) and always stays in play,
+            // one stroke, no penalty. A firm one must actually get to the corner.
             var spec = TropicalCourse.Hole4Spec();
-            var table = new System.Text.StringBuilder("[Test] hole 4 tee putt sweep (strike m/s -> outcome)\n");
-            int landed = 0, holed = 0, gap = 0, back = 0, lost = 0;
-            foreach (float s in new[] { 1.6f, 2.2f, 2.6f, 3.0f, 3.4f, 3.8f, 4.2f, 4.6f })
+            foreach (float s in new[] { 1.6f, 2.6f, 3.6f, 4.6f })
             {
                 using var b = new Hole3Bed(4);
                 yield return Steps(5);
                 b.ball.Strike(Vector3.forward * s);
-                yield return WaitUntil(() => b.hole.IsComplete || b.hole.Strokes >= 2 || (b.ball.IsAtRest && b.ball.Position.z > spec.ramp.LipZ), 60f);
-                var o = spec.BowlOrigin;
-                float r = new Vector2(b.ball.Position.x - o.x, b.ball.Position.z - o.z).magnitude;
+                float maxZ = 0f;
+                for (int i = 0; i < 600; i++) { yield return new WaitForFixedUpdate(); maxZ = Mathf.Max(maxZ, b.ball.Position.z); }
+                Assert.AreEqual(1, b.hole.Strokes, $"a {s:F1} m/s tee putt must not cost a penalty (ball at {b.ball.Position})");
+                Assert.IsTrue(b.ball.InPlay);
+                Assert.Less(b.ball.Position.x, 0.7f, "the tee putt stays on the first lane or in the corner");
+                if (s >= 3.6f) Assert.Greater(maxZ, spec.turnZ - 1.0f, "a firm tee putt runs on to the corner");
+            }
+        }
+
+        [UnityTest]
+        [NUnit.Framework.Timeout(900000)]
+        public IEnumerator Hole4_FromTheCorner_SweepRollsBack_FallsShort_OrLandsInTheBowl()
+        {
+            // Second shot: from the corner, along the second leg, over the ramp.
+            var spec = TropicalCourse.Hole4Spec();
+            var table = new System.Text.StringBuilder("[Test] hole 4 second shot sweep, from the corner (strike m/s -> outcome)\n");
+            int landed = 0, holed = 0, gap = 0, back = 0, lost = 0;
+            foreach (float s in new[] { 2.4f, 3.0f, 3.4f, 3.8f, 4.2f, 4.6f, 5.0f, 5.6f })
+            {
+                using var b = new Hole3Bed(4);
+                yield return Steps(5);
+                b.ball.PlaceAt(b.Surface(0f, spec.turnZ));
+                yield return Steps(5);
+                b.ball.Strike(Vector3.right * s);
+                yield return WaitUntil(() => b.hole.IsComplete || b.hole.Strokes >= 2 || (b.ball.IsAtRest && spec.Along(b.ball.Position) > spec.ramp.LipZ), 60f);
+                var c = spec.BowlCentreXZ;
+                float r = new Vector2(b.ball.Position.x - c.x, b.ball.Position.z - c.y).magnitude;
                 string text;
                 if (b.hole.IsComplete) { text = "HOLED"; holed++; landed++; }
-                else if (b.hole.Strokes >= 2) { bool left = b.ball.Position.z > spec.ramp.LipZ + spec.ramp.Gap + 0.5f; text = left ? "left the bowl (penalty)" : "short: pit (penalty)"; if (left) lost++; else gap++; }
-                else if (r < spec.bowl.radius + 0.05f && b.ball.Position.z > spec.ramp.LipZ) { text = $"in the bowl at r {r:F2}, resting"; landed++; }
-                else { text = $"rolled back (rest z {b.ball.Position.z:F2})"; back++; }
+                else if (b.hole.Strokes >= 2) { bool left = spec.Along(b.ball.Position) > spec.ramp.LipZ + spec.ramp.Gap + 0.5f; text = left ? "left the bowl (penalty)" : "short: pit (penalty)"; if (left) lost++; else gap++; }
+                else if (r < spec.bowl.radius + 0.05f && spec.Along(b.ball.Position) > spec.ramp.LipZ) { text = $"in the bowl at r {r:F2}, resting"; landed++; }
+                else { text = $"rolled back (rest x {b.ball.Position.x:F2})"; back++; }
                 table.AppendLine($"  {s:F1} -> {text} (strokes {b.hole.Strokes})");
             }
             Debug.Log(table.ToString());
-            Assert.GreaterOrEqual(landed, 2, "several tee putts must land in the bowl");
-            Assert.GreaterOrEqual(gap, 1, "a tee putt that is a little short must fall in the pit");
-            Assert.GreaterOrEqual(back, 1, "a soft tee putt must stay on the lane");
+            Assert.GreaterOrEqual(landed, 2, "several second shots must land in the bowl");
+            Assert.GreaterOrEqual(gap, 1, "a second shot that is a little short must fall in the pit");
+            Assert.GreaterOrEqual(back, 1, "a soft second shot must stay on the lane");
             Assert.AreEqual(0, lost, "a ball that landed in the bowl must not leave it");
         }
 

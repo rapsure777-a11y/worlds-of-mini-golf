@@ -86,6 +86,20 @@ def cylinder(group, base, radius_fn, height, sides=16, rings=8, tile=1.0, color_
     return o
 
 
+def fan(hub, colors, step_deg, length, width, thick):
+    """A fan of feathers radiating from `hub` (x, y, z): each feather starts at the hub and points outward, the centre one stands
+    furthest back and the outer ones step forward so no two share a plane or cut through each other. A small band covers the roots."""
+    n = len(colors)
+    mid = (n - 1) / 2.0
+    for k, col in enumerate(colors):
+        a = math.radians((k - mid) * step_deg)
+        layer = (mid - abs(k - mid)) * 0.0 - abs(k - mid) * 0.008   # outer feathers stand a little further forward (-Y)
+        centre = (hub[0] + math.sin(a) * length * 0.5, hub[1] + layer, hub[2] + math.cos(a) * length * 0.5)
+        m = Matrix.Translation(centre) @ Matrix.Rotation(a, 4, "Y")
+        box("Paint", m.to_translation(), (width, thick, length), rot=m.to_euler(), color=col, bevel=0.008)
+    box("Paint", (hub[0], hub[1] - mid * 0.008 - 0.012, hub[2] + 0.005), (width * 2.4, thick + 0.02, 0.05), color=TEAL, bevel=0.01)
+
+
 # ------------------------------------------------------------------ poles
 def pole(tiers, tier_h, base_r, bands, wings, crown):
     """Carved pole facing -Y: each tier carries a face (brow, eyes, nose, grinning mouth with teeth) and a painted band."""
@@ -145,11 +159,7 @@ def pole(tiers, tier_h, base_r, bands, wings, crown):
         for side in (-1, 1):
             box("Paint", (side * 0.1, -0.18, top + 0.2), (0.07, 0.03, 0.07), color=CREAM)
             box("Paint", (side * 0.1, -0.195, top + 0.2), (0.035, 0.03, 0.035), color=DARK)
-        for k in range(5):
-            a = math.radians(-60 + k * 30)
-            m = Matrix.Translation((math.sin(a) * 0.08, 0.0, top + 0.27)) @ Matrix.Rotation(a, 4, "Y")
-            box("Paint", m.to_translation(), (0.05, 0.03, 0.32), rot=m.to_euler(),
-                color=(RED, YELLOW, TEAL, YELLOW, RED)[k], bevel=0.008)
+        fan((0, 0, top + 0.235), (RED, YELLOW, TEAL, YELLOW, RED), 30, 0.32, 0.05, 0.03)
     else:
         box("Totem", (0, 0, top + 0.02), (base_r * 2.1, base_r * 2.1, 0.07), color=(0.85, 0.7, 0.55, 0), bevel=0.02)
 
@@ -161,7 +171,8 @@ def mask():
     # Shield: a tall board with a diamond top.
     box("Totem", (0, 0, z0 + 0.35), (0.5, 0.07, 0.62), color=(0.92, 0.78, 0.62, 0), bevel=0.012)
     m = Matrix.Translation((0, 0, z0 + 0.66)) @ Matrix.Rotation(math.radians(45), 4, "Y")
-    box("Totem", m.to_translation(), (0.35, 0.07, 0.35), rot=m.to_euler(), color=(0.92, 0.78, 0.62, 0), bevel=0.012)
+    # Slightly thinner than the board so the two do not share a face (that made the shield shimmer).
+    box("Totem", m.to_translation(), (0.35, 0.064, 0.35), rot=m.to_euler(), color=(0.92, 0.78, 0.62, 0), bevel=0.012)
     y = -0.04
     zf = z0 + 0.35
     # Painted border.
@@ -178,11 +189,8 @@ def mask():
     box("Paint", (0, y - 0.012, zf - 0.19), (0.3, 0.03, 0.095), color=(0.55, 0.08, 0.06, 0), bevel=0.012)
     for k in range(5):
         box("Paint", (-0.1 + k * 0.05, y - 0.03, zf - 0.19), (0.036, 0.02, 0.06), color=CREAM)
-    # Feather crest.
-    for k in range(7):
-        a = math.radians(-66 + k * 22)
-        m = Matrix.Translation((math.sin(a) * 0.12, 0.0, z0 + 0.96 + math.cos(a) * 0.03)) @ Matrix.Rotation(a, 4, "Y")
-        box("Paint", m.to_translation(), (0.06, 0.025, 0.34), rot=m.to_euler(), color=(RED, YELLOW, TEAL, ORANGE, TEAL, YELLOW, RED)[k], bevel=0.008)
+    # Feather crest: a layered fan that radiates from the diamond's tip.
+    fan((0, 0, z0 + 0.905), (RED, YELLOW, TEAL, ORANGE, TEAL, YELLOW, RED), 22, 0.34, 0.06, 0.025)
 
 
 def finish(name):

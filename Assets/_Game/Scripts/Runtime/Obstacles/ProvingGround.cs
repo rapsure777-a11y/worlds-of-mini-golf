@@ -97,25 +97,49 @@ namespace Gamebreak.MiniGolf
         [Tooltip("How far the lane drops before the run-up to the ramp. 0 = a flat lane.")]
         public float dropHeight = 0f;
         public float dropStartZ = 1.4f, dropEndZ = 4.0f;
+        [Header("Optional turn: the ramp and bowl sit on a second leg that runs sideways (+X) from the end of the first lane")]
+        public bool turn = false;
+        [Tooltip("Hole-space z of the second leg's centre line (the first lane runs on to here plus half a lane width).")]
+        public float turnZ = 4.6f;
 
         public float EntryDz => Mathf.Sqrt(Mathf.Max(0.01f, bowl.radius * bowl.radius - entryOffsetX * entryOffsetX));
         /// <summary>Lane level (before the ramp's own rise) at z: 0 on the flat, down to -<see cref="dropHeight"/> after the drop.</summary>
         public float LaneBase(float z) => Slopes.RampZ(z, dropStartZ, dropEndZ, 0f, -dropHeight);
-        /// <summary>Lane surface height: the drop plus the ramp's rise.</summary>
-        public float LaneHeight(float x, float z) => LaneBase(z) + ramp.Height(x, z);
-        /// <summary>The bowl's local origin in hole space: its shelf edge sits <see cref="LaunchRampSpec.padDrop"/> below the ramp lip, like the plain landing pad.</summary>
-        public Vector3 BowlOrigin => new Vector3(entryOffsetX, LaneBase(ramp.LipZ) + ramp.LipHeight - ramp.padDrop - bowl.Height(bowl.radius), ramp.LipZ + ramp.Gap + EntryDz);
+        /// <summary>Where the ramp's lip is, along the first lane (no turn) or the second leg's own axis (turn): the lane level there is <see cref="LaneBase"/> of this z.</summary>
+        float LipLevelZ => turn ? turnZ : ramp.LipZ;
+        /// <summary>Lane surface height: the drop plus the ramp's rise. With a turn the ramp lies along the second leg: along = x, across = turnZ - z.</summary>
+        public float LaneHeight(float x, float z) => turn ? LaneBase(z) + ramp.Height(turnZ - z, x) : LaneBase(z) + ramp.Height(x, z);
+        /// <summary>The bowl's local origin in the ramp's own frame (see <see cref="Frame"/>): its shelf edge sits <see cref="LaunchRampSpec.padDrop"/> below the ramp lip, like the plain landing pad.</summary>
+        public Vector3 BowlOrigin => new Vector3(entryOffsetX, LaneBase(LipLevelZ) + ramp.LipHeight - ramp.padDrop - bowl.Height(bowl.radius), ramp.LipZ + ramp.Gap + EntryDz);
+        /// <summary>Position and yaw of the ramp's own frame in hole space. Without a turn it is the hole's own frame; with one, local +z points along hole +x and local +x along hole -z.</summary>
+        public (Vector3 position, float yaw) Frame => turn ? (new Vector3(0f, 0f, turnZ), 90f) : (Vector3.zero, 0f);
+        /// <summary>Hole-space XZ of a point given in the ramp's frame.</summary>
+        public Vector2 ToHoleXZ(float localX, float localZ) => turn ? new Vector2(localZ, turnZ - localX) : new Vector2(localX, localZ);
+        /// <summary>Distance travelled along the ramp's direction by a hole-space point (z on a straight hole, x after the turn).</summary>
+        public float Along(Vector3 holePos) => turn ? holePos.x : holePos.z;
+        /// <summary>The bowl's centre in hole space.</summary>
+        public Vector2 BowlCentreXZ { get { var o = BowlOrigin; return ToHoleXZ(o.x, o.z); } }
         /// <summary>The ground the bowl occupies (hole space XZ): for the terrain plateau and the foliage keep-out.</summary>
         public Rect BowlFootprint
         {
-            get { var o = BowlOrigin; float r = bowl.radius + 0.4f; return new Rect(o.x - r, o.z - r, 2f * r, 2f * r); }
+            get { var c = BowlCentreXZ; float r = bowl.radius + 0.4f; return new Rect(c.x - r, c.y - r, 2f * r, 2f * r); }
         }
         /// <summary>The lane as a green: run-up (with the drop) and ramp, an open lip, no cup. The bowl is added by <see cref="ProvingGround.BuildJumpBowlPieces"/>.</summary>
         public GreenLayout LaneLayout()
         {
             var layout = new GreenLayout { wallHeight = ramp.railHeight };
-            layout.Area(-ramp.Width * 0.5f, 0f, ramp.Width, ramp.LipZ);
-            layout.openEdges.Add(new Rect(-ramp.Width * 0.5f - 0.1f, ramp.LipZ - 0.005f, ramp.Width + 0.2f, 0.01f));
+            float w = ramp.Width;
+            if (!turn)
+            {
+                layout.Area(-w * 0.5f, 0f, w, ramp.LipZ);
+                layout.openEdges.Add(new Rect(-w * 0.5f - 0.1f, ramp.LipZ - 0.005f, w + 0.2f, 0.01f));
+            }
+            else
+            {
+                layout.Area(-w * 0.5f, 0f, w, turnZ + w * 0.5f);                                   // first lane, with the drop
+                layout.Area(-w * 0.5f, turnZ - w * 0.5f, ramp.LipZ + w * 0.5f, w);                 // second leg: run-up and ramp
+                layout.openEdges.Add(new Rect(ramp.LipZ - 0.005f, turnZ - w * 0.5f - 0.1f, 0.01f, w + 0.2f));
+            }
             layout.height = LaneHeight;
             return layout;
         }
@@ -235,16 +259,23 @@ namespace Gamebreak.MiniGolf
         public static Cup BuildJumpBowlPieces(Transform root, GolfTuning tuning, ProvingMaterials mats, JumpBowlSpec spec)
         {
             var r = spec.ramp;
+            // The ramp's own frame: the hole's frame on a straight hole, or turned to run along hole +x after a turn.
+            var (framePos, frameYaw) = spec.Frame;
+            var frame = new GameObject("RampFrame").transform;
+            frame.SetParent(root, false);
+            frame.localPosition = framePos;
+            frame.localRotation = Quaternion.Euler(0f, frameYaw, 0f);
+
             var bowlGo = new GameObject("Bowl");
-            bowlGo.transform.SetParent(root, false);
+            bowlGo.transform.SetParent(frame, false);
             bowlGo.transform.localPosition = spec.BowlOrigin;
             var bowl = bowlGo.AddComponent<RouletteBowl>();
             bowl.Configure(spec.BowlForHole(), tuning, mats);
             bowl.Rebuild();
 
             // The pit under the gap: touching it is out of bounds (a short jump), as on the plain launch hole.
-            float lipLevel = spec.LaneBase(r.LipZ);
-            ProvingKit.Box("GapFloor", root, new Vector3(0f, lipLevel - r.gapDepth - 0.05f, r.LipZ + (r.Gap + 1.0f) * 0.5f), Quaternion.identity,
+            float lipLevel = spec.LaneBase(spec.turn ? spec.turnZ : r.LipZ);
+            ProvingKit.Box("GapFloor", frame, new Vector3(0f, lipLevel - r.gapDepth - 0.05f, r.LipZ + (r.Gap + 1.0f) * 0.5f), Quaternion.identity,
                 new Vector3(r.Width + 1.6f, 0.1f, r.Gap + 1.0f), mats.wood, true, false, true);
             return bowl.Cup;
         }

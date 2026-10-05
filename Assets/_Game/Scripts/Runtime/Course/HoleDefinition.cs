@@ -124,7 +124,7 @@ namespace Gamebreak.MiniGolf
         public const float JungleDeckHeight = 2.6f;
 
         /// <summary>
-        /// Hole 4, "Hollow Drop" (par 3): the valley hole, shortened. Headset feedback on the first version (a five-leg S, par 4) was "too
+        /// Hole 4, "Tiki Twister" (par 3; first built as the five-leg "Hollow Drop"): the drop, one turn, the ramp jump and the bowl. Headset feedback on the first version (a five-leg S, par 4) was "too
         /// long, too many turns". Now: a short lane with the 24 cm drop (the ball arrives at the ramp already moving), a flat run-up, the
         /// launch ramp over a pit, and a jump into a small roulette bowl (offset so the ball enters at an angle) with the cup at its
         /// lowest point. A soft putt rolls back; a short jump falls in the pit (one stroke, back to the last rest spot); a ball that lands
@@ -136,7 +136,7 @@ namespace Gamebreak.MiniGolf
             var def = new HoleDefinition
             {
                 number = 4,
-                name = "Hollow Drop",
+                name = "Tiki Twister",
                 par = 3,
                 layout = spec.LaneLayout(),
                 tee = new Vector2(0f, 0.6f),
@@ -149,12 +149,16 @@ namespace Gamebreak.MiniGolf
             return def;
         }
 
-        /// <summary>The numbers behind Hole 4: lane 1.2 m wide, a drop of 24 cm, a 1 m run-up, the 14 degree ramp, and a 1.6 m bowl entered at an angle.</summary>
+        /// <summary>
+        /// The numbers behind Hole 4: a 1.2 m lane with a 24 cm drop, one 90 degree turn at the end of the first lane (a firm tee putt cannot
+        /// reach the cup: the corner wall stops it), then a second leg with a 1.4 m run-up, the 14 degree ramp, a gap, and a 1.6 m bowl entered at an angle.
+        /// </summary>
         public static JumpBowlSpec Hole4Spec()
         {
-            var s = new JumpBowlSpec { dropHeight = 0.24f, dropStartZ = 1.4f, dropEndZ = 4.0f, entryOffsetX = 0.5f, entryHalfAngle = 26f };
+            var s = new JumpBowlSpec { dropHeight = 0.24f, dropStartZ = 1.4f, dropEndZ = 4.0f, entryOffsetX = 0.5f, entryHalfAngle = 26f, turn = true, turnZ = 4.6f };
             s.ramp.width = 1.2f;
-            s.ramp.approachLength = 5.0f;     // flat run-up from the end of the drop (z 4.0) to the ramp (z 5.0)
+            s.ramp.approachLength = 2.0f;     // second leg: flat from the corner (x 0.6) to the ramp (x 2.0)
+            s.ramp.gap = 0.6f;
             s.bowl.radius = 1.6f;
             s.bowl.shelfWidth = 0.45f;
             return s;

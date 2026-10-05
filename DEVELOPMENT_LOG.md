@@ -142,3 +142,11 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - **Code:** `HoleDefinition.buildExtras` / `extraAreas` (a hole can hang pieces and a cup off its lane), `HoleFactory` uses them, `ProvingGround.BuildJumpBowlPieces`, `JumpBowlSpec` (drop, `LaneLayout`, `BowlFootprint`), `TropicalCourse.Hole4Spec()`. The bowl wall and notch curb now stand on a solid base. Terrain plateau and foliage keep-out cover the bowl (`TropicalWorld.LayoutBounds(def)`); `JungleIsland.DressHole4` re-placed for the new footprint.
 - **Rails:** `CourseGeometry.BuildWalls` now closes the rail corner posts where a rail meets an open edge (they were hollow, which looked see-through). Only runs for layouts with open edges, so Holes 1-3 are unchanged.
 - **Tee putt sweep (Default):** 1.6-2.2 m/s stay on the lane; 2.6-3.0 fall short in the pit (+1 stroke); **3.4-4.6 land in the bowl with 1 stroke** (two end on the apron next to the cup). Tests: 106/106, scene and both players rebuilt, screenshots checked.
+
+## 2026-10-04 (late night): Hole 4 renamed "Tiki Twister", given a turn and a longer jump; tiki crest fixed
+
+- **Headset feedback:** Hole 4 was "way too easy" (the ramp was too close to the circle to miss); the tiki mask top still clipped slightly; "where is the water wheel?" (it only exists in the proving-ground build, not in the course yet). Andrew renamed the hole: **Tiki Twister**.
+- **Hole 4 now:** 1.2 m lane with the 24 cm drop, then one 90 degree turn at the end of the first lane (corner wall), a second leg with a 1.4 m run-up, the ramp, a **0.6 m gap** (was 0.3), and the 1.6 m bowl. `JumpBowlSpec` gained `turn` / `turnZ` (the ramp frame is turned to run along hole +x); `HoleFactory` faces a composite hole down its first lane.
+- **Corner sweep (second shot from the corner):** 2.4 rolls back; 3.0-3.8 fall short in the pit (+1); 4.2-5.6 land in the bowl. A firm tee putt hits the corner wall and rebounds up the drop (no penalty).
+- **Tiki crest:** the feathers radiated from one point and cut through each other; now a layered fan on a root band, and the shield diamond is thinner than the board (no shared face, no shimmer). `Tools/Blender/hero_tiki.py`.
+- Tests 107/107; scene and both players rebuilt; screenshots checked.
