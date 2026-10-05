@@ -67,7 +67,9 @@ namespace Gamebreak.MiniGolf
         GolfBall m_Held;
         int m_Bucket;
         Vector3 m_StartPos;
-        float m_BlendT, m_Remaining, m_HeldTime;
+        float m_BlendT, m_Remaining, m_HeldTime, m_NoCaptureTime;
+        /// <summary>After a release the carrier ignores the ball for this long, so it rolls clear of the bucket.</summary>
+        const float RecaptureLockoutSeconds = 1.5f;
         Transform m_Visual;
         bool m_Initialised;
 
@@ -150,7 +152,8 @@ namespace Gamebreak.MiniGolf
             else m_Held = null;
 
             var b = ResolveBall();
-            if (b && b.InPlay && !b.IsHeld) TryCapture(b);
+            if (b && b.InPlay && !b.IsHeld && m_NoCaptureTime <= 0f) TryCapture(b);
+            if (m_NoCaptureTime > 0f) m_NoCaptureTime -= dt;
         }
 
         void TryCapture(GolfBall b)
@@ -191,6 +194,7 @@ namespace Gamebreak.MiniGolf
             m_Held = null;
             Vector3 dir = transform.TransformDirection(spec.releaseDirectionLocal.sqrMagnitude > 1e-6f ? spec.releaseDirectionLocal.normalized : Vector3.right);
             b.EndHold(dir * spec.releaseSpeed);
+            m_NoCaptureTime = RecaptureLockoutSeconds;   // the ball is still inside its old bucket's reach: do not scoop it straight back up
             ReleaseCount++;
             Released?.Invoke(this, b);
         }

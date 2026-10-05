@@ -164,3 +164,17 @@ A correction to the earlier sprint notes: the fixed timestep is **120 Hz** (`Gol
 - No test was executed. No scene was built. Nothing was seen in a headset.
 
 Stop for Local Claude integration. Do not merge into `milestone-3-island-hopping` until the feel is judged.
+
+---
+
+## 9. Local integration results (2026-10-04, real Unity 6000.3.9f1)
+
+- **Compile:** clean on first import (no errors in the three edited core files or the new code).
+- **Tests:** `ObstacleProvingGroundTests` 24/26 on the first run, **26/26 after one fix**. Full suite **104/104** (the previous 78 plus 26). Holes 1-4 unchanged.
+- **Fix (genuine integration bug), `WaterwheelCarrier`:** on release the ball was still inside its old bucket's `captureRadius` and slower than `maxCaptureSpeed`, so the very next physics step scooped it back up (re-held three steps after release, so the ball was carried round again). Added a 1.5 s re-capture lockout after a release (`RecaptureLockoutSeconds`). No tuning values were changed.
+- **Logged windows (Default tuning):**
+  - Launch ramp: rolls back at 1.6-2.0 m/s, falls in the gap at 2.4-2.8, **lands from 3.2 m/s up to at least 5.2** (landing window wider than 2 m/s). Short jump: 2 strokes, returns to the tee. 20 deg ramp hops 5.5 cm over the lip vs 1.7 cm at 10 deg (4.2 m/s).
+  - Waterwheel: capture, carry of 6.2 s at the 14 s period (3.2 s at 7 s), release onto the channel, holed in 1 stroke, 0 out-of-bounds returns.
+  - Roulette bowl (shelf 0.065, cone 0.10): 4 of 8 strikes holed, 2 on the apron, 2 on the shelf, none on the cone, max energy gain 0.000 J/kg (no attraction). At 1.5 m/s a strike 4 or 8 degrees off the wall holes; 0 degrees ends on the shelf.
+- **Builds:** scene `Assets/_Game/Worlds/ProvingGround/ObstacleProvingGround.unity` (Default tuning); player `Builds/ProvingGround/ObstacleProvingGround.exe` (PCVR, 0 errors).
+- **Not yet verified:** anything in the headset (flight look, the lip, the scoop, how the bowl feels, best shelf slope, rig height at the wheel channel). Runtime behaviour above is from PlayMode tests only.
