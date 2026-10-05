@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 namespace Gamebreak.MiniGolf.Editor
 {
     /// <summary>
-    /// Builds the Obstacle Proving Ground demonstration scene: three holes (launch ramp, waterwheel carrier, roulette bowl) with the same ball,
+    /// Builds the Obstacle Proving Ground demonstration scene: four holes (launch ramp, waterwheel carrier, roulette bowl, and a jump from a ramp into the bowl) with the same ball,
     /// putter, rig, scorecard and feedback the real course uses. Writes only its own scene and materials under Assets/_Game/Worlds/ProvingGround;
     /// it never touches the Tropical scene, the Tropical theme asset or the build settings.
     /// Menu: Gamebreak/Proving Ground. Batch: -executeMethod Gamebreak.MiniGolf.Editor.ProvingGroundSceneBuilder.BuildDefaultBatch
@@ -105,7 +105,7 @@ namespace Gamebreak.MiniGolf.Editor
             ballVisual.GetComponent<MeshRenderer>().sharedMaterial = ballMat;
             ball.SetVisual(ballVisual.transform);
 
-            // The three demonstration holes.
+            // The demonstration holes.
             var courseRoot = new GameObject("ProvingGround").transform;
             var holes = ProvingGround.BuildAll(courseRoot, tuning, ball, mats, preset, ground);
             ballGo.transform.position = holes[0].TeePosition;

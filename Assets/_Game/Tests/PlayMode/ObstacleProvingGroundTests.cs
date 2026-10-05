@@ -554,6 +554,41 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.That(ratio, Is.InRange(1.6f, 2.5f), "carry time scales with the wheel period");
         }
 
+
+        // ------------------------------------------------------------------ D. jump into the bowl
+
+        [UnityTest]
+        [NUnit.Framework.Timeout(900000)]
+        public IEnumerator JumpBowl_SpeedSweep_RollsBack_FallsShort_OrLandsInTheBowl()
+        {
+            // Lane, ramp, gap, then the bowl with a notch in its wall. Logs where each strike ends up (inside the bowl or not) and the strokes.
+            var spec = ProvingGround.JumpBowlSpecFor(ProvingPreset.Default);
+            var table = new System.Text.StringBuilder("[Test] jump-into-bowl sweep (strike m/s -> outcome)\n");
+            int landed = 0, holed = 0, lost = 0, gap = 0, back = 0;
+            foreach (float s in new[] { 1.6f, 2.4f, 2.8f, 3.2f, 3.6f, 4.0f, 4.6f, 5.2f })
+            {
+                using var bed = new ProvingBed();
+                bed.Begin(ProvingGround.BuildJumpBowlHole(bed.root.transform, bed.tuning, bed.ball, bed.mats, spec, Vector3.zero));
+                yield return Steps(5);
+                bed.ball.Strike(Vector3.forward * s);
+                yield return WaitUntil(() => bed.hole.IsComplete || bed.hole.Strokes >= 2 || (bed.ball.IsAtRest && bed.ball.Position.z > spec.ramp.LipZ), 60f);
+                Vector3 local = bed.ball.Position;
+                Vector3 centre = spec.BowlOrigin;
+                float r = new Vector2(local.x - centre.x, local.z - centre.z).magnitude;
+                bool inBowl = r < spec.bowl.radius + 0.05f && local.z > spec.ramp.LipZ;
+                string o;
+                if (bed.hole.IsComplete) { o = "HOLED"; holed++; landed++; }
+                else if (bed.hole.Strokes >= 2) { o = bed.ball.Position.z > spec.ramp.LipZ + spec.ramp.Gap + 0.5f ? "left the bowl (penalty)" : "short: gap (penalty)"; if (o.StartsWith("left")) lost++; else gap++; }
+                else if (inBowl) { o = $"in the bowl at r {r:F2}, resting"; landed++; }
+                else { o = "rolled back"; back++; }
+                table.AppendLine($"  {s:F1} -> {o} (strokes {bed.hole.Strokes})");
+            }
+            Debug.Log(table.ToString());
+            Assert.GreaterOrEqual(landed, 3, "several strike speeds must land in the bowl");
+            Assert.GreaterOrEqual(gap, 1, "a short jump must fall in the gap");
+            Assert.GreaterOrEqual(back, 1, "a soft putt must roll back down the ramp");
+            Assert.AreEqual(0, lost, "a ball that landed in the bowl must not leave it through the entry notch");
+        }
         // ------------------------------------------------------------------ C. roulette bowl
 
         static HoleController BuildBowl(ProvingBed bed, RouletteBowlSpec spec) =>
@@ -677,11 +712,11 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [Test]
-        public void BuildAll_ProducesThreeHoles_WithCups()
+        public void BuildAll_ProducesFourHoles_WithCups()
         {
             using var bed = new ProvingBed();
             var holes = ProvingGround.BuildAll(bed.root.transform, bed.tuning, bed.ball, bed.mats, ProvingPreset.Default);
-            Assert.AreEqual(3, holes.Length);
+            Assert.AreEqual(4, holes.Length);
             foreach (var h in holes) Assert.IsNotNull(h.Cup);
         }
     }

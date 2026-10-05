@@ -202,3 +202,9 @@ Stop for Local Claude integration. Do not merge into `milestone-3-island-hopping
 ### 9d. Design direction, corrected by Andrew (2026-10-04)
 
 The launch ramp, the waterwheel and the roulette bowl are all **features of a hole**, not whole holes. The roulette bowl does **not** have to be the course finale: it is simply the **end of a hole** (the ball plays along a lane or course and finishes in the bowl), never a hole that is only a circle. This corrects the "course finale" wording in 9b. Integration notes in section 7 (item 9) still apply: the bowl needs to become a hole's final green, which `HoleFactory` does not support yet.
+
+### 9e. Hole 4 of the demo: "Jump into the Bowl" (Andrew's idea, 2026-10-04)
+
+A lane, the launch ramp, a 0.3 m gap, then the roulette bowl with a notch in its wall where the ball lands. Built from the existing pieces (`ProvingGround.BuildJumpBowlHole`, `JumpBowlSpec`; the bowl gained `entryAngleDegrees` / `entryHalfWidthDegrees`). The bowl centre is offset 0.6 m sideways so the ball enters at an angle and orbits rather than crossing the middle; its shelf edge sits 6 cm below the ramp lip like the plain landing pad. In the notch the wall is replaced by a 2 cm curb: a landing ball clears it, a ball rolling out cannot. A short jump falls in the pit under the gap (+1 stroke, back to the last rest spot).
+
+Sweep (`JumpBowl_SpeedSweep_...`, Default tuning): 1.6 rolls back; 2.4 and 2.8 fall short (penalty); **3.2, 3.6, 4.0, 4.6, 5.2 all land in the bowl with 1 stroke and none leaves it** (one holed in one, two rest on the apron next to the cup, two on the rim shelf where they can be re-struck). Tests 28/28. The bowl as the end of a real, longer hole still needs lane layouts that feed the ramp (see section 7, item 9).

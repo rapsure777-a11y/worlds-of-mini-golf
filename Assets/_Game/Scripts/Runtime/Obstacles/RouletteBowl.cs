@@ -27,6 +27,10 @@ namespace Gamebreak.MiniGolf
         [Range(32, 180)] public int segments = 96;
         [Tooltip("Tee position around the rim, degrees from +X toward +Z (looking down).")]
         public float teeAngleDegrees = -90f;
+        [Tooltip("Optional entry notch for a ball arriving from outside (a jump): direction of the notch from the centre, degrees from +X toward +Z.")]
+        public float entryAngleDegrees = 0f;
+        [Tooltip("Half-width of the entry notch in degrees. 0 = the wall is closed all the way round. In the notch the wall is replaced by a low curb that a landing ball clears but a ball rolling out cannot.")]
+        public float entryHalfWidthDegrees = 0f;
 
         public float ShelfInnerRadius => radius - shelfWidth;
 
@@ -102,6 +106,13 @@ namespace Gamebreak.MiniGolf
             {
                 float a = 2f * Mathf.PI * i / n;
                 Vector3 radial = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                if (spec.entryHalfWidthDegrees > 0f && Mathf.Abs(Mathf.DeltaAngle(a * Mathf.Rad2Deg, spec.entryAngleDegrees)) < spec.entryHalfWidthDegrees)
+                {
+                    // Entry notch: a low curb instead of the wall (the same trick as the launch pad's lip).
+                    ProvingKit.Box("EntryCurb", walls, radial * (spec.radius + 0.02f) + Vector3.up * (hR + 0.01f), Quaternion.LookRotation(radial, Vector3.up),
+                        new Vector3(width, 0.02f, 0.04f), materials.wall, true);
+                    continue;
+                }
                 Vector3 pos = radial * (spec.radius + spec.wallThickness * 0.5f) + Vector3.up * (hR + (spec.wallHeight - 0.05f) * 0.5f);
                 ProvingKit.Box("WallSegment", walls, pos, Quaternion.LookRotation(radial, Vector3.up),
                     new Vector3(width, spec.wallHeight + 0.05f, spec.wallThickness), materials.wall, true);

@@ -80,7 +80,34 @@ namespace Gamebreak.MiniGolf
     }
 
     /// <summary>
-    /// Builds the three proving-ground demonstration holes at runtime, with the real hole code (<see cref="HoleController"/>, <see cref="Cup"/>,
+    /// "Jump into the Bowl": a lane, a launch ramp and a short gap, then the roulette bowl with a notch cut in its wall where the ball lands.
+    /// The bowl is offset sideways so the ball arrives at an angle (it orbits instead of crossing the middle). Hole space: x across the lane,
+    /// z along it, approach level y = 0.
+    /// </summary>
+    [System.Serializable]
+    public class JumpBowlSpec
+    {
+        public LaunchRampSpec ramp = new LaunchRampSpec();
+        public RouletteBowlSpec bowl = new RouletteBowlSpec();
+        [Tooltip("Sideways offset of the bowl centre from the lane. 0 = the ball enters head-on; larger = a more tangential entry.")]
+        public float entryOffsetX = 0.6f;
+        [Tooltip("Half-width of the notch in the bowl's wall, degrees.")]
+        public float entryHalfAngle = 24f;
+
+        public float EntryDz => Mathf.Sqrt(Mathf.Max(0.01f, bowl.radius * bowl.radius - entryOffsetX * entryOffsetX));
+        /// <summary>The bowl's local origin in hole space: its shelf edge sits <see cref="LaunchRampSpec.padDrop"/> below the ramp lip, like the plain landing pad.</summary>
+        public Vector3 BowlOrigin => new Vector3(entryOffsetX, ramp.LipHeight - ramp.padDrop - bowl.Height(bowl.radius), ramp.LipZ + ramp.Gap + EntryDz);
+        public RouletteBowlSpec BowlForHole()
+        {
+            var b = bowl.Clone();
+            b.entryAngleDegrees = Mathf.Atan2(-EntryDz, -entryOffsetX) * Mathf.Rad2Deg;
+            b.entryHalfWidthDegrees = entryHalfAngle;
+            return b;
+        }
+    }
+
+    /// <summary>
+    /// Builds the proving-ground demonstration holes at runtime, with the real hole code (<see cref="HoleController"/>, <see cref="Cup"/>,
     /// <see cref="GolfBall"/>). Used by the editor scene builder and by the PlayMode tests, so what is tested is what is demonstrated.
     /// </summary>
     public static class ProvingGround
@@ -170,7 +197,33 @@ namespace Gamebreak.MiniGolf
             return ProvingKit.AttachHole(root, number, 2, spec.TeeLocal, bowl.Cup, tuning, ball, mats.tee);
         }
 
-        /// <summary>The three demonstration holes in a row, plus a distant out-of-bounds ground slab.</summary>
+        public static JumpBowlSpec JumpBowlSpecFor(ProvingPreset p) => new JumpBowlSpec { ramp = LaunchSpec(p), bowl = BowlSpec(p) };
+
+        public static HoleController BuildJumpBowlHole(Transform parent, GolfTuning tuning, GolfBall ball, ProvingMaterials mats, JumpBowlSpec spec,
+            Vector3 position, int number = 4)
+        {
+            var root = NewRoot(parent, $"Hole{number:00}_JumpIntoBowl", position);
+            var r = spec.ramp;
+            var layout = new GreenLayout { wallHeight = r.railHeight };
+            layout.Area(-r.Width * 0.5f, 0f, r.Width, r.LipZ);                                                   // run-up and ramp
+            layout.openEdges.Add(new Rect(-r.Width * 0.5f - 0.1f, r.LipZ - 0.005f, r.Width + 0.2f, 0.01f));     // open lip
+            layout.height = r.Height;
+            CourseGeometry.CreateGreen("JumpLane", layout, tuning, root.transform, mats.green, mats.cup, mats.wall, mats.flag, null, out Cup unused);
+
+            var bowlGo = new GameObject("Bowl");
+            bowlGo.transform.SetParent(root.transform, false);
+            bowlGo.transform.localPosition = spec.BowlOrigin;
+            var bowl = bowlGo.AddComponent<RouletteBowl>();
+            bowl.Configure(spec.BowlForHole(), tuning, mats);
+            bowl.Rebuild();
+
+            // The pit under the gap: touching it is out of bounds (a short jump), as on the plain launch hole.
+            ProvingKit.Box("GapFloor", root.transform, new Vector3(0f, -r.gapDepth - 0.05f, r.LipZ + (r.Gap + 1.0f) * 0.5f), Quaternion.identity,
+                new Vector3(r.Width + 1.6f, 0.1f, r.Gap + 1.0f), mats.wood, true, false, true);
+            return ProvingKit.AttachHole(root, number, 3, new Vector3(0f, r.Height(0f, r.teeZ), r.teeZ), bowl.Cup, tuning, ball, mats.tee);
+        }
+
+        /// <summary>The demonstration holes in a row, plus a distant out-of-bounds ground slab.</summary>
         public static HoleController[] BuildAll(Transform parent, GolfTuning tuning, GolfBall ball, ProvingMaterials mats, ProvingPreset preset, Material groundMat = null)
         {
             var holes = new[]
@@ -178,6 +231,7 @@ namespace Gamebreak.MiniGolf
                 BuildLaunchHole(parent, tuning, ball, mats, LaunchSpec(preset), new Vector3(0f, 0f, 0f), 1),
                 BuildWaterwheelHole(parent, tuning, ball, mats, WheelSpec(preset), new Vector3(6f, 0f, 0f), 2),
                 BuildRouletteHole(parent, tuning, ball, mats, BowlSpec(preset), new Vector3(14f, 0f, 0f), 3),
+                BuildJumpBowlHole(parent, tuning, ball, mats, JumpBowlSpecFor(preset), new Vector3(22f, 0f, 0f), 4),
             };
             ProvingKit.Box("Ground", parent, new Vector3(7f, -0.65f, 3f), Quaternion.identity, new Vector3(40f, 0.1f, 24f), groundMat, true, false, true);
             return holes;
