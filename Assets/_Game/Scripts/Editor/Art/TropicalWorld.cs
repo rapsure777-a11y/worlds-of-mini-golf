@@ -43,13 +43,15 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var frames = new List<HoleFrame>();
             foreach (var d in defs) frames.Add(new HoleFrame(d));
             bool IsJungle(HoleDefinition d) => d.cluster == TropicalCourse.JungleCluster;
+            bool IsTemple(HoleDefinition d) => d.cluster == TropicalCourse.TempleCluster;
+            bool OffStart(HoleDefinition d) => IsJungle(d) || IsTemple(d);   // holes that are not on the Starting Island
 
             // ---- Starting Island: holes 1-2 (unchanged from the approved visual baseline).
             var island = new IslandGen { centre = Vector2.zero, radius = 34f, seed = 7, splat = true };
             // Flatten every hole site (layout bounds + walk-around margin) to its green's ground height.
             for (int i = 0; i < defs.Count; i++)
             {
-                if (IsJungle(defs[i])) continue;
+                if (OffStart(defs[i])) continue;
                 var (centre, half) = LayoutBounds(defs[i]);
                 var f = frames[i];
                 island.zones.Add(new IslandGen.Zone
@@ -61,7 +63,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // Path from each cup to the next tee (within an island only; islands are linked by the pier and the hole transition).
             for (int i = 0; i + 1 < defs.Count; i++)
             {
-                if (IsJungle(defs[i]) || IsJungle(defs[i + 1])) continue;
+                if (OffStart(defs[i]) || OffStart(defs[i + 1])) continue;
                 var a = frames[i].L2(defs[i].layout.cup.Value.x, defs[i].layout.cup.Value.y + 1.2f);
                 var b = frames[i + 1].L2(defs[i + 1].tee.x, defs[i + 1].tee.y - 1.2f);
                 AddPath(island, a, b, 0.8f, Mathf.Min(defs[i].origin.y, defs[i + 1].origin.y) - TropicalCourse.GreenElevation - 0.08f);
@@ -83,10 +85,20 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 JungleIsland.ConfigureTerrain(jungle, frames[i], defs[i]);
             }
 
+            // ---- Temple Island: holes 5-6 (only when the course has them).
+            IslandGen temple = null;
+            for (int i = 0; i < defs.Count; i++)
+            {
+                if (!IsTemple(defs[i])) continue;
+                if (temple == null) temple = TempleIsland.CreateIsland();
+                TempleIsland.ConfigureTerrain(temple, frames[i], defs[i]);
+            }
+
             var world = new GameObject("World").transform;
             world.SetParent(parent, false);
             var islands = new List<IslandGen> { island };
             if (jungle != null) islands.Add(jungle);
+            if (temple != null) islands.Add(temple);
             BuildTerrainAndSea(kit, hero, islands, world);
             SetupLighting(kit);
 
@@ -95,10 +107,11 @@ namespace Gamebreak.MiniGolf.Editor.Art
             dressingRoot.SetParent(world, false);
             var dresser = new Dresser(kit, hero, island, dressingRoot);
             Dresser jungleDresser = jungle != null ? new Dresser(kit, hero, jungle, dressingRoot) : null;
+            Dresser templeDresser = temple != null ? new Dresser(kit, hero, temple, dressingRoot) : null;
             for (int i = 0; i < defs.Count; i++)
             {
                 var (centre, half) = LayoutBounds(defs[i]);
-                var dr = IsJungle(defs[i]) ? jungleDresser : dresser;
+                var dr = IsJungle(defs[i]) ? jungleDresser : IsTemple(defs[i]) ? templeDresser : dresser;
                 // Generous clearance: holes get hand-placed dressing; random island cover stays back.
                 dr.KeepOut(frames[i].L2(centre.x, centre.y), half + new Vector2(0.9f, 1.2f), frames[i].yaw, 2.6f);
             }
@@ -113,6 +126,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
                     case 2: DressHole2(dresser, frames[i], defs[i]); break;
                     case 3: JungleIsland.DressHole3(jungleDresser, frames[i], defs[i]); break;
                     case 4: JungleIsland.DressHole4(jungleDresser, frames[i], defs[i]); break;
+                    case 5: TempleIsland.DressHole5(templeDresser, frames[i], defs[i]); break;
+                    case 6: TempleIsland.DressHole6(templeDresser, frames[i], defs[i]); break;
                     default: Debug.LogWarning($"[Gamebreak] No dressing for hole {defs[i].number} yet."); break;
                 }
             }
@@ -235,7 +250,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
             horizon.SetParent(world, false);
             var rnd = new System.Random(31);
             // Distant islands, mostly visible from the southern (Hole 1) side.
-            float[] angles = { 200f, 245f, 290f, 330f, 120f };
+            // (The 330 degree island moved to 30: the Temple Island now occupies that bearing at about 135 m.)
+            float[] angles = { 200f, 245f, 290f, 30f, 120f };
             for (int i = 0; i < angles.Length; i++)
             {
                 float a = angles[i] * Mathf.Deg2Rad, dist = Dresser.Range(rnd, 150f, 240f);
