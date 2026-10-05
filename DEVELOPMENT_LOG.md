@@ -166,3 +166,7 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - One test fix: `HolesOneToThree_HaveNoOpenEdges_AndHoleFourHasOnlyTheRampLip` asserted zero open edges on every hole except 4; Hole 6 legitimately has the wheel dock's open edge, so it now checks holes 1-3 only.
 - Full PlayMode suite **133/133** (Holes56Tests 26, proving ground and Holes 1-4 unchanged). Desktop smoke test PASS. Screenshots of holes 5-6 reviewed (rich). Headset not yet tried on 5-6.
 - Not done (out of scope): Holes 7-9, Graphics Pass 3.
+
+## 2026-10-05 (later): Headset verdict on Holes 5-6; Hole 3 is par 4
+
+- Andrew played Holes 5 and 6 in the headset: "They play great. No issues." Only change requested: Hole 3 Jungle Crossing becomes par 4 (done, test updated, 133/133).
