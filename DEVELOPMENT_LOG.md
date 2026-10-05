@@ -154,3 +154,8 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 ## 2026-10-05: Hole 4 "Tiki Twister" approved in the headset
 
 - Andrew: "Feels good. That's really good." Hole 4 (drop, 90 degree turn, 0.6 m gap ramp, roulette bowl) is confirmed. `RESUME.md` is stale on Hole 4; next up is Temple Island (holes 5-6).
+
+## 2026-10-05: Holes 5 and 6 written in the cloud (UNVERIFIED), branch `feature/holes-5-6-sun-stair-waterwheel-mill`
+
+- **Hole 5 "The Sun Stair" (par 4)** and **Hole 6 "The Waterwheel Mill" (par 3)** on a new Temple Island, built from the proven mechanics: one stepped green with `BankWall` kickers/rails and a launch jump (Hole 5); the proven waterwheel feeding an aqueduct and a final green, with a gentle mill road as the conventional route (Hole 6). New reusable `BankWall`; the wheel hole spec gained an optional final green and a shared `BuildWheelPieces`. Terrace steps are steep cells in one mesh, so a miss lands on a lower terrace (no penalty). `TempleIsland` is bare functional dressing.
+- No Unity here: syntax-parsed and type-checked against stubs only; `Holes56Tests` not run. Details, risks and integration steps in `Docs/HOLES_5_6.md`. The brief's "flow zones" do not exist in the repo and were not needed.

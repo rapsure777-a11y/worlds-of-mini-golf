@@ -41,6 +41,8 @@ namespace Gamebreak.MiniGolf
                 Hole02(),
                 Hole03(),
                 Hole04(),
+                Hole05(),
+                Hole06(),
             };
         }
 
@@ -59,7 +61,7 @@ namespace Gamebreak.MiniGolf
                 new IslandCluster { id = JungleCluster, displayName = "Jungle Island", holes = new[] { 3, 4 }, musicName = "JungleTheme", centre = JungleCentre, radius = 26f,
                     tagline = "Deep green, and deeper secrets", accent = new Color(0.62f, 0.95f, 0.5f) },
                 // Planned clusters: music is imported, islands and holes are built in later checkpoints/milestones (centre/radius unset).
-                new IslandCluster { id = TempleCluster, displayName = "Temple Island", holes = new[] { 5, 6 }, musicName = "TempleTheme",
+                new IslandCluster { id = TempleCluster, displayName = "Temple Island", holes = new[] { 5, 6 }, musicName = "TempleTheme", centre = TempleCentre, radius = 24f,
                     tagline = "Ruins older than the tide", accent = new Color(0.98f, 0.8f, 0.48f) },
                 new IslandCluster { id = "volcanic", displayName = "Volcanic Island", holes = new[] { 7, 8 }, musicName = "VolcanicTheme",
                     tagline = "Where the island still breathes fire", accent = new Color(1f, 0.55f, 0.3f) },
@@ -70,6 +72,9 @@ namespace Gamebreak.MiniGolf
 
         /// <summary>World XZ of the Jungle Island's centre: south-east of the Starting Island across a ~30 m channel.</summary>
         public static readonly Vector2 JungleCentre = new Vector2(64f, -62f);
+
+        /// <summary>World XZ of the Temple Island's centre: east of the Jungle Island across a ~20 m channel.</summary>
+        public static readonly Vector2 TempleCentre = new Vector2(130f, -38f);
 
         public static IslandCluster ClusterOf(int holeNumber)
         {
@@ -166,6 +171,62 @@ namespace Gamebreak.MiniGolf
 
         /// <summary>Ground height of the Hole 4 plateau on the Jungle Island.</summary>
         public const float Hole4Height = 2.4f;
+
+        /// <summary>Ground height of the Hole 5 plateau (its lower terrace) on the Temple Island.</summary>
+        public const float Hole5Height = 2.0f;
+        /// <summary>Ground height of the Hole 6 plateau (the tee pad and intake lane) on the Temple Island.</summary>
+        public const float Hole6Height = 2.2f;
+
+        /// <summary>
+        /// Hole 5, "The Sun Stair" (par 4): a ziggurat of three terraces on the Temple Island, built by <see cref="SunStairSpec"/> (one rectangle-union
+        /// green with a height function, angled <see cref="BankWall"/> kickers and rails, and a launch jump that can skip the second ramp).
+        /// Local axes: x across the stair, z up it.
+        /// </summary>
+        static HoleDefinition Hole05()
+        {
+            var spec = Hole5Spec();
+            return new HoleDefinition
+            {
+                number = 5,
+                name = "The Sun Stair",
+                par = 4,
+                layout = spec.BuildLayout(),
+                tee = spec.Tee,
+                origin = new Vector3(118f, Hole5Height, -46f),
+                yaw = 0f,
+                cluster = TempleCluster,
+                buildExtras = (root, theme, tuning) => spec.BuildPieces(root, ProvingMaterials.FromTheme(theme)),
+            };
+        }
+
+        /// <summary>The numbers behind Hole 5 (all defaults of <see cref="SunStairSpec"/>).</summary>
+        public static SunStairSpec Hole5Spec() => new SunStairSpec();
+
+        /// <summary>
+        /// Hole 6, "The Waterwheel Mill" (par 3): tee, an intake lane to a dock, the proven waterwheel lifts the ball to an elevated aqueduct, and a final
+        /// green. A long gentle mill road beside the lane climbs to the same green for a player who skips the wheel. Built by <see cref="MillHoleSpec"/>.
+        /// Local axes: x across, z along the lane.
+        /// </summary>
+        static HoleDefinition Hole06()
+        {
+            var spec = Hole6Spec();
+            float r = GolfTuning.Default.ballRadius;
+            return new HoleDefinition
+            {
+                number = 6,
+                name = "The Waterwheel Mill",
+                par = 3,
+                layout = spec.BuildLayout(r),
+                tee = spec.Tee,
+                origin = new Vector3(141f, Hole6Height, -44f),
+                yaw = 0f,
+                cluster = TempleCluster,
+                buildExtras = (root, theme, tuning) => spec.BuildPieces(root, tuning, ProvingMaterials.FromTheme(theme)),
+            };
+        }
+
+        /// <summary>The numbers behind Hole 6: the proven wheel, a bucket every 2 s, a 3 m aqueduct and a 2 x 3 m final green.</summary>
+        public static MillHoleSpec Hole6Spec() => new MillHoleSpec();
 
         /// <summary>
         /// Hole 2, "Palm Corner" (DRAFT greybox, pending HQ creative approval). A left-hand dogleg:

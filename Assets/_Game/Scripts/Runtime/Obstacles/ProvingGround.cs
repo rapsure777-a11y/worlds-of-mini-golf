@@ -20,6 +20,15 @@ namespace Gamebreak.MiniGolf
         public float exitLength = 2.8f;
         public float railHeight = 0.12f;
         public float teeZ = 0.5f;
+        [Header("Optional final green (production holes)")]
+        [Tooltip("0 = no green: the channel ends at the cup, as in the proving ground. Otherwise a flat green this wide continues the channel and holds the cup.")]
+        public float greenWidth = 0f;
+        [Tooltip("Length of that green past the end of the channel.")]
+        public float greenLength = 0f;
+        public bool HasGreen => greenWidth > 0.1f && greenLength > 0.1f;
+        public WaterwheelHoleSpec Clone() { var c = (WaterwheelHoleSpec)MemberwiseClone(); c.wheel = wheel.Clone(); return c; }
+        public float GreenWidth => Snap(greenWidth);
+        public float GreenLength => Snap(greenLength);
 
         static float Snap(float v) => Mathf.Round(v * 10f) / 10f;
 
@@ -50,22 +59,39 @@ namespace Gamebreak.MiniGolf
         }
         public float ChannelStartZ(float ballRadius) => Mathf.Max(WheelZ + 0.2f, Snap(ReleasePoint(ballRadius).z - 0.15f));
         public float ChannelEndZ(float ballRadius) => ChannelStartZ(ballRadius) + Mathf.Max(1.2f, Snap(exitLength));
-        public float CupZ(float ballRadius) => ChannelEndZ(ballRadius) - 0.6f;
+        public float CupZ(float ballRadius) => HasGreen ? Snap(ChannelEndZ(ballRadius) + GreenLength * 0.5f) : ChannelEndZ(ballRadius) - 0.6f;
+        /// <summary>Floor height of the elevated channel (and of the flat green after it) at <paramref name="z"/>, hole space.</summary>
+        public float ChannelHeight(float z, float ballRadius)
+        {
+            float zr = ReleasePoint(ballRadius).z;
+            float upper = HasGreen ? ChannelEndZ(ballRadius) - zr : CupZ(ballRadius) - 0.45f - zr;
+            return ChannelFloorAtRelease(ballRadius) - exitSlope * Mathf.Clamp(z - zr, -0.5f, upper);
+        }
         public float ChannelFloorAtRelease(float ballRadius) => ReleasePoint(ballRadius).y - ballRadius - 0.002f;
 
         public GreenLayout BuildLayout(float ballRadius)
         {
-            float zr = ReleasePoint(ballRadius).z, yf = ChannelFloorAtRelease(ballRadius);
-            float z0 = ChannelStartZ(ballRadius), z1 = ChannelEndZ(ballRadius), cupZ = CupZ(ballRadius);
-            float split = WheelZ + 0.15f;
             var l = new GreenLayout { wallHeight = railHeight };
+            var h = AddToLayout(l, ballRadius);
+            l.cup = new Vector2(0f, CupZ(ballRadius));
+            l.height = h;
+            return l;
+        }
+
+        /// <summary>
+        /// Adds the wheel's pieces (intake lane, wide dock, elevated channel, optional final green, the open dock end) to <paramref name="l"/> and returns
+        /// their height function, so a production hole can compose them with its own tee, approach and routes.
+        /// </summary>
+        public System.Func<float, float, float> AddToLayout(GreenLayout l, float ballRadius)
+        {
+            float z0 = ChannelStartZ(ballRadius), z1 = ChannelEndZ(ballRadius);
+            float split = WheelZ + 0.15f;
             l.Area(-LaneWidth * 0.5f, 0f, LaneWidth, DockStartZ);             // intake lane
             l.Area(-DockWidth * 0.5f, DockStartZ, DockWidth, DockEndZ - DockStartZ);   // wide dock under the wheel
             l.openEdges.Add(new Rect(-DockWidth * 0.5f - 0.1f, DockEndZ - 0.005f, DockWidth + 0.2f, 0.01f));   // no rail at the dock's end: nothing in the buckets' way
             l.Area(-LaneWidth * 0.5f, z0, LaneWidth, z1 - z0);                // elevated exit channel
-            l.cup = new Vector2(0f, cupZ);
-            l.height = (x, z) => z < split ? DockFloor(z) : yf - exitSlope * Mathf.Clamp(z - zr, -0.5f, cupZ - 0.45f - zr);
-            return l;
+            if (HasGreen) l.Area(-GreenWidth * 0.5f, z1, GreenWidth, GreenLength);   // final green
+            return (x, z) => z < split ? DockFloor(z) : ChannelHeight(z, ballRadius);
         }
 
         /// <summary>Human-readable problems with this combination (empty when it will work).</summary>
@@ -207,10 +233,20 @@ namespace Gamebreak.MiniGolf
             var root = NewRoot(parent, $"Hole{number:00}_Waterwheel", position);
             var layout = spec.BuildLayout(r);
             var green = CourseGeometry.CreateGreen("WaterwheelGreen", layout, tuning, root.transform, mats.green, mats.cup, mats.wall, mats.flag, null, out Cup cup);
+            BuildWheelPieces(root.transform, tuning, ball, mats, spec);
+            return ProvingKit.AttachHole(root, number, 2, new Vector3(0f, 0f, spec.teeZ), cup, tuning, ball, mats.tee);
+        }
 
+        /// <summary>
+        /// The waterwheel and what stands round it (dock curb, supports under the elevated channel), as children of <paramref name="root"/> (hole space).
+        /// Shared by the proving-ground hole and the production Waterwheel Mill. <paramref name="ball"/> may be null: the carrier then follows the active hole's ball.
+        /// </summary>
+        public static WaterwheelCarrier BuildWheelPieces(Transform root, GolfTuning tuning, GolfBall ball, ProvingMaterials mats, WaterwheelHoleSpec spec)
+        {
+            float r = tuning.ballRadius;
             Vector3 centre = spec.WheelCentre(r);
             var wheelGo = new GameObject("Waterwheel");
-            wheelGo.transform.SetParent(root.transform, false);
+            wheelGo.transform.SetParent(root, false);
             wheelGo.transform.localPosition = centre;
             wheelGo.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);      // carrier +X (the ball's travel direction) -> hole +Z
             var carrier = wheelGo.AddComponent<WaterwheelCarrier>();
@@ -219,18 +255,20 @@ namespace Gamebreak.MiniGolf
             // A low curb closes the dock: taller than the ball's radius so the ball cannot roll over it, lower than the bucket trays so
             // nothing clips. (A full-height end rail sits right in the buckets' path.)
             float curbTop = spec.DockFloor(spec.DockEndZ) + WaterwheelHoleSpec.DockCurbHeight;
-            ProvingKit.Box("DockCurb", root.transform, new Vector3(0f, (curbTop - 0.2f) * 0.5f, spec.DockEndZ + 0.03f), Quaternion.identity,
+            ProvingKit.Box("DockCurb", root, new Vector3(0f, (curbTop - 0.2f) * 0.5f, spec.DockEndZ + 0.03f), Quaternion.identity,
                 new Vector3(spec.DockWidth, curbTop + 0.2f, 0.06f), mats.wall, true);
 
-            // Decorative supports under the elevated channel (no colliders).
-            float yf = spec.ChannelFloorAtRelease(r), z0 = spec.ChannelStartZ(r), z1 = spec.ChannelEndZ(r);
-            foreach (float z in new[] { z0 + 0.3f, z1 - 0.3f })
+            // Decorative supports under the elevated channel and green (no colliders).
+            float z0 = spec.ChannelStartZ(r), z1 = spec.ChannelEndZ(r);
+            var posts = new System.Collections.Generic.List<(float z, float width)> { (z0 + 0.3f, spec.LaneWidth + 0.1f), (z1 - 0.3f, spec.LaneWidth + 0.1f) };
+            if (spec.HasGreen) posts.Add((z1 + spec.GreenLength - 0.3f, spec.GreenWidth + 0.1f));
+            foreach (var (z, width) in posts)
             {
-                float top = yf - spec.exitSlope * (z - spec.ReleasePoint(r).z) - 0.03f;
-                ProvingKit.Box("ChannelSupport", root.transform, new Vector3(0f, (top - 0.6f) * 0.5f, z), Quaternion.identity,
-                    new Vector3(spec.LaneWidth + 0.1f, top + 0.6f, 0.18f), mats.wood, false);
+                float top = spec.ChannelHeight(z, r) - 0.03f;
+                ProvingKit.Box("ChannelSupport", root, new Vector3(0f, (top - 0.6f) * 0.5f, z), Quaternion.identity,
+                    new Vector3(width, top + 0.6f, 0.18f), mats.wood, false);
             }
-            return ProvingKit.AttachHole(root, number, 2, new Vector3(0f, 0f, spec.teeZ), cup, tuning, ball, mats.tee);
+            return carrier;
         }
 
         public static HoleController BuildRouletteHole(Transform parent, GolfTuning tuning, GolfBall ball, ProvingMaterials mats, RouletteBowlSpec spec,

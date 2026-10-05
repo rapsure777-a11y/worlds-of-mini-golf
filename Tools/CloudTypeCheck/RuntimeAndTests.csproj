@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="UnityStubs.cs" />
     <Compile Include="../../Assets/_Game/Tests/PlayMode/ObstacleProvingGroundTests.cs" />
+    <Compile Include="../../Assets/_Game/Tests/PlayMode/Holes56Tests.cs" />
     <PackageReference Include="NUnit" Version="3.14.0" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Worlds/*.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/HoleDefinition.cs" />
