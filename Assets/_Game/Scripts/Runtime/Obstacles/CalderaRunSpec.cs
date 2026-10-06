@@ -37,7 +37,7 @@ namespace Gamebreak.MiniGolf
         [Header("Rails and kickers")]
         public float wallHeight = 0.16f;
         [Tooltip("Height of the low ring round the cup that a jump landing has to climb. 0 = none.")]
-        public float ringHeight = 0.012f;
+        public float ringHeight = 0.015f;
         [Tooltip("Half-width (degrees) of the ring opening centred on the gate, so a ball rolled in through the gate is not hindered.")]
         public float ringOpeningHalf = 55f;
 
