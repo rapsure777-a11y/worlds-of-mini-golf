@@ -10,6 +10,7 @@
     <Compile Include="../../Assets/_Game/Tests/PlayMode/ObstacleProvingGroundTests.cs" />
     <Compile Include="../../Assets/_Game/Tests/PlayMode/Holes56Tests.cs" />
     <Compile Include="../../Assets/_Game/Tests/PlayMode/Holes78Tests.cs" />
+    <Compile Include="../../Assets/_Game/Tests/PlayMode/Holes9Tests.cs" />
     <PackageReference Include="NUnit" Version="3.14.0" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Worlds/*.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/HoleDefinition.cs" />
@@ -21,6 +22,7 @@
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfPhysicsBootstrap.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/HoleController.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/Cup.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/CourseController.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/PlayableSurface.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/OutOfBoundsSurface.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/OutOfBoundsZone.cs" />

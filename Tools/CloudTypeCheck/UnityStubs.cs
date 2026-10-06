@@ -16,7 +16,7 @@ namespace UnityEngine
     public class WaitForFixedUpdate : YieldInstruction {}
     public class ScriptableObject : Object { public static T CreateInstance<T>() where T:ScriptableObject => null; }
     public class GameObject : Object { public GameObject(){} public GameObject(string n){} public Transform transform; public bool activeSelf; public void SetActive(bool b){}
-        public T AddComponent<T>() where T:Component => null; public T GetComponent<T>() => default; public T[] GetComponentsInChildren<T>() => null; public static GameObject CreatePrimitive(PrimitiveType t)=>null; public string tag; }
+        public T AddComponent<T>() where T:Component => null; public T GetComponent<T>() => default; public T[] GetComponentsInChildren<T>() => null; public T GetComponentInChildren<T>() => default; public static GameObject CreatePrimitive(PrimitiveType t)=>null; public string tag; }
     public enum PrimitiveType { Sphere, Capsule, Cylinder, Cube, Plane, Quad }
     public class Transform : Component { public Vector3 position, localPosition, localScale, forward, up, right; public int childCount; public Quaternion rotation, localRotation;
         public void SetParent(Transform p){} public void SetParent(Transform p, bool w){} public Transform Find(string n)=>null; public Vector3 TransformPoint(Vector3 p)=>p; public Vector3 InverseTransformPoint(Vector3 p)=>p;
