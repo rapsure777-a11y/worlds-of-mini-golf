@@ -182,3 +182,8 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - One test fix beyond Cloud's work: `TropicalScene_HasJungleIsland_WithHoleThreeOnABridge` still asserted Hole 3 par 3 (the scene had been stale when par 4 went in); now par 4.
 - Full PlayMode suite **176/176** (Holes78Tests 43). Measured: vent captures 3.2-4.0 m/s putts from the causeway foot and rejects fast balls without trapping; ride 2.4 s, exit 1.98 m/s, no extra stroke; Hole 8 gate entry puts every 1.5-4.0 m/s ball in the bowl near the cup; shortcut lands in the bowl from 4.2 m/s, pit (+1) below 3.8, one hole in one at 5.0.
 - Headset pending for Holes 7-8. Hole 9 and Graphics Pass 3 not started.
+
+## 2026-10-06 (later): Hole 9 "Summit Sanctuary" written in the cloud (UNVERIFIED), branch `feature/hole-9-summit-sanctuary`
+
+- Par 5 finale on a new Summit island (50, 80), highest ground of the course. **No bowl** (Andrew: Holes 4 and 8 already use them). Stages: Summit Approach, Sanctuary Climb (east kicker, 5.9 m climb over a waterfall chasm, corner kicker), Hero Shortcut (the Sun Stair's launch jump onto the Overlook, skips the detour), Final Approach (Shrine Lane with a 0.7 m gate, kicker, Landing) and **the Sky Bridge**: a rail-less 3.2 m ridge over an abyss to the cup on the Altar. Only existing mechanics (height function, `BankWall`, launch jump, open edges, OOB boxes); no runtime system changed.
+- No Unity here: syntax-parsed and type-checked against stubs only; `Holes9Tests` (24 new, expected total 200) not run. Details, risks, Unity steps and the headset checklist in `Docs/HOLE_9.md`. Graphics Pass 3 not started.

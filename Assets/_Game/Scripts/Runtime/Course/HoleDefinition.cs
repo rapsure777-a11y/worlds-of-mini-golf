@@ -45,10 +45,11 @@ namespace Gamebreak.MiniGolf
                 Hole06(),
                 Hole07(),
                 Hole08(),
+                Hole09(),
             };
         }
 
-        public const string StartCluster = "start", JungleCluster = "jungle", TempleCluster = "temple", VolcanicCluster = "volcanic";
+        public const string StartCluster = "start", JungleCluster = "jungle", TempleCluster = "temple", VolcanicCluster = "volcanic", SummitCluster = "summit";
 
         /// <summary>
         /// The archipelago: island clusters with their holes, music and position. Holes 1-2 share the Starting Island,
@@ -67,7 +68,7 @@ namespace Gamebreak.MiniGolf
                     tagline = "Ruins older than the tide", accent = new Color(0.98f, 0.8f, 0.48f) },
                 new IslandCluster { id = VolcanicCluster, displayName = "Volcanic Island", holes = new[] { 7, 8 }, musicName = "VolcanicTheme", centre = VolcanicCentre, radius = 26f,
                     tagline = "Where the island still breathes fire", accent = new Color(1f, 0.55f, 0.3f) },
-                new IslandCluster { id = "summit", displayName = "Summit Sanctuary", holes = new[] { 9 }, musicName = "SummitTheme",
+                new IslandCluster { id = SummitCluster, displayName = "Summit Sanctuary", holes = new[] { 9 }, musicName = "SummitTheme", centre = SummitCentre, radius = 24f,
                     tagline = "The whole archipelago at your feet", accent = new Color(0.82f, 0.93f, 1f) },
             };
         }
@@ -80,6 +81,9 @@ namespace Gamebreak.MiniGolf
 
         /// <summary>World XZ of the Volcanic Island's centre: north-east of the Temple Island across a ~55 m channel.</summary>
         public static readonly Vector2 VolcanicCentre = new Vector2(120f, 44f);
+
+        /// <summary>World XZ of the Summit Sanctuary island's centre: north of the Starting Island and west of the Volcanic Island, across open sea.</summary>
+        public static readonly Vector2 SummitCentre = new Vector2(50f, 80f);
 
         public static IslandCluster ClusterOf(int holeNumber)
         {
@@ -289,6 +293,35 @@ namespace Gamebreak.MiniGolf
 
         /// <summary>The numbers behind Hole 8 (all defaults of <see cref="CalderaRunSpec"/>).</summary>
         public static CalderaRunSpec Hole8Spec() => new CalderaRunSpec();
+
+        /// <summary>Ground height of the Hole 9 plateau on the Summit island: the highest ground of the course.</summary>
+        public const float Hole9Height = 3.4f;
+
+        /// <summary>
+        /// Hole 9, "Summit Sanctuary" (par 5): the finale, a multi-stage climb with a hero jump that skips the long way round, ending in the Sky Bridge, a rail-less
+        /// putt over a cliff to the cup on the Altar. No bowl. Built by <see cref="SummitSanctuarySpec"/>. Local axes: x across the approach, z up the mountain.
+        /// </summary>
+        static HoleDefinition Hole09()
+        {
+            var spec = Hole9Spec();
+            var def = new HoleDefinition
+            {
+                number = 9,
+                name = "Summit Sanctuary",
+                par = 5,
+                layout = spec.BuildLayout(),
+                tee = spec.Tee,
+                origin = new Vector3(47f, Hole9Height, 70f),
+                yaw = 0f,
+                cluster = SummitCluster,
+                buildExtras = (root, theme, tuning) => spec.BuildPieces(root, tuning, ProvingMaterials.FromTheme(theme)),
+            };
+            def.extraAreas.AddRange(spec.ExtraAreas());
+            return def;
+        }
+
+        /// <summary>The numbers behind Hole 9 (all defaults of <see cref="SummitSanctuarySpec"/>).</summary>
+        public static SummitSanctuarySpec Hole9Spec() => new SummitSanctuarySpec();
 
         /// <summary>
         /// Hole 2, "Palm Corner" (DRAFT greybox, pending HQ creative approval). A left-hand dogleg:

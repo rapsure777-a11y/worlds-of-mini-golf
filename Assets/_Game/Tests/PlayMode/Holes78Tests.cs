@@ -114,10 +114,10 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [Test]
-        public void Course_HasEightConsecutiveHoles_AndHolesSevenAndEightDoNotOverlap()
+        public void Course_HasNineConsecutiveHoles_AndHolesSevenAndEightDoNotOverlap()
         {
             var holes = TropicalCourse.Holes();
-            CollectionAssert.AreEqual(Enumerable.Range(1, 8).ToArray(), holes.Select(h => h.number).ToArray(), "holes 1..8 in order (Hole 9 is not part of this batch)");
+            CollectionAssert.AreEqual(Enumerable.Range(1, 9).ToArray(), holes.Select(h => h.number).ToArray(), "holes 1..9 in order");
             Rect World(HoleDefinition d)
             {
                 var rects = d.layout.areas.Concat(d.extraAreas).ToList();

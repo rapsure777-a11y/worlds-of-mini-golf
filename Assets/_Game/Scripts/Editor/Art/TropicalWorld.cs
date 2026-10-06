@@ -45,7 +45,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
             bool IsJungle(HoleDefinition d) => d.cluster == TropicalCourse.JungleCluster;
             bool IsTemple(HoleDefinition d) => d.cluster == TropicalCourse.TempleCluster;
             bool IsVolcanic(HoleDefinition d) => d.cluster == TropicalCourse.VolcanicCluster;
-            bool OffStart(HoleDefinition d) => IsJungle(d) || IsTemple(d) || IsVolcanic(d);   // holes that are not on the Starting Island
+            bool IsSummit(HoleDefinition d) => d.cluster == TropicalCourse.SummitCluster;
+            bool OffStart(HoleDefinition d) => IsJungle(d) || IsTemple(d) || IsVolcanic(d) || IsSummit(d);   // holes that are not on the Starting Island
 
             // ---- Starting Island: holes 1-2 (unchanged from the approved visual baseline).
             var island = new IslandGen { centre = Vector2.zero, radius = 34f, seed = 7, splat = true };
@@ -104,12 +105,22 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 VolcanicIsland.ConfigureTerrain(volcanic, frames[i], defs[i]);
             }
 
+            // ---- Summit Sanctuary island: hole 9 (only when the course has it).
+            IslandGen summit = null;
+            for (int i = 0; i < defs.Count; i++)
+            {
+                if (!IsSummit(defs[i])) continue;
+                if (summit == null) summit = SummitIsland.CreateIsland();
+                SummitIsland.ConfigureTerrain(summit, frames[i], defs[i]);
+            }
+
             var world = new GameObject("World").transform;
             world.SetParent(parent, false);
             var islands = new List<IslandGen> { island };
             if (jungle != null) islands.Add(jungle);
             if (temple != null) islands.Add(temple);
             if (volcanic != null) islands.Add(volcanic);
+            if (summit != null) islands.Add(summit);
             BuildTerrainAndSea(kit, hero, islands, world);
             SetupLighting(kit);
 
@@ -120,10 +131,11 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Dresser jungleDresser = jungle != null ? new Dresser(kit, hero, jungle, dressingRoot) : null;
             Dresser templeDresser = temple != null ? new Dresser(kit, hero, temple, dressingRoot) : null;
             Dresser volcanicDresser = volcanic != null ? new Dresser(kit, hero, volcanic, dressingRoot) : null;
+            Dresser summitDresser = summit != null ? new Dresser(kit, hero, summit, dressingRoot) : null;
             for (int i = 0; i < defs.Count; i++)
             {
                 var (centre, half) = LayoutBounds(defs[i]);
-                var dr = IsJungle(defs[i]) ? jungleDresser : IsTemple(defs[i]) ? templeDresser : IsVolcanic(defs[i]) ? volcanicDresser : dresser;
+                var dr = IsJungle(defs[i]) ? jungleDresser : IsTemple(defs[i]) ? templeDresser : IsVolcanic(defs[i]) ? volcanicDresser : IsSummit(defs[i]) ? summitDresser : dresser;
                 // Generous clearance: holes get hand-placed dressing; random island cover stays back.
                 dr.KeepOut(frames[i].L2(centre.x, centre.y), half + new Vector2(0.9f, 1.2f), frames[i].yaw, 2.6f);
             }
@@ -142,6 +154,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
                     case 6: TempleIsland.DressHole6(templeDresser, frames[i], defs[i]); break;
                     case 7: VolcanicIsland.DressHole7(volcanicDresser, frames[i], defs[i]); break;
                     case 8: VolcanicIsland.DressHole8(volcanicDresser, frames[i], defs[i]); break;
+                    case 9: SummitIsland.DressHole9(summitDresser, frames[i], defs[i]); break;
                     default: Debug.LogWarning($"[Gamebreak] No dressing for hole {defs[i].number} yet."); break;
                 }
             }
@@ -265,8 +278,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var rnd = new System.Random(31);
             // Distant islands, mostly visible from the southern (Hole 1) side.
             // (The 330 degree island moved to 30: the Temple Island now occupies that bearing at about 135 m. It then moved on to 75:
-            // the Volcanic Island sits at about 128 m on the 20 degree bearing.)
-            float[] angles = { 200f, 245f, 290f, 75f, 120f };
+            // the Volcanic Island sits at about 128 m on the 20 degree bearing. It moved on to 160: the Summit island is at about 94 m on the 58 degree bearing.)
+            float[] angles = { 200f, 245f, 290f, 160f, 120f };
             for (int i = 0; i < angles.Length; i++)
             {
                 float a = angles[i] * Mathf.Deg2Rad, dist = Dresser.Range(rnd, 150f, 240f);
