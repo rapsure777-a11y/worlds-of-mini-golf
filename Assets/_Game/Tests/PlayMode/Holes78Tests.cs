@@ -739,7 +739,7 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.That(s.Jump.bowl.gateHalfWidthDegrees, Is.GreaterThan(5f), "the bowl has a gate");
             Assert.That(s.Jump.bowl.entryHalfWidthDegrees, Is.EqualTo(0f), "(the jump notch is set when the bowl is built for the hole)");
             Assert.That(s.Jump.BowlForHole().entryHalfWidthDegrees, Is.GreaterThan(5f), "and a jump notch");
-            Assert.That(s.BowlRadius, Is.GreaterThanOrEqualTo(2.0f), "a large bowl");
+            Assert.That(s.BowlRadius, Is.GreaterThanOrEqualTo(1.5f), "a modest bowl (Andrew asked for a smaller circle)");
             Assert.That(d.layout.openEdges.Count, Is.GreaterThanOrEqualTo(2), "the jump lip and the gate lane's end are open");
         }
 

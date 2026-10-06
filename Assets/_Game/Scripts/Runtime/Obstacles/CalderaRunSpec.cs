@@ -45,9 +45,9 @@ namespace Gamebreak.MiniGolf
             var s = new JumpBowlSpec { entryOffsetX = 0.8f, entryHalfAngle = 26f };
             s.ramp.width = 1.2f;
             s.ramp.approachLength = 2.0f;
-            s.ramp.gap = 0.6f;
+            s.ramp.gap = 1.0f;
             s.ramp.teeZ = 0.9f;
-            s.bowl.radius = 2.0f;
+            s.bowl.radius = 1.5f;
             s.bowl.shelfWidth = 0.5f;
             return s;
         }
