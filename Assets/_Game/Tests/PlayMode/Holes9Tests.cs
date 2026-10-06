@@ -421,7 +421,7 @@ namespace Gamebreak.MiniGolf.Tests
             {
                 var t = new Tally();
                 yield return Steps(5);
-                yield return Putt(b, t, b.Surface(s.ShrineGateX, s.MergeEndZ - 0.5f), new Vector3(0f, 0f, 2.1f));
+                yield return Putt(b, t, b.Surface(s.ShrineGateX, s.MergeEndZ - 0.5f), new Vector3(0f, 0f, 2.4f));
                 Vector3 p = b.ball.Position;
                 Debug.Log($"[Test] shrine gate: rest {p}");
                 Assert.AreEqual(1, b.hole.Strokes);

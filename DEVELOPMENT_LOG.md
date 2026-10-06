@@ -193,3 +193,10 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 
 - Par 5 finale on a new Summit island (50, 80), highest ground of the course. **No bowl** (Andrew: Holes 4 and 8 already use them). Stages: Summit Approach, Sanctuary Climb (east kicker, 5.9 m climb over a waterfall chasm, corner kicker), Hero Shortcut (the Sun Stair's launch jump onto the Overlook, skips the detour), Final Approach (Shrine Lane with a 0.7 m gate, kicker, Landing) and **the Sky Bridge**: a rail-less 3.2 m ridge over an abyss to the cup on the Altar. Only existing mechanics (height function, `BankWall`, launch jump, open edges, OOB boxes); no runtime system changed.
 - No Unity here: syntax-parsed and type-checked against stubs only; `Holes9Tests` (24 new, expected total 200) not run. Details, risks, Unity steps and the headset checklist in `Docs/HOLE_9.md`. Graphics Pass 3 not started.
+
+## 2026-10-05 (late night): Cloud Hole 9 integrated (Summit Sanctuary)
+
+- Merged `feature/hole-9-summit-sanctuary` (`40937f2`) onto the local tip (Hole 8 ring included). Compiled clean; scene builds with 9 holes and the Summit island; both players build (0 errors); desktop smoke PASS (9-entry scorecard).
+- One test fix: `Hole9_ShrineLane_AGoodPuttThreadsTheGate...` asserted the ball passes the gate by 0.2 m with a 2.1 m/s putt; it rested at +0.19 m (it did pass the gate), so the putt is 2.4 m/s. No gameplay change.
+- Full suite **201/201** (24 Holes9Tests + my Hole 8 ring test). Measured: hero jump from Terrace 1 needs 4.0 m/s (3.6 and below fall in the pit, +1; 4.0-5.4 land on the Overlook); Waterfall Climb from its foot: 3.4 m/s rests part-way up, 4.0+ reaches the top; Sky Bridge putts 2.8-3.6 m/s reach the Altar (3.2 holes); tee putts 2.4-3.8 m/s rest on the approach.
+- Headset pending for Hole 9. Graphics Pass 3 not started.
