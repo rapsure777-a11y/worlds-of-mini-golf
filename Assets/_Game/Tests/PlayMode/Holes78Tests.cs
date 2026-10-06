@@ -723,6 +723,18 @@ namespace Gamebreak.MiniGolf.Tests
         // ------------------------------------------------------------------ Hole 8 layout
 
         [Test]
+        public void Hole8_Bowl_HasALowInnerRing_ThatIsOpenOnTheGateSide()
+        {
+            var b = TropicalCourse.Hole8Spec().Jump.bowl;
+            Assert.Greater(b.ringHeight, 0f, "an inner ring round the cup (Andrew: a blocker to get over)");
+            Assert.Less(b.ringHeight, 0.02f, "lower than a ball's radius, so a firm putt can climb it");
+            Assert.Greater(b.ringOpeningHalfWidthDegrees, 30f, "the gate side is open");
+            Assert.AreEqual(b.gateAngleDegrees, b.ringOpeningAngleDegrees, 0.01f, "the opening is centred on the gate");
+            Assert.Greater(b.ringRadius, b.apronRadius + 0.3f, "the ring stands well out from the cup");
+            Assert.Less(b.ringRadius, b.ShelfInnerRadius, "the ring is on the cone, inside the shelf");
+        }
+
+        [Test]
         public void Hole8_Definition_IsAParFourWithTheJumpAndAGate()
         {
             var d = Def(8);
@@ -1035,7 +1047,9 @@ namespace Gamebreak.MiniGolf.Tests
             for (int i = 0; i < 6 && !b.hole.IsComplete; i++)
             {
                 Vector3 cup = b.hole.Cup.transform.position, d = cup - b.ball.Position; d.y = 0f;
-                b.ball.Strike(d.normalized * Mathf.Clamp(SpeedForDistance(d.magnitude, b.tuning), 0.5f, 2.2f)); strokes++;
+                // A ball outside the inner ring must be struck firmly enough to climb it (that is its job); inside, a soft putt.
+                bool outside = Vector2.Distance(new Vector2(b.ball.Position.x, b.ball.Position.z), s.BowlCentre) > s.jump.bowl.ringRadius + 0.05f;
+                b.ball.Strike(d.normalized * Mathf.Clamp(SpeedForDistance(d.magnitude, b.tuning), outside ? 1.6f : 0.5f, 2.4f)); strokes++;
                 yield return Steps(3);
                 yield return WaitUntil(() => b.hole.IsComplete || b.ball.IsAtRest || b.hole.Strokes > strokes, 40f);
                 yield return Steps(10);

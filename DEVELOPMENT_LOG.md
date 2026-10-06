@@ -182,3 +182,9 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - One test fix beyond Cloud's work: `TropicalScene_HasJungleIsland_WithHoleThreeOnABridge` still asserted Hole 3 par 3 (the scene had been stale when par 4 went in); now par 4.
 - Full PlayMode suite **176/176** (Holes78Tests 43). Measured: vent captures 3.2-4.0 m/s putts from the causeway foot and rejects fast balls without trapping; ride 2.4 s, exit 1.98 m/s, no extra stroke; Hole 8 gate entry puts every 1.5-4.0 m/s ball in the bowl near the cup; shortcut lands in the bowl from 4.2 m/s, pit (+1) below 3.8, one hole in one at 5.0.
 - Headset pending for Holes 7-8. Hole 9 and Graphics Pass 3 not started.
+
+## 2026-10-05 (night): Hole 8 harder shortcut, inner ring
+
+- **Andrew's feedback on Caldera Run:** the tee shortcut was far too easy (an eagle off the tee) and gave no reason to take the long route. Asked for a smaller circle, a harder gap, and then a blocker inside the circle that a short landing hangs up against (another stroke), without affecting the long route's entry.
+- **Done:** bowl radius 2.0 -> 1.5, jump gap 0.6 -> 1.0 m (the shortcut now needs about 5.0 m/s; 4.6 and below fall in the pit, +1). New `RouletteBowlSpec.ring*` fields: a low (1.2 cm, under a ball radius) ring at r 0.9 round the cup, open for 110 degrees centred on the gate. A first attempt at a hurdle on the rim shelf did nothing (the jump lands moving mostly inward, not along the shelf); a 2-3 cm ring stopped everything (a step near the ball's radius cannot be rolled over), so 1.2 cm.
+- **Measured:** gate entries 1.5-4.0 m/s unchanged (end r 0.13-0.17 from the cup); normal route 4 strokes; shortcut at 5.0/5.6 m/s lands in the bowl but stays outside the ring (r 0.95-1.17), costing another stroke. Tests 177/177 (one new ring test; the normal-route test strikes at least 1.6 m/s when outside the ring).

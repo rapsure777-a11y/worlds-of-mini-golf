@@ -35,6 +35,13 @@ namespace Gamebreak.MiniGolf
         public float gateAngleDegrees = 0f;
         [Tooltip("Half-width of the gate notch in degrees. 0 = no gate. It gets the same low curb as the entry notch.")]
         public float gateHalfWidthDegrees = 0f;
+        [Tooltip("Optional inner ring: a low step in a circle of this radius round the cup (0 height = none). A ball crossing the cone must have the speed to climb it; a slow one hangs up against it and rolls back out to rest on the shelf for another stroke.")]
+        public float ringHeight = 0f;
+        public float ringRadius = 0.9f;
+        public float ringThickness = 0.05f;
+        [Tooltip("The ring has no step within this half-width (degrees) of ringOpeningAngleDegrees, so a ball coming in from that side reaches the cup unhindered.")]
+        public float ringOpeningAngleDegrees = 0f;
+        public float ringOpeningHalfWidthDegrees = 0f;
 
         /// <summary>True when the wall is replaced by a low curb at this angle (degrees from +X toward +Z): inside the entry notch or the gate.</summary>
         public bool InNotch(float angleDegrees) =>
@@ -133,6 +140,25 @@ namespace Gamebreak.MiniGolf
                 ProvingKit.Box("WallSegment", walls, pos, Quaternion.LookRotation(radial, Vector3.up),
                     new Vector3(width, spec.wallHeight + BaseDepth, spec.wallThickness), materials.wall, true);
             }
+
+            if (spec.ringHeight > 0f)
+            {
+                // A low ring of boxes round the cup, standing on a solid base; open on the gate side.
+                int rn = 48;
+                float rr = spec.ringRadius, rw = 2f * rr * Mathf.Tan(Mathf.PI / rn) + 0.01f;
+                float ry = spec.Height(rr), rh = spec.ringHeight + BaseDepth;
+                var ring = new GameObject("Ring").transform;
+                ring.SetParent(root, false);
+                for (int i = 0; i < rn; i++)
+                {
+                    float a = 2f * Mathf.PI * i / rn;
+                    if (spec.ringOpeningHalfWidthDegrees > 0f && Mathf.Abs(Mathf.DeltaAngle(a * Mathf.Rad2Deg, spec.ringOpeningAngleDegrees)) < spec.ringOpeningHalfWidthDegrees) continue;
+                    Vector3 radial = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                    ProvingKit.Box("RingSegment", ring, radial * rr + Vector3.up * (ry + spec.ringHeight - rh * 0.5f), Quaternion.LookRotation(radial, Vector3.up),
+                        new Vector3(rw, rh, spec.ringThickness), materials.wall, true);
+                }
+            }
+
 
             var cupGo = new GameObject("Cup");
             cupGo.transform.SetParent(root, false);

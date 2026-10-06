@@ -36,6 +36,10 @@ namespace Gamebreak.MiniGolf
         public float gateLaneWidth = 0.8f;
         [Header("Rails and kickers")]
         public float wallHeight = 0.16f;
+        [Tooltip("Height of the low ring round the cup that a jump landing has to climb. 0 = none.")]
+        public float ringHeight = 0.012f;
+        [Tooltip("Half-width (degrees) of the ring opening centred on the gate, so a ball rolled in through the gate is not hindered.")]
+        public float ringOpeningHalf = 55f;
 
         static float Snap(float v) => Mathf.Round(v * 10f) / 10f;
 
@@ -64,6 +68,10 @@ namespace Gamebreak.MiniGolf
                 var (angle, half) = GateArc();
                 jump.bowl.gateAngleDegrees = angle;
                 jump.bowl.gateHalfWidthDegrees = half;
+                // An inner ring round the cup, open on the gate side so the long route is not hindered.
+                jump.bowl.ringHeight = ringHeight;
+                jump.bowl.ringOpeningAngleDegrees = angle;
+                jump.bowl.ringOpeningHalfWidthDegrees = ringOpeningHalf;
                 return jump;
             }
         }
