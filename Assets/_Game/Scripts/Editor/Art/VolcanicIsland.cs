@@ -155,18 +155,31 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // Silhouettes (Graphics Pass 3B): clusters of hexagonal basalt columns across the river, chunky crater blocks round the Falls cliff, torches along the tiers.
             var basalt = Gp3Materials.Ready ? Gp3Materials.RockBasalt : null;
             foreach (var (x, z, sc, model) in new[] { (-3.8f, s.Tier2EndZ + 1.0f, 0.85f, "HeroBasalt_C"), (-4.4f, s.Tier3FrontZ + 1.5f, 1.0f, "HeroBasalt_A"), (6.8f, s.Tier3EndZ + 0.5f, 0.95f, "HeroBasalt_C"), (7.6f, s.Tier2EndZ - 1.0f, 0.8f, "HeroBasalt_B") })
-                if (Clear(def, x, z, 3.0f)) d.Crag(model, f.L(x, z), x * 31f, sc, basalt, root, lods: false);
+                if (ClearOfAll(f, x, z, 4.0f)) d.Crag(model, f.L(x, z), x * 31f, sc, basalt, root, lods: false);
             var rr = new System.Random(707);
             for (int i = 0; i < 7; i++)
             {
                 float lx = -s.PadHalf - 1.8f - (float)rr.NextDouble() * 2.2f, lz = -1f + i * 2.4f;
-                if (Clear(def, lx, lz, 1.6f)) d.Crag(i % 2 == 0 ? "HeroRock_A" : "HeroStone_C", f.L(lx, lz), (float)rr.NextDouble() * 360f, 0.7f + (float)rr.NextDouble() * 0.5f, basalt, root, lods: false);
+                if (ClearOfAll(f, lx, lz, 2.4f)) d.Crag(i % 2 == 0 ? "HeroRock_A" : "HeroStone_C", f.L(lx, lz), (float)rr.NextDouble() * 360f, 0.7f + (float)rr.NextDouble() * 0.5f, basalt, root, lods: false);
             }
             Crust(d, root, 7, basalt, 71);
             foreach (float z in new[] { 1.0f, 3.0f })
                 d.Torch(f.L(-s.PadHalf - 0.6f, z));
             d.Torch(f.L(s.CrossEastX + 0.6f, s.CrossEndZ + 1.0f));
             d.Torch(f.L(s.CrossEastX + 0.6f, s.Tier2EndZ - 0.5f));
+        }
+
+        /// <summary>Like <see cref="Clear(HoleDefinition,float,float,float)"/>, but against EVERY hole on the island: Holes 7 and 8 stand only about 15 m apart, so one hole's backdrop must never land on the other's course.</summary>
+        static bool ClearOfAll(HoleFrame f, float x, float z, float margin)
+        {
+            var world = f.L2(x, z);
+            foreach (var def in TropicalCourse.Holes())
+            {
+                if (def.cluster != TropicalCourse.VolcanicCluster) continue;
+                var lp = new HoleFrame(def).ToLocal2(world);
+                if (!Clear(def, lp.x, lp.y, margin)) return false;
+            }
+            return true;
         }
 
         /// <summary>True when hole-space (x, z) is at least <paramref name="margin"/> metres from every green area and extra area of the hole (the course, ramps, pits and the bowl).</summary>
@@ -191,12 +204,12 @@ namespace Gamebreak.MiniGolf.Editor.Art
                     if (!r.transform.parent || r.transform.parent.name != "Lava") continue;
                     var b = r.bounds;
                     if (b.size.x < 1.2f || b.size.z < 1.2f) continue;
-                    int n = Mathf.Clamp(Mathf.RoundToInt(b.size.x * b.size.z * 0.35f), 2, 9);
+                    int n = Mathf.Clamp(Mathf.RoundToInt(b.size.x * b.size.z * 0.12f), 1, 4);
                     for (int i = 0; i < n; i++)
                     {
                         float x = Mathf.Lerp(b.min.x + 0.45f, b.max.x - 0.45f, (float)rnd.NextDouble());
                         float z = Mathf.Lerp(b.min.z + 0.45f, b.max.z - 0.45f, (float)rnd.NextDouble());
-                        d.Crag(i % 2 == 0 ? "HeroStone_C" : "HeroStone_A", new Vector3(x, b.max.y - 0.05f, z), (float)rnd.NextDouble() * 360f, 0.9f + (float)rnd.NextDouble() * 0.9f,
+                        d.Crag(i % 2 == 0 ? "HeroStone_C" : "HeroStone_A", new Vector3(x, b.max.y - 0.05f, z), (float)rnd.NextDouble() * 360f, 0.55f + (float)rnd.NextDouble() * 0.5f,
                             basalt, root, lods: false, yStretch: 0.45f, shadows: false, ground: false);
                     }
                 }
@@ -235,7 +248,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // Every piece is placed only where it stands clear of the whole course (greens, the launch ramp, the pit, the bowl): a model's own size is covered by the margin.
             void Put(string model, float lx, float lz, float yaw, float sc, float margin, bool lods = true, float sink = 0.1f)
             {
-                if (Clear(def, lx, lz, margin)) d.Crag(model, f.L(lx, lz), yaw, sc, basalt, root, lods: lods, extraSink: sink);
+                if (ClearOfAll(f, lx, lz, margin + 1.5f)) d.Crag(model, f.L(lx, lz), yaw, sc, basalt, root, lods: lods, extraSink: sink);
             }
             const int rim = 18;
             for (int i = 0; i < rim; i++)

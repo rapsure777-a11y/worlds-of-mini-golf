@@ -174,7 +174,9 @@ namespace Gamebreak.MiniGolf
         }
 
         /// <summary>Rails around every outside edge of the green. Flat-shaded; the collider welds duplicates.</summary>
-        public static Mesh BuildWalls(GreenLayout l)
+        /// <param name="skirtsOnly">Visual-only variant (Graphics Pass 3B stone rails): no rail faces and no rail corner posts, only the skirts that close the drop at open edges.
+        /// The collider keeps using the full mesh.</param>
+        public static Mesh BuildWalls(GreenLayout l, bool skirtsOnly = false)
         {
             var g = new Grid(l);
             var verts = new List<Vector3>();
@@ -228,6 +230,7 @@ namespace Gamebreak.MiniGolf
             void EdgeOrSkirt(Vector3 a, Vector3 b, Vector3 outward)
             {
                 if (IsOpenEdge(a, b)) Skirt(a, b, outward);
+                else if (skirtsOnly) { }
                 else Edge(a, b, outward);
             }
 
@@ -250,7 +253,7 @@ namespace Gamebreak.MiniGolf
                 // The four cells around grid vertex (i,j).
                 bool sw = In(i - 1, j - 1), se = In(i, j - 1), nw = In(i - 1, j), ne = In(i, j);
                 int count = (sw ? 1 : 0) + (se ? 1 : 0) + (nw ? 1 : 0) + (ne ? 1 : 0);
-                if (count != 1) continue;
+                if (count != 1 || skirtsOnly) continue;
                 Vector3 ox = (sw || nw) ? Vector3.right : Vector3.left;
                 Vector3 oz = (sw || se) ? Vector3.forward : Vector3.back;
                 Vector3 p = P(i, j) + Vector3.up * wh;

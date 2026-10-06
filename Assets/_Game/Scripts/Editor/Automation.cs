@@ -186,6 +186,15 @@ namespace Gamebreak.MiniGolf.Editor
                 shots.Add(($"{n}_d_side_left", mid - right * 6f + Vector3.up * 2.4f + line * 1f, mid + Vector3.up * 0.4f));
                 shots.Add(($"{n}_e_from_cup", cupPos + line * 1.6f + Vector3.up * 1.5f, tee + Vector3.up * 0.3f));
                 shots.Add(($"{n}_f_cup", cupPos + new Vector3(0.25f, 0.25f, -0.35f), cupPos));
+                if (h.HoleNumber == 7 || h.HoleNumber == 8)
+                {
+                    // Standing views along the real route at eye height, as the player stands beside the ball after each shot.
+                    var t7 = h.transform;
+                    var pts = h.HoleNumber == 7 ? new[] { (0.6f, 0.8f, 1.5f, 3.3f), (2.0f, 1.9f, 2.4f, 6.0f), (2.9f, 7.5f, 2.4f, 9.5f), (2.9f, 12.5f, 2.4f, 15.0f) } : new[] { (0.7f, 0.8f, 0f, 3.0f), (-3.4f, 1.0f, -3.4f, 5.0f), (-2.6f, 4.0f, 0.8f, 5.0f) };
+                    int si = 0;
+                    foreach (var (px, pz, lx, lz) in pts)
+                        shots.Add(($"{n}_s{si++}_stand", t7.TransformPoint(new Vector3(px, 1.65f, pz)), t7.TransformPoint(new Vector3(lx, 0.4f, lz))));
+                }
                 if (h.HoleNumber == 3)
                 {
                     // Jungle Crossing: the bridge from the side, and from the elbow looking across it (hole-local coordinates).

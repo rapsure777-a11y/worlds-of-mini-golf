@@ -123,10 +123,21 @@ namespace Gamebreak.MiniGolf.Editor.Art
         /// </summary>
         static void RailCoping(Dresser d, HoleDefinition def, HoleFrame f, Transform gp, int number)
         {
-            var stoneMat = Gp3Materials.Ready ? (Gp3Materials.Limestone ? Gp3Materials.Limestone : Gp3Materials.Sandstone) : null;
+            var stoneMat = Gp3Materials.Ready ? (Gp3Materials.Sandstone ? Gp3Materials.Sandstone : Gp3Materials.Limestone) : null;
             if (!stoneMat) return;
             var l = def.layout;
             var holder = new GameObject($"RailCoping_Hole{number}").transform; holder.SetParent(gp, false);
+            // The old rail strip is replaced, not covered: the visible wall mesh keeps only the skirts at open edges; the MeshCollider keeps the full wall mesh.
+            foreach (var hc in Object.FindObjectsByType<HoleController>(FindObjectsSortMode.None))
+            {
+                if (hc.HoleNumber != number) continue;
+                foreach (var t in hc.GetComponentsInChildren<Transform>(true))
+                {
+                    if (t.name != "Walls") continue;
+                    var mf = t.GetComponent<MeshFilter>();
+                    if (mf) mf.sharedMesh = CourseGeometry.BuildWalls(l, skirtsOnly: true);
+                }
+            }
             float th = l.wallThickness, wh = l.wallHeight, step = l.cell;
             var rects = l.areas;
             bool Covered(Vector2 p) { foreach (var r in rects) if (p.x > r.xMin + 1e-4f && p.x < r.xMax - 1e-4f && p.y > r.yMin + 1e-4f && p.y < r.yMax - 1e-4f) return true; return false; }
@@ -168,24 +179,34 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Material mat, System.Func<Vector2, float, Vector3> W, HashSet<Vector2Int> placed)
         {
             float len = s1 - s0;
-            int stones = Mathf.Max(1, Mathf.RoundToInt(len / 0.55f));
+            int stones = Mathf.Max(1, Mathf.RoundToInt(len / 0.5f));
             float sl = len / stones;
             Vector2 off = outward * (th * 0.5f);
-            for (int k = 0; k < stones; k++)
+            // Two courses replace the old rail strip: a base course of cut stones, and a wider coping course laid with its joints offset by half a stone.
+            for (int course = 0; course < 2; course++)
             {
-                float a = s0 + k * sl, b = a + sl;
-                Vector2 pa = origin + dir * a + off, pb = origin + dir * b + off;
-                Vector3 wa = W(pa, wh + 0.012f), wb = W(pb, wh + 0.012f);
-                Vector3 axis = wb - wa;
-                if (axis.sqrMagnitude < 1e-6f) continue;
-                var key = new Vector2Int(Mathf.RoundToInt((wa.x + wb.x) * 50f), Mathf.RoundToInt((wa.z + wb.z) * 50f));
-                if (!placed.Add(key)) continue;
-                float jitter = 0.012f * ((k * 7 + Mathf.RoundToInt(origin.x * 10f + origin.y * 10f)) % 3);
-                var go = ChamferMesh.Block("Coping", holder, (wa + wb) * 0.5f + Vector3.up * (0.014f + jitter * 0.5f), Quaternion.LookRotation(axis.normalized, Vector3.up),
-                    new Vector3(th + 0.05f, 0.032f + jitter, axis.magnitude - 0.018f), 0.011f, mat, 1.1f);
-                GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+                int count = course == 0 ? stones : stones + 1;
+                for (int k = 0; k < count; k++)
+                {
+                    float a = course == 0 ? s0 + k * sl : s0 + (k - 0.5f) * sl, b = a + sl;
+                    a = Mathf.Max(a, s0); b = Mathf.Min(b, s1);
+                    if (b - a < 0.05f) continue;
+                    Vector2 pa = origin + dir * a + off, pb = origin + dir * b + off;
+                    float baseTop = wh * 0.62f;
+                    Vector3 wa = W(pa, 0f), wb = W(pb, 0f);
+                    Vector3 axis = wb - wa;
+                    if (axis.sqrMagnitude < 1e-6f) continue;
+                    var key = new Vector2Int(Mathf.RoundToInt((wa.x + wb.x) * 50f) + course * 200000, Mathf.RoundToInt((wa.z + wb.z) * 50f));
+                    if (!placed.Add(key)) continue;
+                    float bottom = -0.05f, top = course == 0 ? baseTop : wh + 0.02f, lo = course == 0 ? bottom : baseTop - 0.004f;
+                    float h = top - lo, width = course == 0 ? th + 0.012f : th + 0.05f;
+                    float jitter = 0.006f * ((k * 7 + Mathf.RoundToInt(origin.x * 10f + origin.y * 10f)) % 3);
+                    var go = ChamferMesh.Block(course == 0 ? "RailStone" : "Coping", holder, (wa + wb) * 0.5f + Vector3.up * ((lo + top) * 0.5f + jitter * 0.5f),
+                        Quaternion.LookRotation(axis.normalized, Vector3.up), new Vector3(width, h + jitter, axis.magnitude + 0.006f), course == 0 ? 0.012f : 0.014f, mat, 1.1f);
+                    GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+                }
             }
-            // A cut-stone post with a capped head at each end of the run (the wall's own end, standing proud of it).
+            // A cut-stone post with a capped head at each end of the run (the rail's own end, standing proud of it).
             foreach (float sEnd in new[] { s0, s1 })
             {
                 Vector2 p = origin + dir * sEnd + outward * (th * 0.5f);
