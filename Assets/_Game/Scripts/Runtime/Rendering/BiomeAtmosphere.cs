@@ -154,6 +154,22 @@ namespace Gamebreak.MiniGolf
             Apply(m_Current);
         }
 
+        /// <summary>Editor capture and previews: applies a preset to the scene settings without a running component (the sky is a throw-away copy, never saved).</summary>
+        public static void ApplyPreview(AtmospherePreset p, Light sun, ref Material skyCopy)
+        {
+            if (sun) { sun.color = p.sunColor; sun.intensity = p.sunIntensity; sun.transform.rotation = Quaternion.Euler(p.sunEuler); }
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = p.ambientSky; RenderSettings.ambientEquatorColor = p.ambientEquator; RenderSettings.ambientGroundColor = p.ambientGround;
+            RenderSettings.fog = true; RenderSettings.fogMode = FogMode.ExponentialSquared; RenderSettings.fogColor = p.fogColor; RenderSettings.fogDensity = p.fogDensity;
+            if (!skyCopy && RenderSettings.skybox) skyCopy = new Material(RenderSettings.skybox) { name = "PreviewSky" };
+            if (skyCopy)
+            {
+                skyCopy.SetColor("_TopColor", p.skyTop); skyCopy.SetColor("_HorizonColor", p.skyHorizon); skyCopy.SetColor("_BottomColor", p.skyBottom);
+                skyCopy.SetColor("_SunColor", p.skySun); skyCopy.SetFloat("_SunSize", p.skySunSize); skyCopy.SetFloat("_SunGlow", p.skySunGlow);
+                RenderSettings.skybox = skyCopy;
+            }
+        }
+
         void Apply(AtmospherePreset p)
         {
             if (sun)

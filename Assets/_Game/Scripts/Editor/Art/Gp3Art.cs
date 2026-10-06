@@ -212,7 +212,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var lawn = AssetDatabase.LoadAssetAtPath<Texture2D>($"{HeroKit.TexDir}/lawn_albedo.png");
             var lawnN = AssetDatabase.LoadAssetAtPath<Texture2D>($"{HeroKit.TexDir}/lawn_normal.png");
             RockLimestone = Rock("Gp3_RockLimestone", "limestone", Color.white, 0.5f, lawn, lawnN);
-            RockBasalt = Rock("Gp3_RockBasalt", "basalt", Color.white, 1f, null, null);   // _TopCoverage is a normal.y threshold: 1 = no cap at all
+            RockBasalt = Rock("Gp3_RockBasalt", "basalt", new Color(1.65f, 1.6f, 1.7f), 1f, null, null);   // _TopCoverage is a normal.y threshold: 1 = no cap at all
             RockSandstoneWarm = Rock("Gp3_RockSandstone", "sandstone", Color.white, 0.35f, lawn, lawnN);
 
             // --- golf realism (URP Lit for real metal response; the cup liner and ball use the stylized shader with their own maps)

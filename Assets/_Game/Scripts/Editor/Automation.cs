@@ -218,10 +218,16 @@ namespace Gamebreak.MiniGolf.Editor
             cam.nearClipPlane = 0.01f;
             var rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
             cam.targetTexture = rt;
+            Material previewSky = null;
+            var sunLight = Object.FindFirstObjectByType<Light>();
+            foreach (var l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None)) if (l.type == LightType.Directional) sunLight = l;
             foreach (var s in shots)
             {
                 go.transform.position = s.pos;
                 go.transform.LookAt(s.look);
+                // Each hole is judged under its own biome light, fog and sky, as the player sees it (the runtime component does this on hole start).
+                if (s.name.StartsWith("hole") && int.TryParse(s.name.Substring(4, 2), out int hn)) BiomeAtmosphere.ApplyPreview(BiomeAtmospheres.ForHole(hn), sunLight, ref previewSky);
+                else BiomeAtmosphere.ApplyPreview(BiomeAtmospheres.For(TropicalCourse.StartCluster), sunLight, ref previewSky);
                 cam.Render();
                 RenderTexture.active = rt;
                 var tex = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);

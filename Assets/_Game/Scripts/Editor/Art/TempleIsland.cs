@@ -176,7 +176,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             if (d.HasModel("HeroMillHouse")) d.Model("HeroMillHouse", f.L(1.9f, wz + 0.2f), f.Yaw(270f), 0.92f, snap: true, sink: 0.04f, parent: root);
             HeroAt(d, root, f, "HeroTempleFacade", -0.5f, gz + 1.05f, gy - 0.1f, 180f, 0.58f);
             // The aqueduct arcade under the green: length along the course, top just below the surface.
-            HeroAt(d, root, f, "HeroArcade", 0f, (s.GreenStartZ(r) + gz) * 0.5f, gy - 1.0f, 90f);
+            HeroAt(d, root, f, "HeroArcade", 0f, (s.GreenStartZ(r) + gz) * 0.5f, gy - 1.12f, 90f);
             Massif(d, root, f, -0.5f, gz + 10.5f, 10f, 6, 606, 1.15f);
             foreach (var (x, z) in new[] { (s.RoadOuterX - 0.7f, 0.7f), (s.padRight + 0.5f, 0.7f), (-0.7f, 5.5f), (0.9f, 5.5f), (s.RoadOuterX - 0.7f, gz - 0.3f), (1.5f, gz - 0.3f) })
                 Pier(d, root, f, x, z);

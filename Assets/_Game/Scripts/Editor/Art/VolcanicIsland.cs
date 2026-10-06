@@ -20,7 +20,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var c = TropicalCourse.VolcanicCentre;
             var g = new IslandGen { centre = c, radius = 26f, seed = 41, hillHeight = 4.0f, extent = 36f, splat = false, skipDeepSea = true };
             LoadMaterials();
-            g.terrainMaterial = s_Basalt;
+            g.terrainMaterial = s_TerrainBasalt;
             g.mounds.Add((c + new Vector2(-3f, 15f), 11f, 8.5f));    // the volcano: a big dark silhouette behind both holes
             g.mounds.Add((c + new Vector2(17f, -4f), 7f, 3.5f));
             g.mounds.Add((c + new Vector2(-16f, -6f), 7f, 3.0f));
@@ -41,7 +41,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         // ------------------------------------------------------------------ materials and small helpers
 
-        static Material s_Basalt, s_BasaltDark, s_Lava, s_LavaFall, s_Ember;
+        static Material s_Basalt, s_BasaltDark, s_Lava, s_LavaFall, s_Ember, s_TerrainBasalt;
 
         static Material Mat(string name, Color color, float smoothness = 0.12f, float emission = 0f)
         {
@@ -63,11 +63,12 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         static void LoadMaterials()
         {
-            s_Basalt = Mat("Volcanic_Basalt", new Color(0.19f, 0.18f, 0.2f));
-            s_BasaltDark = Mat("Volcanic_BasaltDark", new Color(0.11f, 0.105f, 0.12f));
+            s_Basalt = Mat("Volcanic_Basalt", new Color(0.33f, 0.3f, 0.32f));
+            s_BasaltDark = Mat("Volcanic_BasaltDark", new Color(0.2f, 0.19f, 0.21f));
             s_Lava = Mat("Volcanic_Lava", new Color(1f, 0.38f, 0.07f), 0.3f, 1.6f);
             s_LavaFall = Mat("Volcanic_LavaFall", new Color(1f, 0.55f, 0.12f), 0.3f, 2.0f);
             s_Ember = Mat("Volcanic_Ember", new Color(1f, 0.25f, 0.05f), 0.2f, 1.2f);
+            s_TerrainBasalt = s_Basalt;   // the island terrain keeps the plain colour (its UVs span the whole island; a textured, glowing material there smears into dark blotches)
             if (Gp3Materials.Ready) { s_Basalt = Gp3Materials.Basalt; s_BasaltDark = Gp3Materials.Basalt; }
         }
 
@@ -154,17 +155,28 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // Silhouettes (Graphics Pass 3B): clusters of hexagonal basalt columns across the river, chunky crater blocks round the Falls cliff, torches along the tiers.
             var basalt = Gp3Materials.Ready ? Gp3Materials.RockBasalt : null;
             foreach (var (x, z, sc, model) in new[] { (-3.8f, s.Tier2EndZ + 1.0f, 0.85f, "HeroBasalt_C"), (-4.4f, s.Tier3FrontZ + 1.5f, 1.0f, "HeroBasalt_A"), (6.8f, s.Tier3EndZ + 0.5f, 0.95f, "HeroBasalt_C"), (7.6f, s.Tier2EndZ - 1.0f, 0.8f, "HeroBasalt_B") })
-                d.Crag(model, f.L(x, z), x * 31f, sc, basalt, root, lods: false);
+                if (Clear(def, x, z, 3.0f)) d.Crag(model, f.L(x, z), x * 31f, sc, basalt, root, lods: false);
             var rr = new System.Random(707);
-            for (int i = 0; i < 5; i++)
-                d.Crag(i % 2 == 0 ? "HeroCrater_A" : "HeroCrater_B", f.L(cliffX + 3.6f + (float)rr.NextDouble() * 2.2f, (s.Tier2EndZ + s.Tier3EndZ) * 0.5f - 3.5f + i * 1.9f), (float)rr.NextDouble() * 360f, 1.0f + (float)rr.NextDouble() * 0.5f, basalt, root);
             for (int i = 0; i < 7; i++)
-                d.Crag(i % 2 == 0 ? "HeroRock_A" : "HeroStone_C", f.L(-s.PadHalf - 1.4f - (float)rr.NextDouble() * 2.2f, -1f + i * 2.4f), (float)rr.NextDouble() * 360f, 0.8f + (float)rr.NextDouble() * 0.7f, basalt, root, lods: false);
+            {
+                float lx = -s.PadHalf - 1.8f - (float)rr.NextDouble() * 2.2f, lz = -1f + i * 2.4f;
+                if (Clear(def, lx, lz, 1.6f)) d.Crag(i % 2 == 0 ? "HeroRock_A" : "HeroStone_C", f.L(lx, lz), (float)rr.NextDouble() * 360f, 0.7f + (float)rr.NextDouble() * 0.5f, basalt, root, lods: false);
+            }
             Crust(d, root, 7, basalt, 71);
             foreach (float z in new[] { 1.0f, 3.0f })
                 d.Torch(f.L(-s.PadHalf - 0.6f, z));
             d.Torch(f.L(s.CrossEastX + 0.6f, s.CrossEndZ + 1.0f));
             d.Torch(f.L(s.CrossEastX + 0.6f, s.Tier2EndZ - 0.5f));
+        }
+
+        /// <summary>True when hole-space (x, z) is at least <paramref name="margin"/> metres from every green area and extra area of the hole (the course, ramps, pits and the bowl).</summary>
+        static bool Clear(HoleDefinition def, float x, float z, float margin)
+        {
+            foreach (var r in def.layout.areas)
+                if (x > r.xMin - margin && x < r.xMax + margin && z > r.yMin - margin && z < r.yMax + margin) return false;
+            foreach (var r in def.extraAreas)
+                if (x > r.xMin - margin && x < r.xMax + margin && z > r.yMin - margin && z < r.yMax + margin) return false;
+            return true;
         }
 
         /// <summary>Broken crust on the lava: dark slabs set into each lava box (visual only, away from every edge), so the molten surface reads as cracked rock.</summary>
@@ -220,28 +232,32 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Vector2 c = s.BowlCentre;
             var basalt = Gp3Materials.Ready ? Gp3Materials.RockBasalt : null;
             var rr = new System.Random(808);
+            // Every piece is placed only where it stands clear of the whole course (greens, the launch ramp, the pit, the bowl): a model's own size is covered by the margin.
+            void Put(string model, float lx, float lz, float yaw, float sc, float margin, bool lods = true, float sink = 0.1f)
+            {
+                if (Clear(def, lx, lz, margin)) d.Crag(model, f.L(lx, lz), yaw, sc, basalt, root, lods: lods, extraSink: sink);
+            }
             const int rim = 18;
             for (int i = 0; i < rim; i++)
             {
                 float a = 360f * i / rim + (float)rr.NextDouble() * 6f, ra = a * Mathf.Deg2Rad;
                 float north = Mathf.Clamp01(0.5f + 0.5f * Mathf.Sin(ra));
                 float rad = 11.5f + (float)rr.NextDouble() * 1.4f;
-                d.Crag(i % 2 == 0 ? "HeroCrater_A" : "HeroCrater_B", f.L(c.x + Mathf.Cos(ra) * rad * 1.2f, c.y + Mathf.Sin(ra) * rad), -a + 90f + (float)rr.NextDouble() * 40f, 0.6f + 0.7f * north + (float)rr.NextDouble() * 0.2f, basalt, root, extraSink: 0.3f);
+                Put(i % 2 == 0 ? "HeroCrater_A" : "HeroCrater_B", c.x + Mathf.Cos(ra) * rad * 1.2f, c.y + Mathf.Sin(ra) * rad, -a + 90f + (float)rr.NextDouble() * 40f,
+                    0.6f + 0.7f * north + (float)rr.NextDouble() * 0.2f, 5.5f, true, 0.3f);
             }
             for (int i = 0; i < 7; i++)
             {
                 float ra = (i / 7f * 360f + 20f) * Mathf.Deg2Rad;
-                d.Crag(i % 2 == 0 ? "HeroBasalt_C" : "HeroBasalt_A", f.L(c.x + Mathf.Cos(ra) * 9.6f * 1.2f, c.y + Mathf.Sin(ra) * 9.6f), (float)rr.NextDouble() * 360f, 0.85f + (float)rr.NextDouble() * 0.35f, basalt, root, lods: false);
+                Put(i % 2 == 0 ? "HeroBasalt_C" : "HeroBasalt_A", c.x + Mathf.Cos(ra) * 9.6f * 1.2f, c.y + Mathf.Sin(ra) * 9.6f, (float)rr.NextDouble() * 360f, 0.85f + (float)rr.NextDouble() * 0.35f, 5.0f, false);
             }
             for (int i = 0; i < 12; i++)   // scree at the foot of the wall
             {
                 float ra = (float)rr.NextDouble() * Mathf.PI * 2f;
-                d.Crag(i % 3 == 0 ? "HeroRock_B" : "HeroStone_A", f.L(c.x + Mathf.Cos(ra) * 7.4f * 1.2f, c.y + Mathf.Sin(ra) * 7.4f), (float)rr.NextDouble() * 360f, 0.6f + (float)rr.NextDouble() * 0.6f, basalt, root, lods: false);
+                Put(i % 3 == 0 ? "HeroRock_B" : "HeroStone_A", c.x + Mathf.Cos(ra) * 7.4f * 1.2f, c.y + Mathf.Sin(ra) * 7.4f, (float)rr.NextDouble() * 360f, 0.6f + (float)rr.NextDouble() * 0.6f, 2.8f, false);
             }
             Crust(d, root, 8, basalt, 81);
-            // Lava seams: glowing patches on the crater floor outside the rails, and a glow so the climb and the bowl read.
-            foreach (var (x, z, w, l) in new[] { (s.WestX - 1.6f, 3.0f, 1.0f, 3.2f), (s.WestX - 1.4f, 7.0f, 1.2f, 1.8f), (c.x + s.BowlRadius + 1.4f, c.y - 1.5f, 1.2f, 2.4f) })
-                Block(root, f, "LavaSeam", x, z, w, l, -0.55f, -0.38f, s_Lava);
+            // (The sunk lava-seam slabs were removed: they only showed as glowing rectangle outlines.) A glow so the climb and the bowl read.
             Glow(root, f.L(s.WestX - 1.2f, 3.0f) + Vector3.up * 0.5f, 6f, 1.8f, "SeamGlow");
             Glow(root, f.L(c.x, c.y) + Vector3.up * 2.5f, 7f, 1.0f, "BowlGlow");
             // Torches: the tee, the foot of the climb, the gate and the ramp's lip.
