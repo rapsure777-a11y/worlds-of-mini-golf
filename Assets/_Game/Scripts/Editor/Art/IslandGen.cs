@@ -50,6 +50,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
         public readonly List<Channel> channels = new List<Channel>();
         /// <summary>Skip terrain cells that are flat deep sea floor (no triangles, no collider). Used for secondary islands so seabeds of neighbouring islands never overlap.</summary>
         public bool skipDeepSea;
+        /// <summary>Optional terrain material for this island (the Volcanic Island's basalt); null = the shared tropical splat material.</summary>
+        public Material terrainMaterial;
 
         /// <summary>Normalised distance to the coast (1 at the shoreline), with a noisy outline.</summary>
         public float CoastParam(float x, float z)

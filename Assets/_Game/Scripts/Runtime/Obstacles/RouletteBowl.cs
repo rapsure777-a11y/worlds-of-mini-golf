@@ -31,6 +31,18 @@ namespace Gamebreak.MiniGolf
         public float entryAngleDegrees = 0f;
         [Tooltip("Half-width of the entry notch in degrees. 0 = the wall is closed all the way round. In the notch the wall is replaced by a low curb that a landing ball clears but a ball rolling out cannot.")]
         public float entryHalfWidthDegrees = 0f;
+        [Tooltip("Optional second notch, for a ball that arrives by rolling (a ground-level approach lane) rather than by a jump: direction from the centre, degrees from +X toward +Z.")]
+        public float gateAngleDegrees = 0f;
+        [Tooltip("Half-width of the gate notch in degrees. 0 = no gate. It gets the same low curb as the entry notch.")]
+        public float gateHalfWidthDegrees = 0f;
+
+        /// <summary>True when the wall is replaced by a low curb at this angle (degrees from +X toward +Z): inside the entry notch or the gate.</summary>
+        public bool InNotch(float angleDegrees) =>
+            (entryHalfWidthDegrees > 0f && Mathf.Abs(Mathf.DeltaAngle(angleDegrees, entryAngleDegrees)) < entryHalfWidthDegrees)
+            || (gateHalfWidthDegrees > 0f && Mathf.Abs(Mathf.DeltaAngle(angleDegrees, gateAngleDegrees)) < gateHalfWidthDegrees);
+
+        /// <summary>Height of the notch curb's top above the rim of the shelf. A landing ball clears it, a ball rolling out cannot; an approach lane at this level rolls the ball in.</summary>
+        public const float NotchCurbRise = 0.02f;
 
         public float ShelfInnerRadius => radius - shelfWidth;
 
@@ -108,11 +120,11 @@ namespace Gamebreak.MiniGolf
             {
                 float a = 2f * Mathf.PI * i / n;
                 Vector3 radial = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
-                if (spec.entryHalfWidthDegrees > 0f && Mathf.Abs(Mathf.DeltaAngle(a * Mathf.Rad2Deg, spec.entryAngleDegrees)) < spec.entryHalfWidthDegrees)
+                if (spec.InNotch(a * Mathf.Rad2Deg))
                 {
                     // Entry notch: a low curb instead of the wall (the same trick as the launch pad's lip).
                     // It stands on a solid base so nothing shows under it.
-                    ProvingKit.Box("EntryCurb", walls, radial * (spec.radius + 0.02f) + Vector3.up * (hR + 0.02f - BaseDepth * 0.5f), Quaternion.LookRotation(radial, Vector3.up),
+                    ProvingKit.Box("EntryCurb", walls, radial * (spec.radius + 0.02f) + Vector3.up * (hR + RouletteBowlSpec.NotchCurbRise - BaseDepth * 0.5f), Quaternion.LookRotation(radial, Vector3.up),
                         new Vector3(width, BaseDepth, 0.04f), materials.wall, true);
                     continue;
                 }

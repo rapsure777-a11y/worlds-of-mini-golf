@@ -44,7 +44,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
             foreach (var d in defs) frames.Add(new HoleFrame(d));
             bool IsJungle(HoleDefinition d) => d.cluster == TropicalCourse.JungleCluster;
             bool IsTemple(HoleDefinition d) => d.cluster == TropicalCourse.TempleCluster;
-            bool OffStart(HoleDefinition d) => IsJungle(d) || IsTemple(d);   // holes that are not on the Starting Island
+            bool IsVolcanic(HoleDefinition d) => d.cluster == TropicalCourse.VolcanicCluster;
+            bool OffStart(HoleDefinition d) => IsJungle(d) || IsTemple(d) || IsVolcanic(d);   // holes that are not on the Starting Island
 
             // ---- Starting Island: holes 1-2 (unchanged from the approved visual baseline).
             var island = new IslandGen { centre = Vector2.zero, radius = 34f, seed = 7, splat = true };
@@ -94,11 +95,21 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 TempleIsland.ConfigureTerrain(temple, frames[i], defs[i]);
             }
 
+            // ---- Volcanic Island: holes 7-8 (only when the course has them).
+            IslandGen volcanic = null;
+            for (int i = 0; i < defs.Count; i++)
+            {
+                if (!IsVolcanic(defs[i])) continue;
+                if (volcanic == null) volcanic = VolcanicIsland.CreateIsland();
+                VolcanicIsland.ConfigureTerrain(volcanic, frames[i], defs[i]);
+            }
+
             var world = new GameObject("World").transform;
             world.SetParent(parent, false);
             var islands = new List<IslandGen> { island };
             if (jungle != null) islands.Add(jungle);
             if (temple != null) islands.Add(temple);
+            if (volcanic != null) islands.Add(volcanic);
             BuildTerrainAndSea(kit, hero, islands, world);
             SetupLighting(kit);
 
@@ -108,10 +119,11 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var dresser = new Dresser(kit, hero, island, dressingRoot);
             Dresser jungleDresser = jungle != null ? new Dresser(kit, hero, jungle, dressingRoot) : null;
             Dresser templeDresser = temple != null ? new Dresser(kit, hero, temple, dressingRoot) : null;
+            Dresser volcanicDresser = volcanic != null ? new Dresser(kit, hero, volcanic, dressingRoot) : null;
             for (int i = 0; i < defs.Count; i++)
             {
                 var (centre, half) = LayoutBounds(defs[i]);
-                var dr = IsJungle(defs[i]) ? jungleDresser : IsTemple(defs[i]) ? templeDresser : dresser;
+                var dr = IsJungle(defs[i]) ? jungleDresser : IsTemple(defs[i]) ? templeDresser : IsVolcanic(defs[i]) ? volcanicDresser : dresser;
                 // Generous clearance: holes get hand-placed dressing; random island cover stays back.
                 dr.KeepOut(frames[i].L2(centre.x, centre.y), half + new Vector2(0.9f, 1.2f), frames[i].yaw, 2.6f);
             }
@@ -128,6 +140,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
                     case 4: JungleIsland.DressHole4(jungleDresser, frames[i], defs[i]); break;
                     case 5: TempleIsland.DressHole5(templeDresser, frames[i], defs[i]); break;
                     case 6: TempleIsland.DressHole6(templeDresser, frames[i], defs[i]); break;
+                    case 7: VolcanicIsland.DressHole7(volcanicDresser, frames[i], defs[i]); break;
+                    case 8: VolcanicIsland.DressHole8(volcanicDresser, frames[i], defs[i]); break;
                     default: Debug.LogWarning($"[Gamebreak] No dressing for hole {defs[i].number} yet."); break;
                 }
             }
@@ -183,7 +197,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 terrain.transform.SetParent(world, false);
                 terrain.AddComponent<MeshFilter>().sharedMesh = terrainMesh;
                 var tr = terrain.AddComponent<MeshRenderer>();
-                tr.sharedMaterial = hero.Terrain; // TerrainSplat: vertex colour = layer weights (IslandGen.splat)
+                tr.sharedMaterial = islands[i].terrainMaterial ? islands[i].terrainMaterial : hero.Terrain; // TerrainSplat: vertex colour = layer weights (IslandGen.splat)
                 tr.shadowCastingMode = ShadowCastingMode.On;
                 terrain.AddComponent<MeshCollider>().sharedMesh = terrainMesh;
                 terrain.AddComponent<OutOfBoundsSurface>();
@@ -250,8 +264,9 @@ namespace Gamebreak.MiniGolf.Editor.Art
             horizon.SetParent(world, false);
             var rnd = new System.Random(31);
             // Distant islands, mostly visible from the southern (Hole 1) side.
-            // (The 330 degree island moved to 30: the Temple Island now occupies that bearing at about 135 m.)
-            float[] angles = { 200f, 245f, 290f, 30f, 120f };
+            // (The 330 degree island moved to 30: the Temple Island now occupies that bearing at about 135 m. It then moved on to 75:
+            // the Volcanic Island sits at about 128 m on the 20 degree bearing.)
+            float[] angles = { 200f, 245f, 290f, 75f, 120f };
             for (int i = 0; i < angles.Length; i++)
             {
                 float a = angles[i] * Mathf.Deg2Rad, dist = Dresser.Range(rnd, 150f, 240f);

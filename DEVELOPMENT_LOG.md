@@ -170,3 +170,8 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 ## 2026-10-05 (later): Headset verdict on Holes 5-6; Hole 3 is par 4
 
 - Andrew played Holes 5 and 6 in the headset: "They play great. No issues." Only change requested: Hole 3 Jungle Crossing becomes par 4 (done, test updated, 133/133).
+
+## 2026-10-06: Holes 7 and 8 written in the cloud (UNVERIFIED), branch `feature/holes-7-8-lava-falls-caldera-run`
+
+- **Hole 7 "Lava Falls" (par 4)** and **Hole 8 "Caldera Run" (par 4)** on a new Volcanic Island (centre (120, 44)). Hole 7: three tiers, a banked tee putt, a lava-lake causeway, and a new small reusable `VentTransport` (capture, 0.6 s charge, visible 1.6 s ride over a lava river, exit at 2 m/s onto the final green; a hold, no stroke). Hole 8: a crater route (two banks, a 3% climb, a gate lane) rolling into the proven 2 m roulette bowl through a new second curb notch (`RouletteBowlSpec.gate*`), plus an optional launch-ramp jump into the same bowl.
+- No Unity here: syntax-parsed and type-checked against stubs only; `Holes78Tests` (43 new, expected total 176) not run. Details, risks, Unity steps and the headset checklist in `Docs/HOLES_7_8.md`. Hole 9, Graphics Pass 3 and Holes 1-6 untouched.

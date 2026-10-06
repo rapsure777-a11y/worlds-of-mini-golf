@@ -43,10 +43,12 @@ namespace Gamebreak.MiniGolf
                 Hole04(),
                 Hole05(),
                 Hole06(),
+                Hole07(),
+                Hole08(),
             };
         }
 
-        public const string StartCluster = "start", JungleCluster = "jungle", TempleCluster = "temple";
+        public const string StartCluster = "start", JungleCluster = "jungle", TempleCluster = "temple", VolcanicCluster = "volcanic";
 
         /// <summary>
         /// The archipelago: island clusters with their holes, music and position. Holes 1-2 share the Starting Island,
@@ -63,7 +65,7 @@ namespace Gamebreak.MiniGolf
                 // Planned clusters: music is imported, islands and holes are built in later checkpoints/milestones (centre/radius unset).
                 new IslandCluster { id = TempleCluster, displayName = "Temple Island", holes = new[] { 5, 6 }, musicName = "TempleTheme", centre = TempleCentre, radius = 24f,
                     tagline = "Ruins older than the tide", accent = new Color(0.98f, 0.8f, 0.48f) },
-                new IslandCluster { id = "volcanic", displayName = "Volcanic Island", holes = new[] { 7, 8 }, musicName = "VolcanicTheme",
+                new IslandCluster { id = VolcanicCluster, displayName = "Volcanic Island", holes = new[] { 7, 8 }, musicName = "VolcanicTheme", centre = VolcanicCentre, radius = 26f,
                     tagline = "Where the island still breathes fire", accent = new Color(1f, 0.55f, 0.3f) },
                 new IslandCluster { id = "summit", displayName = "Summit Sanctuary", holes = new[] { 9 }, musicName = "SummitTheme",
                     tagline = "The whole archipelago at your feet", accent = new Color(0.82f, 0.93f, 1f) },
@@ -75,6 +77,9 @@ namespace Gamebreak.MiniGolf
 
         /// <summary>World XZ of the Temple Island's centre: east of the Jungle Island across a ~20 m channel.</summary>
         public static readonly Vector2 TempleCentre = new Vector2(130f, -38f);
+
+        /// <summary>World XZ of the Volcanic Island's centre: north-east of the Temple Island across a ~55 m channel.</summary>
+        public static readonly Vector2 VolcanicCentre = new Vector2(120f, 44f);
 
         public static IslandCluster ClusterOf(int holeNumber)
         {
@@ -227,6 +232,63 @@ namespace Gamebreak.MiniGolf
 
         /// <summary>The numbers behind Hole 6: the proven wheel, a bucket every 2 s, a 3 m aqueduct and a 2 x 3 m final green.</summary>
         public static MillHoleSpec Hole6Spec() => new MillHoleSpec();
+
+        /// <summary>Ground height of the Hole 7 plateau on the Volcanic Island.</summary>
+        public const float Hole7Height = 2.4f;
+        /// <summary>Ground height of the Hole 8 plateau on the Volcanic Island.</summary>
+        public const float Hole8Height = 2.6f;
+
+        /// <summary>
+        /// Hole 7, "Lava Falls" (par 4): three tiers on the Volcanic Island. A banked tee putt, a causeway up beside a lava lake to Tier 2, a vent that captures the ball
+        /// and carries it over a lava river to the final green on Tier 3. Built by <see cref="LavaFallsSpec"/>. Local axes: x across, z up the hole.
+        /// </summary>
+        static HoleDefinition Hole07()
+        {
+            var spec = Hole7Spec();
+            var def = new HoleDefinition
+            {
+                number = 7,
+                name = "Lava Falls",
+                par = 4,
+                layout = spec.BuildLayout(),
+                tee = spec.Tee,
+                origin = new Vector3(114f, Hole7Height, 32f),
+                yaw = 0f,
+                cluster = VolcanicCluster,
+                buildExtras = (root, theme, tuning) => spec.BuildPieces(root, tuning, ProvingMaterials.FromTheme(theme)),
+            };
+            def.extraAreas.Add(spec.Footprint);   // the lava lake, river and pool lie beyond the green's own rectangles
+            return def;
+        }
+
+        /// <summary>The numbers behind Hole 7 (all defaults of <see cref="LavaFallsSpec"/>).</summary>
+        public static LavaFallsSpec Hole7Spec() => new LavaFallsSpec();
+
+        /// <summary>
+        /// Hole 8, "Caldera Run" (par 4): a crater route that builds toward a large roulette bowl, entered through a ground-level gate, with an optional launch-ramp
+        /// shortcut that jumps straight into the same bowl. Built by <see cref="CalderaRunSpec"/>. Local axes: x across the tee lane, z along it.
+        /// </summary>
+        static HoleDefinition Hole08()
+        {
+            var spec = Hole8Spec();
+            var def = new HoleDefinition
+            {
+                number = 8,
+                name = "Caldera Run",
+                par = 4,
+                layout = spec.BuildLayout(),
+                tee = spec.Tee,
+                origin = new Vector3(129f, Hole8Height, 40f),
+                yaw = 0f,
+                cluster = VolcanicCluster,
+                buildExtras = (root, theme, tuning) => spec.BuildPieces(root, tuning, ProvingMaterials.FromTheme(theme)),
+            };
+            def.extraAreas.AddRange(spec.ExtraAreas());
+            return def;
+        }
+
+        /// <summary>The numbers behind Hole 8 (all defaults of <see cref="CalderaRunSpec"/>).</summary>
+        public static CalderaRunSpec Hole8Spec() => new CalderaRunSpec();
 
         /// <summary>
         /// Hole 2, "Palm Corner" (DRAFT greybox, pending HQ creative approval). A left-hand dogleg:
