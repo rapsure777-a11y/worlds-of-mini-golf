@@ -32,6 +32,7 @@ Shader "Gamebreak/StylizedLit"
         _WindStrength ("Wind Strength (m)", Float) = 0
         _WindSpeed ("Wind Speed", Float) = 1.2
         [HDR] _EmissionColor ("Emission", Color) = (0, 0, 0, 0)
+        _EmissionMap ("Emission Mask (RGB, default white)", 2D) = "white" {}
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 2
     }
 
@@ -162,7 +163,7 @@ Shader "Gamebreak/StylizedLit"
                 half3 color = albedo * (ambient + light.color * diffuse * lerp(0.6h, 1.0h, occlusion) + translucent)
                             + light.color * spec
                             + _RimColor.rgb * rim
-                            + _EmissionColor.rgb;
+                            + _EmissionColor.rgb * SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, input.uv).rgb;
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1.0h);
             }

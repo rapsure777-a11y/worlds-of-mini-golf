@@ -164,6 +164,7 @@ namespace Gamebreak.MiniGolf
             cupGo.transform.SetParent(root, false);
             Cup = cupGo.AddComponent<Cup>();
             Cup.Configure(Tuning, ProvingKit.MakeFlag(cupGo.transform, materials.flag));
+            if (materials.cupRim) Cup.SetRim(materials.cupRim);
 
             // Rebuilt after the hole was assembled (tuning in the editor): point the hole at the new cup and tee.
             var hole = GetComponent<HoleController>();

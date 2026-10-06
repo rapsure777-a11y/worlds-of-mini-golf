@@ -188,8 +188,10 @@ namespace Gamebreak.MiniGolf
             {
                 int s = verts.Count;
                 verts.Add(a); verts.Add(b); verts.Add(c); verts.Add(d);
-                float len = Vector3.Distance(a, b);
-                uvs.Add(new Vector2(0, 0)); uvs.Add(new Vector2(len, 0)); uvs.Add(new Vector2(len, 1)); uvs.Add(new Vector2(0, 1));
+                // World-space UVs (metres), continuous along a rail: u runs along the rail, v up it; the top face uses the ground plane. Stone-block rails
+                // (Graphics Pass 3) need a pattern that does not restart every 10 cm cell. Geometry is unchanged.
+                Vector2 Uv(Vector3 p) => Mathf.Abs(normal.y) > 0.5f ? new Vector2(p.x, p.z) : Mathf.Abs(normal.x) > 0.5f ? new Vector2(p.z, p.y) : new Vector2(p.x, p.y);
+                uvs.Add(Uv(a)); uvs.Add(Uv(b)); uvs.Add(Uv(c)); uvs.Add(Uv(d));
                 AddTri(tris, verts, s, s + 1, s + 2, normal);
                 AddTri(tris, verts, s, s + 2, s + 3, normal);
             }
@@ -282,7 +284,7 @@ namespace Gamebreak.MiniGolf
 
         /// <param name="deckMat">Material for <see cref="GreenLayout.deckAreas"/> (null: turf).</param>
         public static GameObject CreateGreen(string name, GreenLayout layout, GolfTuning tuning, Transform parent,
-            Material greenMat, Material cupMat, Material wallMat, Material flagMat, Material deckMat, out Cup cup)
+            Material greenMat, Material cupMat, Material wallMat, Material flagMat, Material deckMat, out Cup cup, Material cupRimMat = null)
         {
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
@@ -317,6 +319,7 @@ namespace Gamebreak.MiniGolf
                 cup = cupGo.AddComponent<Cup>();
                 var flag = CreateFlag(cupGo.transform, tuning, flagMat);
                 cup.Configure(tuning, flag);
+                if (cupRimMat) cup.SetRim(cupRimMat);
             }
             return root;
         }

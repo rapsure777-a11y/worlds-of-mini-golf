@@ -30,11 +30,19 @@ namespace Gamebreak.MiniGolf.Editor
             ProjectSetup.EnsureQualityAssets();
             var kit = Art.TropicalKit.Build();
             var hero = Art.HeroKit.Build(kit);
+            Art.Gp3.Run("textures and materials", () => Art.Gp3Materials.Upgrade(kit, hero));   // Graphics Pass 3: turf, stone rails, golf realism, biome materials
             var theme = CreateTropicalTheme();
             // Putting surface and rails use the Blender-baked PBR sets (Hero_Turf: low bump, Hero_Rail: wood). The cup, flag and tee stay on the kit.
             theme.deck = hero.Deck;
             theme.green = hero.Turf; theme.wall = hero.Rail; theme.cup = kit.Cup; theme.flag = kit.Flag; theme.tee = kit.Tee;
             theme.water = kit.Water;
+            if (Art.Gp3Materials.Ready)
+            {
+                // Graphics Pass 3 golf realism: brushed-steel cup liner and rim, a refined putter head (the shaft and grip are unchanged).
+                theme.cup = Art.Gp3Materials.CupLiner; theme.cupRim = Art.Gp3Materials.CupRim;
+                theme.putterHead = Art.Gp3Materials.PutterBody; theme.putterBevel = Art.Gp3Materials.PutterBevel;
+                theme.putterInsert = Art.Gp3Materials.PutterInsert; theme.putterLine = Art.Gp3Materials.PutterLine;
+            }
             // Music clusters come from the archipelago data (TropicalCourse.Clusters): one track per island cluster.
             var musicClusters = new List<MusicCluster>();
             foreach (var c in clusters)
@@ -119,7 +127,7 @@ namespace Gamebreak.MiniGolf.Editor
 
             var putterGo = new GameObject("Putter");
             var putter = putterGo.AddComponent<Putter>();
-            putter.Configure(tuning, right, ball, theme.putterShaft, theme.putterHead, theme.putterGrip);
+            putter.Configure(tuning, right, ball, theme.putterShaft, theme.putterHead, theme.putterGrip, theme.putterBevel, theme.putterInsert, theme.putterLine);
 
             var line = new GameObject("TeleportArc").AddComponent<LineRenderer>();
             line.transform.SetParent(rigGo.transform, false);
@@ -146,6 +154,8 @@ namespace Gamebreak.MiniGolf.Editor
             var rig = rigGo.AddComponent<VRRig>();
             rig.Configure(offset, cam, left, right, putter, course, line, reticle.transform, cardGo);
             course.Configure(TropicalCourse.Name, holes, ball, rig);
+            // Graphics Pass 3: each biome gets its own sun colour and height, ambient, fog and sky (eased in as the player moves between islands).
+            Art.Gp3.Run("biome atmosphere", () => new GameObject("BiomeAtmosphere").AddComponent<BiomeAtmosphere>().Configure(course, sun, kit.Sky));
 
             var fadeMat = new Material(Shader.Find("Gamebreak/Mist")) { name = "TransitionFade" };
             fadeMat.SetColor("_BaseColor", new Color(0f, 0f, 0f, 0f));
@@ -333,6 +343,14 @@ namespace Gamebreak.MiniGolf.Editor
             }
             var m = Mat("Ball", Color.white, 0.75f);
             m.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(texPath));
+            // Graphics Pass 3: golf-ball dimples as a normal map (the stripe stays, so the roll is still visible). Same sphere, same physics.
+            var dimples = Art.Gp3Textures.Load("ball", "normal");
+            if (dimples)
+            {
+                m.SetTexture("_BumpMap", dimples);
+                m.SetFloat("_BumpScale", 1.1f);
+                m.EnableKeyword("_NORMALMAP");
+            }
             return m;
         }
 

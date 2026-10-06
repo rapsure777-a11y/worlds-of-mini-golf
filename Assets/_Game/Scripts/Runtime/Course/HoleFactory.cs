@@ -14,7 +14,7 @@ namespace Gamebreak.MiniGolf
 
             CourseGeometry.CreateGreen("Green", def.layout, tuning, root.transform,
                 theme ? theme.green : null, theme ? theme.cup : null, theme ? theme.wall : null, theme ? theme.flag : null,
-                theme ? theme.deck : null, out Cup cup);
+                theme ? theme.deck : null, out Cup cup, theme ? theme.cupRim : null);
             if (def.buildExtras != null) cup = def.buildExtras(root.transform, theme, tuning);
 
             float teeH = def.layout.Height(def.tee.x, def.tee.y);

@@ -26,6 +26,10 @@ namespace Gamebreak.MiniGolf
         [SerializeField] Material shaftMaterial;
         [SerializeField] Material headMaterial;
         [SerializeField] Material gripMaterial;
+        [Header("Head finish (Graphics Pass 3; any may be null: the head material is used)")]
+        [SerializeField] Material headBevelMaterial;
+        [SerializeField] Material headInsertMaterial;
+        [SerializeField] Material headLineMaterial;
 
         [Tooltip("Hand to head-centre distance, metres.")]
         [SerializeField] float length = -1f;
@@ -48,7 +52,8 @@ namespace Gamebreak.MiniGolf
         /// <summary>Raised after the putter launches the ball. Argument is the ball speed.</summary>
         public event Action<Putter, float> StruckBall;
 
-        Transform m_Pivot, m_Shaft, m_Head, m_Grip;
+        Transform m_Pivot, m_Shaft, m_Head, m_Grip, m_HeadVisual;
+        Vector3 m_VisualBuiltFor;
 
         // Head history for velocity smoothing.
         const int k_History = 9;
@@ -63,10 +68,12 @@ namespace Gamebreak.MiniGolf
         bool m_Overlapping;
         float m_LastHitTime = -10f;
 
-        public void Configure(GolfTuning t, Transform handTransform, GolfBall golfBall, Material shaft, Material head, Material grip)
+        public void Configure(GolfTuning t, Transform handTransform, GolfBall golfBall, Material shaft, Material head, Material grip,
+            Material headBevel = null, Material headInsert = null, Material headLine = null)
         {
             tuning = t; hand = handTransform; ball = golfBall;
             shaftMaterial = shaft; headMaterial = head; gripMaterial = grip;
+            headBevelMaterial = headBevel; headInsertMaterial = headInsert; headLineMaterial = headLine;
         }
 
         void Awake()
@@ -89,7 +96,40 @@ namespace Gamebreak.MiniGolf
             m_Shaft = MakePart(PrimitiveType.Cylinder, "Shaft", shaftMaterial);
             m_Grip = MakePart(PrimitiveType.Cylinder, "Grip", gripMaterial);
             m_Head = MakePart(PrimitiveType.Cube, "Head", headMaterial);
+            // The "Head" cube stays as the strike box's transform (the swing detection reads its pose and Tuning.headSize), but it no longer draws:
+            // the visible head is a separate refined mesh that follows it exactly.
+            var proxyRenderer = m_Head.GetComponent<MeshRenderer>();
+            var proxyFilter = m_Head.GetComponent<MeshFilter>();
+            if (Application.isPlaying) { Destroy(proxyRenderer); Destroy(proxyFilter); } else { DestroyImmediate(proxyRenderer); DestroyImmediate(proxyFilter); }
+            var visual = new GameObject("HeadVisual");
+            visual.transform.SetParent(m_Pivot, false);
+            m_HeadVisual = visual.transform;
+            visual.AddComponent<MeshFilter>();
+            var vr = visual.AddComponent<MeshRenderer>();
+            vr.sharedMaterials = HeadMaterials();
+            vr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             LayoutVisual();
+        }
+
+        Material[] HeadMaterials()
+        {
+            Material Or(Material m) => m ? m : headMaterial;
+            return new[] { headMaterial, Or(headBevelMaterial), Or(headInsertMaterial), Or(headLineMaterial) };
+        }
+
+        void RefreshHeadVisual()
+        {
+            if (!m_HeadVisual) return;
+            var t = Tuning;
+            m_HeadVisual.localPosition = m_Head.localPosition;
+            m_HeadVisual.localRotation = m_Head.localRotation;
+            m_HeadVisual.localScale = Vector3.one;
+            if (m_VisualBuiltFor != t.headSize)
+            {
+                var mf = m_HeadVisual.GetComponent<MeshFilter>();
+                mf.sharedMesh = GolfVisualMeshes.PutterHead(t.headSize);
+                m_VisualBuiltFor = t.headSize;
+            }
         }
 
         Transform MakePart(PrimitiveType type, string name, Material mat)
@@ -119,6 +159,7 @@ namespace Gamebreak.MiniGolf
             m_Head.localPosition = new Vector3(0f, 0f, length);
             m_Head.localRotation = Quaternion.AngleAxis(headTwist, Vector3.forward);
             m_Head.localScale = t.headSize;
+            RefreshHeadVisual();
         }
 
         public void SetAdjustments(float newLength, float newAngle, float newTwist)

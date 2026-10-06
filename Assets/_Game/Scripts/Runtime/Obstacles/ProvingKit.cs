@@ -6,13 +6,13 @@ namespace Gamebreak.MiniGolf
     [System.Serializable]
     public class ProvingMaterials
     {
-        public Material green, wall, cup, flag, wood, metal, tee;
+        public Material green, wall, cup, flag, wood, metal, tee, cupRim;
 
         public static ProvingMaterials FromTheme(WorldTheme theme)
         {
             var m = new ProvingMaterials();
             if (!theme) return m;
-            m.green = theme.green; m.wall = theme.wall; m.cup = theme.cup; m.flag = theme.flag; m.tee = theme.tee;
+            m.green = theme.green; m.wall = theme.wall; m.cup = theme.cup; m.flag = theme.flag; m.tee = theme.tee; m.cupRim = theme.cupRim;
             m.wood = theme.deck ? theme.deck : theme.wall;
             return m;
         }

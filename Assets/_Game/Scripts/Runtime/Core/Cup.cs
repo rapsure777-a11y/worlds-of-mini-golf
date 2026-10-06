@@ -28,6 +28,30 @@ namespace Gamebreak.MiniGolf
             tuning = t; flag = flagObject;
         }
 
+        /// <summary>
+        /// Adds the cup's visual rim (a thin metal ring flush with the turf, see <see cref="GolfVisualMeshes.CupRim"/>). Visual only: no collider, nothing inside the
+        /// pit, so the cup's mechanics are unchanged. Safe to call more than once (the old rim is replaced).
+        /// </summary>
+        public GameObject SetRim(Material rimMaterial)
+        {
+            var old = transform.Find(RimName);
+            if (old)
+            {
+                old.name = "_discarded"; old.gameObject.SetActive(false);     // out of the way at once; destroyed at the end of the frame in play mode
+                if (Application.isPlaying) Destroy(old.gameObject); else DestroyImmediate(old.gameObject);
+            }
+            if (!rimMaterial) return null;
+            var go = new GameObject(RimName);
+            go.transform.SetParent(transform, false);
+            go.AddComponent<MeshFilter>().sharedMesh = GolfVisualMeshes.CupRim(Radius);
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = rimMaterial;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return go;
+        }
+
+        public const string RimName = "CupRim";
+
         public void Track(params GolfBall[] balls) => m_Balls = balls ?? Array.Empty<GolfBall>();
 
         public bool ContainsBall(GolfBall ball)

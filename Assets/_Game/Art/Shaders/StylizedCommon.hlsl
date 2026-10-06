@@ -8,6 +8,7 @@ TEXTURE2D(_BaseMap);    SAMPLER(sampler_BaseMap);
 TEXTURE2D(_DetailTex);  SAMPLER(sampler_DetailTex);
 TEXTURE2D(_BumpMap);    SAMPLER(sampler_BumpMap);
 TEXTURE2D(_MaskMap);    SAMPLER(sampler_MaskMap);
+TEXTURE2D(_EmissionMap); SAMPLER(sampler_EmissionMap);   // Graphics Pass 3: optional emission mask (default white = uniform emission, as before)
 
 CBUFFER_START(UnityPerMaterial)
     float4 _BaseMap_ST;

@@ -20,11 +20,15 @@ namespace Gamebreak.MiniGolf
         [Tooltip("Wooden bridge/boardwalk surface for GreenLayout.deckAreas; null falls back to the green material.")]
         public Material deck;
         public Material tee;
+        [Tooltip("Graphics Pass 3: the thin metal ring round every cup (null: no ring).")]
+        public Material cupRim;
 
         [Header("Ball and putter")]
         public Material ball;
         public Material putterShaft;
         public Material putterHead;
+        [Tooltip("Graphics Pass 3: bright chamfers, the dark top insert and the white alignment line of the putter head (null: the head material).")]
+        public Material putterBevel, putterInsert, putterLine;
         public Material putterGrip;
 
         [Header("Environment")]

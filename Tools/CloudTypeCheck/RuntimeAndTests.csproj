@@ -11,6 +11,10 @@
     <Compile Include="../../Assets/_Game/Tests/PlayMode/Holes56Tests.cs" />
     <Compile Include="../../Assets/_Game/Tests/PlayMode/Holes78Tests.cs" />
     <Compile Include="../../Assets/_Game/Tests/PlayMode/Holes9Tests.cs" />
+    <Compile Include="../../Assets/_Game/Tests/PlayMode/GolfVisualTests.cs" />
+    <Compile Include="../../Assets/_Game/Tests/PlayMode/Gp3PlannerTests.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Rendering/ScenicPlanners.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/Putter.cs" />
     <PackageReference Include="NUnit" Version="3.14.0" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Worlds/*.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Course/HoleDefinition.cs" />
@@ -22,6 +26,8 @@
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/GolfPhysicsBootstrap.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/HoleController.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/Cup.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Rendering/GolfVisualMeshes.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/Runtime/Rendering/BiomeAtmosphere.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/CourseController.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/PlayableSurface.cs" />
     <Compile Include="../../Assets/_Game/Scripts/Runtime/Core/OutOfBoundsSurface.cs" />

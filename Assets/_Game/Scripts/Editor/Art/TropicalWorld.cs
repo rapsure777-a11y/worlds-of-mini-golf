@@ -163,6 +163,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 for (int i = 0; i < defs.Count; i++)
                     if (defs[i].number == 3) { JungleIsland.DressIsland(jungleDresser, frames[i]); break; }
             BuildHorizon(kit, island, world);
+            Gp3.Run("environment dressing", () => Gp3Dressing.Dress(defs, frames, dresser, jungleDresser, templeDresser, volcanicDresser, summitDresser, dressingRoot));
             RemoveObstructions(dressingRoot);
         }
 
