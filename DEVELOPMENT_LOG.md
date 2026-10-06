@@ -175,3 +175,10 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 
 - **Hole 7 "Lava Falls" (par 4)** and **Hole 8 "Caldera Run" (par 4)** on a new Volcanic Island (centre (120, 44)). Hole 7: three tiers, a banked tee putt, a lava-lake causeway, and a new small reusable `VentTransport` (capture, 0.6 s charge, visible 1.6 s ride over a lava river, exit at 2 m/s onto the final green; a hold, no stroke). Hole 8: a crater route (two banks, a 3% climb, a gate lane) rolling into the proven 2 m roulette bowl through a new second curb notch (`RouletteBowlSpec.gate*`), plus an optional launch-ramp jump into the same bowl.
 - No Unity here: syntax-parsed and type-checked against stubs only; `Holes78Tests` (43 new, expected total 176) not run. Details, risks, Unity steps and the headset checklist in `Docs/HOLES_7_8.md`. Hole 9, Graphics Pass 3 and Holes 1-6 untouched.
+
+## 2026-10-05 (evening): Cloud Holes 7-8 integrated (Lava Falls, Caldera Run)
+
+- Merged `feature/holes-7-8-lava-falls-caldera-run` (`1accad0`; fast-forward from `825f8e5`). Compiled clean; scene builds with 8 holes and a Volcanic Island; both players build (0 errors); desktop smoke PASS (8-entry scorecard).
+- One test fix beyond Cloud's work: `TropicalScene_HasJungleIsland_WithHoleThreeOnABridge` still asserted Hole 3 par 3 (the scene had been stale when par 4 went in); now par 4.
+- Full PlayMode suite **176/176** (Holes78Tests 43). Measured: vent captures 3.2-4.0 m/s putts from the causeway foot and rejects fast balls without trapping; ride 2.4 s, exit 1.98 m/s, no extra stroke; Hole 8 gate entry puts every 1.5-4.0 m/s ball in the bowl near the cup; shortcut lands in the bowl from 4.2 m/s, pit (+1) below 3.8, one hole in one at 5.0.
+- Headset pending for Holes 7-8. Hole 9 and Graphics Pass 3 not started.

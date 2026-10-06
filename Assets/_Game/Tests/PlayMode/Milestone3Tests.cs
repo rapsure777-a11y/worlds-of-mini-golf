@@ -669,7 +669,7 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.GreaterOrEqual(course.Holes.Length, 3);
             var hole3 = course.Holes[2];
             Assert.AreEqual(3, hole3.HoleNumber);
-            Assert.AreEqual(3, hole3.Par);
+            Assert.AreEqual(4, hole3.Par);
             var surface = hole3.GetComponentInChildren<PlayableSurface>();
             var renderer = surface.GetComponent<MeshRenderer>();
             Assert.AreEqual(3, renderer.sharedMaterials.Length, "the surface should carry the extra bridge-deck material");
