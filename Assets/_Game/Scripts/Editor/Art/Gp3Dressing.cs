@@ -36,9 +36,10 @@ namespace Gamebreak.MiniGolf.Editor.Art
             {
                 int n = defs[i].number; var f = frames[i]; var def = defs[i];
                 var dr = n <= 2 ? start : n <= 4 ? jungle : n <= 6 ? temple : n <= 8 ? volcanic : summit;
-                if (dr == null || n == 9) continue;    // Hole 9 keeps its rail-less identity and a clear Altar: no fence there
+                if (dr == null) continue;
                 bool shrine = n == 5 || n == 6;
-                Gp3.Run($"fence hole {n}", () => Fence(dr, def, f, gp, shrine, n));
+                Gp3.Run($"rail coping hole {n}", () => RailCoping(dr, def, f, gp, n));
+                if (n != 9) Gp3.Run($"fence hole {n}", () => Fence(dr, def, f, gp, shrine, n));   // Hole 9 keeps its rail-less identity and a clear Altar: no fence there
             }
             Gp3.Run("lava re-skin", () => ReskinLava(root));
             if (summit != null) Gp3.Run("cloud sea", () => CloudSea(summit, gp));
@@ -113,6 +114,91 @@ namespace Gamebreak.MiniGolf.Editor.Art
             r.lightProbeUsage = LightProbeUsage.Off; r.reflectionProbeUsage = ReflectionProbeUsage.Off;
             GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
             return go;
+        }
+
+        /// <summary>
+        /// Graphics Pass 3B: dresses the course rails so they read as built masonry instead of a flat strip: a chamfered coping stone on top of the wall, laid in short
+        /// stones with joints, and a taller cut-stone post at every run end and corner. Visual only: the wall mesh and its collider are untouched, everything sits on top of
+        /// the existing wall (never inside the playing area), and open edges (lips, jumps) get nothing.
+        /// </summary>
+        static void RailCoping(Dresser d, HoleDefinition def, HoleFrame f, Transform gp, int number)
+        {
+            var stoneMat = Gp3Materials.Ready ? (Gp3Materials.Limestone ? Gp3Materials.Limestone : Gp3Materials.Sandstone) : null;
+            if (!stoneMat) return;
+            var l = def.layout;
+            var holder = new GameObject($"RailCoping_Hole{number}").transform; holder.SetParent(gp, false);
+            float th = l.wallThickness, wh = l.wallHeight, step = l.cell;
+            var rects = l.areas;
+            bool Covered(Vector2 p) { foreach (var r in rects) if (p.x > r.xMin + 1e-4f && p.x < r.xMax - 1e-4f && p.y > r.yMin + 1e-4f && p.y < r.yMax - 1e-4f) return true; return false; }
+            bool IsOpen(Vector2 p) { foreach (var r in l.openEdges) if (p.x >= r.xMin - 1e-3f && p.x <= r.xMax + 1e-3f && p.y >= r.yMin - 1e-3f && p.y <= r.yMax + 1e-3f) return true; return false; }
+            Vector3 W(Vector2 p, float up) { var w = f.L2(p.x, p.y); return new Vector3(w.x, f.origin.y + l.Height(p.x, p.y) + up, w.y); }
+            var placed = new HashSet<Vector2Int>();
+            foreach (var r in rects)
+            {
+                var sides = new[]
+                {
+                    (new Vector2(r.xMin, r.yMin), Vector2.right, Vector2.down, r.width),
+                    (new Vector2(r.xMin, r.yMax), Vector2.right, Vector2.up, r.width),
+                    (new Vector2(r.xMin, r.yMin), Vector2.up, Vector2.left, r.height),
+                    (new Vector2(r.xMax, r.yMin), Vector2.up, Vector2.right, r.height),
+                };
+                foreach (var (origin, dir, outward, length) in sides)
+                {
+                    int n = Mathf.Max(1, Mathf.RoundToInt(length / step));
+                    float runStart = -1f;
+                    for (int i = 0; i <= n; i++)
+                    {
+                        float s = Mathf.Min(length, i * step);
+                        Vector2 mid = origin + dir * Mathf.Min(length, (i + 0.5f) * step) + outward * 0.03f;
+                        Vector2 onEdge = origin + dir * Mathf.Min(length, (i + 0.5f) * step);
+                        bool open = i < n && !Covered(mid) && !IsOpen(onEdge);
+                        if (open && runStart < 0f) runStart = i * step;
+                        if ((!open || i == n) && runStart >= 0f)
+                        {
+                            float runEnd = s;
+                            if (runEnd - runStart > 0.05f) CopingRun(d, f, holder, l, origin, dir, outward, runStart, runEnd, th, wh, stoneMat, W, placed);
+                            runStart = -1f;
+                        }
+                    }
+                }
+            }
+        }
+
+        static void CopingRun(Dresser d, HoleFrame f, Transform holder, GreenLayout l, Vector2 origin, Vector2 dir, Vector2 outward, float s0, float s1, float th, float wh,
+            Material mat, System.Func<Vector2, float, Vector3> W, HashSet<Vector2Int> placed)
+        {
+            float len = s1 - s0;
+            int stones = Mathf.Max(1, Mathf.RoundToInt(len / 0.55f));
+            float sl = len / stones;
+            Vector2 off = outward * (th * 0.5f);
+            for (int k = 0; k < stones; k++)
+            {
+                float a = s0 + k * sl, b = a + sl;
+                Vector2 pa = origin + dir * a + off, pb = origin + dir * b + off;
+                Vector3 wa = W(pa, wh + 0.012f), wb = W(pb, wh + 0.012f);
+                Vector3 axis = wb - wa;
+                if (axis.sqrMagnitude < 1e-6f) continue;
+                var key = new Vector2Int(Mathf.RoundToInt((wa.x + wb.x) * 50f), Mathf.RoundToInt((wa.z + wb.z) * 50f));
+                if (!placed.Add(key)) continue;
+                float jitter = 0.012f * ((k * 7 + Mathf.RoundToInt(origin.x * 10f + origin.y * 10f)) % 3);
+                var go = ChamferMesh.Block("Coping", holder, (wa + wb) * 0.5f + Vector3.up * (0.014f + jitter * 0.5f), Quaternion.LookRotation(axis.normalized, Vector3.up),
+                    new Vector3(th + 0.05f, 0.032f + jitter, axis.magnitude - 0.018f), 0.011f, mat, 1.1f);
+                GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+            }
+            // A cut-stone post with a capped head at each end of the run (the wall's own end, standing proud of it).
+            foreach (float sEnd in new[] { s0, s1 })
+            {
+                Vector2 p = origin + dir * sEnd + outward * (th * 0.5f);
+                Vector3 w = W(p, 0f);
+                var key = new Vector2Int(Mathf.RoundToInt(w.x * 50f) + 100000, Mathf.RoundToInt(w.z * 50f));
+                if (!placed.Add(key)) continue;
+                float ph = wh + 0.075f, pw = th + 0.075f;
+                var rot = Quaternion.Euler(0f, f.yaw, 0f);
+                var post = ChamferMesh.Block("RailPost", holder, w + Vector3.up * (ph * 0.5f - 0.02f), rot, new Vector3(pw, ph, pw), 0.014f, mat, 1.1f);
+                var cap = ChamferMesh.Block("RailPostCap", holder, w + Vector3.up * (ph - 0.005f), rot, new Vector3(pw + 0.035f, 0.035f, pw + 0.035f), 0.012f, mat, 1.1f);
+                GameObjectUtility.SetStaticEditorFlags(post, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+                GameObjectUtility.SetStaticEditorFlags(cap, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+            }
         }
 
         static void Fence(Dresser d, HoleDefinition def, HoleFrame f, Transform gp, bool shrine, int number)

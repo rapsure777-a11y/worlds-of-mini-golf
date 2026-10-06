@@ -143,7 +143,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // The sanctuary (Graphics Pass 3B): a modelled sun-gate temple behind the Altar and a ceremonial gate over the Landing. Both stand wholly beyond the playable
             // surfaces: the sanctuary's stair starts 0.25 m past the Altar's east rail, and the gate's piers stand outside the lane with the arch crown well above head height.
             float ax = (s.AltarWestX + s.AltarEastX) * 0.5f, az = (s.AltarZ0 + s.AltarZ1) * 0.5f, ay = s.AltarHeight;
-            HeroAt(d, root, f, "HeroSanctuary", s.AltarEastX + 0.25f + 1.65f, az, ay - 0.04f, 270f);
+            var sanctuary = HeroAt(d, root, f, "HeroSanctuary", s.AltarEastX + 0.25f + 1.65f, az, ay - 0.04f, 270f);
+            d.Footing(sanctuary, root, s_StoneDark, 0.1f, 0.5f);
             HeroAt(d, root, f, "HeroSummitGate", s.LandingEndX, az, s.SummitLevel - 0.03f, 270f);
 
             // The summit cliff: tall, exposed rock beyond the sanctuary and along the east side of the mountain.

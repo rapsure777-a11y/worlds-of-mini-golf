@@ -82,6 +82,25 @@ namespace Gamebreak.MiniGolf.Editor.Art
             return go;
         }
 
+        /// <summary>
+        /// Gives a placed hero model a stone footing so it never floats: a chamfered block spanning the model's footprint (its renderer bounds, inset), from below the lowest
+        /// ground under it up into the model's base. Visual only. Use for solid, axis-aligned buildings (never for gates or arches the player passes under).
+        /// </summary>
+        public GameObject Footing(GameObject model, Transform parent, Material mat, float inset = 0.06f, float overlap = 0.35f)
+        {
+            if (!model || !mat) return null;
+            var rs = model.GetComponentsInChildren<Renderer>();
+            if (rs.Length == 0) return null;
+            var b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
+            float lowest = float.MaxValue;
+            for (int i = 0; i <= 4; i++) for (int j = 0; j <= 4; j++)
+                lowest = Mathf.Min(lowest, Ground(Mathf.Lerp(b.min.x, b.max.x, i / 4f), Mathf.Lerp(b.min.z, b.max.z, j / 4f)));
+            float bottom = lowest - 0.5f, top = b.min.y + overlap;
+            if (top <= bottom + 0.05f) return null;
+            var size = new Vector3(b.size.x - 2f * inset, top - bottom, b.size.z - 2f * inset);
+            return ChamferMesh.Block(model.name + "_Footing", parent, new Vector3(b.center.x, (top + bottom) * 0.5f, b.center.z), Quaternion.identity, size, 0.04f, mat, 1.6f);
+        }
+
         /// <summary>A saved variant of a triplanar rock material with its own moss/grass cap coverage and optional tint (cached by name under the kit's Materials folder).</summary>
         public static Material RockVariant(Material src, string name, float topCoverage, Color? tint = null)
         {
