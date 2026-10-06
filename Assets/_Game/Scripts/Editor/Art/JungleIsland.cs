@@ -125,6 +125,24 @@ namespace Gamebreak.MiniGolf.Editor.Art
             d.Model("HeroMesa_1", f.L(24f, -6f), f.Yaw(200f), 1.1f, sink: 0.5f, shadows: false, parent: root, seat: true, lods: true, seatExtraSink: 0.4f);
             d.Model("HeroMesa_0", f.L(22f, 16f), f.Yaw(300f), 0.9f, sink: 0.5f, shadows: false, parent: root, seat: true, lods: true, seatExtraSink: 0.4f);
 
+            // ---- Graphics Pass 3B: weathered ruins half swallowed by the jungle, and layered cliffs lining the ravine so it reads as a canyon.
+            foreach (var (x, z, model, yaw, sc) in new[] { (-7.0f, 8.5f, "HeroRuinArch", 90f, 1.15f), (-6.0f, 14.0f, "HeroRuinPillar_A", 20f, 1.1f), (12.0f, 2.0f, "HeroRuinPillar_B", 140f, 1.15f), (13.0f, 12.0f, "HeroRuinWall", 200f, 1.1f), (-5.5f, -2.5f, "HeroRuinPillar_B", 300f, 1.0f) })
+            {
+                var rp = f.L(x, z);
+                if (d.Island.ChannelWeight(rp.x, rp.z) > 0.1f || !d.IsFree(new Vector2(rp.x, rp.z)) || d.Ground(rp.x, rp.z) < 0.3f) continue;
+                if (d.HasModel(model)) d.Model(model, rp, f.Yaw(yaw), sc, snap: true, sink: 0.15f, parent: root, cull: 0.006f);
+            }
+            string[] kitCliffs = { "HeroCliff_A", "HeroCliff_B", "HeroCliff_C" };
+            for (int i = 0; i < 14; i++)
+            {
+                float zz = -9f + i * 2.5f, side = i % 2 == 0 ? -1f : 1f;
+                float xx = BridgeAxisX + side * (RavineHalfWidth + 2.6f + (float)rnd.NextDouble() * 1.6f);
+                var cp = f.L(xx, zz);
+                if (!d.IsFree(new Vector2(cp.x, cp.z)) || d.Ground(cp.x, cp.z) < 0.2f) continue;
+                if (Mathf.Abs(zz - 4.6f) < 3.0f) continue;   // keep the bridge approaches open
+                d.Crag(kitCliffs[i % 3], cp, Yaw360(), 0.55f + (float)rnd.NextDouble() * 0.35f, null, root, lods: true, extraSink: 0.2f);
+            }
+
             // ---- Vines hanging over the ravine rims.
             if (d.HasModel("HeroVines_0"))
                 foreach (var (x, z) in new[] { (2.0f, 0.6f), (2.1f, 8.4f), (8.5f, 0.2f), (8.4f, 9.0f), (2.2f, 3.0f), (8.3f, 6.9f) })

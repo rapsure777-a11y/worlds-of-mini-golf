@@ -418,20 +418,42 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.IsNotNull(dressing, "hole 9 dressing");
             var s = TropicalCourse.Hole9Spec();
             int bad = 0; var report = new System.Text.StringBuilder();
+            int checkedRenderers = 0;
             foreach (var r in dressing.GetComponentsInChildren<MeshRenderer>())
             {
                 if (r.name.StartsWith("Body_") || r.name.Contains("Glow") || r.name.Contains("Cloud") || r.name.Contains("Water") || r.name.Contains("Waterfall") || r.name.Contains("Cliff") || r.name.Contains("Sun") || r.name.Contains("Sign") || r.name.Contains("Torch")) continue;
-                var b = r.bounds;
+                var mf = r.GetComponent<MeshFilter>();
+                if (!mf || !mf.sharedMesh) continue;
+                Vector3[] verts; var m = r.transform.localToWorldMatrix;
+                if (mf.sharedMesh.isReadable) verts = mf.sharedMesh.vertices;
+                else
+                {
+                    // Static batching combines scene meshes into unreadable ones: read the source model instead (same local space as the instance).
+                    verts = null;
+#if UNITY_EDITOR
+                    string model = r.transform.root == r.transform ? null : null;
+                    var owner = r.transform; while (owner.parent && owner.parent.name != "Hole09_Dressing") owner = owner.parent;
+                    foreach (var o in UnityEditor.AssetDatabase.LoadAllAssetRepresentationsAtPath($"Assets/_Game/Art/Generated/Models/{owner.name}.fbx"))
+                        if (o is Mesh sm && sm.name.EndsWith(r.name.Contains("__") ? r.name.Substring(r.name.LastIndexOf("__")) : "?")) { verts = sm.vertices; break; }
+#endif
+                    if (verts == null) continue;
+                }
                 foreach (var a in def.layout.areas)
                 {
                     var rect = new Rect(def.origin.x + a.xMin, def.origin.z + a.yMin, a.width, a.height);
-                    float top = def.origin.y + s.AltarHeight;
-                    bool overXZ = b.min.x < rect.xMax && b.max.x > rect.xMin && b.min.z < rect.yMax && b.max.z > rect.yMin;
-                    // Over the green and low enough to be in a standing player's way (the lintel's underside is above 2.3 m over the lane).
-                    if (overXZ && b.min.y < def.origin.y + s.SummitLevel + 2.3f && b.max.y > def.origin.y)
-                    { bad++; report.AppendLine($"{r.name} overlaps green area {a}"); }
+                    int inside = 0; checkedRenderers++;
+                    // Any vertex over the green's footprint and low enough to be in a standing player's way (the lintel's underside is above 2.3 m over the lane)
+                    // means a model is standing on, or hanging in front of, the playable surface.
+                    for (int i = 0; i < verts.Length; i += 2)
+                    {
+                        var w = m.MultiplyPoint3x4(verts[i]);
+                        if (w.x > rect.xMin + 0.02f && w.x < rect.xMax - 0.02f && w.z > rect.yMin + 0.02f && w.z < rect.yMax - 0.02f && w.y > def.origin.y - 0.05f && w.y < def.origin.y + s.SummitLevel + 2.3f)
+                            inside++;
+                    }
+                    if (inside > 0) { bad++; report.AppendLine($"{r.name}: {inside} vertices over green area {a}"); }
                 }
             }
+            Assert.Greater(checkedRenderers, 8, "the test must really inspect the sanctuary and the gate meshes, not skip them");
             Assert.AreEqual(0, bad, "hole 9 dressing over the green:\n" + report);
         }
 

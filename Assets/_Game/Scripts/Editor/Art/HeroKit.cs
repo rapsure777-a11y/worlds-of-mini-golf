@@ -231,6 +231,29 @@ namespace Gamebreak.MiniGolf.Editor.Art
             return dot >= 0 ? s.Substring(0, dot) : s;
         }
 
+        /// <summary>Graphics Pass 3 materials by name suffix (architecture and rock kits): Limestone, LimestoneWet, Sandstone, Basalt, Gold, Rope, Banner, Ember, Brazier,
+        /// and the triplanar RockLimestone / RockBasalt / RockSandstone. Null when the suffix is unknown or the Gp3 materials are not built.</summary>
+        static Material Gp3Suffix(string s)
+        {
+            if (!Gp3Materials.Ready) return null;
+            switch (s)
+            {
+                case "Limestone": return Gp3Materials.Limestone;
+                case "LimestoneWet": return Gp3Materials.LimestoneWet;
+                case "Sandstone": return Gp3Materials.Sandstone;
+                case "Basalt": return Gp3Materials.Basalt;
+                case "Gold": return Gp3Materials.Gold;
+                case "Rope": return Gp3Materials.Rope;
+                case "Banner": return Gp3Materials.Banner;
+                case "Ember": return Gp3Materials.Ember;
+                case "Brazier": return Gp3Materials.Brazier;
+                case "RockLimestone": return Gp3Materials.RockLimestone;
+                case "RockBasalt": return Gp3Materials.RockBasalt;
+                case "RockSandstone": return Gp3Materials.RockSandstoneWarm;
+                default: return null;
+            }
+        }
+
         // ------------------------------------------------------------------ LODs
 
         readonly Dictionary<string, Mesh> m_RockLods = new Dictionary<string, Mesh>();
@@ -333,7 +356,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 // "__Suffix" may only survive on the mesh name.
                 string suffix = Suffix(r.gameObject.name);
                 if (suffix == "") suffix = Suffix(r.GetComponent<MeshFilter>().sharedMesh.name);
-                if (!m_BySuffix.TryGetValue(suffix, out var mat))
+                if (!m_BySuffix.TryGetValue(suffix, out var mat)) mat = Gp3Suffix(suffix);
+                if (!mat)
                 {
                     Debug.LogWarning($"[Gamebreak] {model}/{r.gameObject.name}: no material suffix, using Paint.");
                     mat = Paint;

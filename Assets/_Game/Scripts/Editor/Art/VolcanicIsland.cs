@@ -68,14 +68,14 @@ namespace Gamebreak.MiniGolf.Editor.Art
             s_Lava = Mat("Volcanic_Lava", new Color(1f, 0.38f, 0.07f), 0.3f, 1.6f);
             s_LavaFall = Mat("Volcanic_LavaFall", new Color(1f, 0.55f, 0.12f), 0.3f, 2.0f);
             s_Ember = Mat("Volcanic_Ember", new Color(1f, 0.25f, 0.05f), 0.2f, 1.2f);
+            if (Gp3Materials.Ready) { s_Basalt = Gp3Materials.Basalt; s_BasaltDark = Gp3Materials.Basalt; }
         }
 
         /// <summary>A decorative block (no collider) from hole space: x/z centre, y span (hole-space heights), size across and along.</summary>
         static GameObject Block(Transform root, HoleFrame f, string name, float x, float z, float sizeX, float sizeZ, float y0, float y1, Material mat, float yawOffset = 0f)
         {
             if (y1 - y0 < 0.01f) return null;
-            var go = ProvingKit.Box(name, root, Vector3.zero, Quaternion.Euler(0f, f.yaw + yawOffset, 0f), new Vector3(sizeX, y1 - y0, sizeZ), mat, collider: false);
-            go.transform.position = f.L(x, z) + Vector3.up * ((y0 + y1) * 0.5f);   // f.L already includes the hole origin's height
+            var go = ChamferMesh.Block(name, root, f.L(x, z) + Vector3.up * ((y0 + y1) * 0.5f), Quaternion.Euler(0f, f.yaw + yawOffset, 0f), new Vector3(sizeX, y1 - y0, sizeZ), Mathf.Min(0.045f, Mathf.Min(sizeX, y1 - y0, sizeZ) * 0.2f), mat, 1.6f);
             return go;
         }
 
@@ -151,13 +151,44 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // A glowing stone ring over the mouth so the receiver reads from the causeway.
             Block(root, f, "MouthGlow", s.Mouth.x, s.Mouth.y, s.dishRadius * 2f + 0.1f, s.dishRadius * 2f + 0.1f, s.Tier2Height - s.dishDepth - 0.012f, s.Tier2Height - s.dishDepth - 0.006f, s_Ember);
 
-            // A few silhouettes: tall basalt spires on the far side of the river, and torches along the tiers.
-            foreach (var (x, z, h) in new[] { (-3.2f, s.Tier2EndZ + 1.0f, 4.5f), (-3.8f, s.Tier3FrontZ + 1.5f, 6.0f), (6.2f, s.Tier3EndZ + 0.5f, 5.2f) })
-                Block(root, f, "Spire", x, z, 1.4f, 1.4f, -0.6f, h, s_BasaltDark, 20f);
+            // Silhouettes (Graphics Pass 3B): clusters of hexagonal basalt columns across the river, chunky crater blocks round the Falls cliff, torches along the tiers.
+            var basalt = Gp3Materials.Ready ? Gp3Materials.RockBasalt : null;
+            foreach (var (x, z, sc, model) in new[] { (-3.8f, s.Tier2EndZ + 1.0f, 0.85f, "HeroBasalt_C"), (-4.4f, s.Tier3FrontZ + 1.5f, 1.0f, "HeroBasalt_A"), (6.8f, s.Tier3EndZ + 0.5f, 0.95f, "HeroBasalt_C"), (7.6f, s.Tier2EndZ - 1.0f, 0.8f, "HeroBasalt_B") })
+                d.Crag(model, f.L(x, z), x * 31f, sc, basalt, root, lods: false);
+            var rr = new System.Random(707);
+            for (int i = 0; i < 5; i++)
+                d.Crag(i % 2 == 0 ? "HeroCrater_A" : "HeroCrater_B", f.L(cliffX + 3.6f + (float)rr.NextDouble() * 2.2f, (s.Tier2EndZ + s.Tier3EndZ) * 0.5f - 3.5f + i * 1.9f), (float)rr.NextDouble() * 360f, 1.0f + (float)rr.NextDouble() * 0.5f, basalt, root);
+            for (int i = 0; i < 7; i++)
+                d.Crag(i % 2 == 0 ? "HeroRock_A" : "HeroStone_C", f.L(-s.PadHalf - 1.4f - (float)rr.NextDouble() * 2.2f, -1f + i * 2.4f), (float)rr.NextDouble() * 360f, 0.8f + (float)rr.NextDouble() * 0.7f, basalt, root, lods: false);
+            Crust(d, root, 7, basalt, 71);
             foreach (float z in new[] { 1.0f, 3.0f })
                 d.Torch(f.L(-s.PadHalf - 0.6f, z));
             d.Torch(f.L(s.CrossEastX + 0.6f, s.CrossEndZ + 1.0f));
             d.Torch(f.L(s.CrossEastX + 0.6f, s.Tier2EndZ - 0.5f));
+        }
+
+        /// <summary>Broken crust on the lava: dark slabs set into each lava box (visual only, away from every edge), so the molten surface reads as cracked rock.</summary>
+        static void Crust(Dresser d, Transform root, int holeNumber, Material basalt, int seed)
+        {
+            var rnd = new System.Random(seed);
+            foreach (var hole in Object.FindObjectsByType<HoleController>(FindObjectsSortMode.None))
+            {
+                if (hole.HoleNumber != holeNumber) continue;
+                foreach (var r in hole.GetComponentsInChildren<MeshRenderer>(true))
+                {
+                    if (!r.transform.parent || r.transform.parent.name != "Lava") continue;
+                    var b = r.bounds;
+                    if (b.size.x < 1.2f || b.size.z < 1.2f) continue;
+                    int n = Mathf.Clamp(Mathf.RoundToInt(b.size.x * b.size.z * 0.35f), 2, 9);
+                    for (int i = 0; i < n; i++)
+                    {
+                        float x = Mathf.Lerp(b.min.x + 0.45f, b.max.x - 0.45f, (float)rnd.NextDouble());
+                        float z = Mathf.Lerp(b.min.z + 0.45f, b.max.z - 0.45f, (float)rnd.NextDouble());
+                        d.Crag(i % 2 == 0 ? "HeroStone_C" : "HeroStone_A", new Vector3(x, b.max.y - 0.05f, z), (float)rnd.NextDouble() * 360f, 0.9f + (float)rnd.NextDouble() * 0.9f,
+                            basalt, root, lods: false, yStretch: 0.45f, shadows: false, ground: false);
+                    }
+                }
+            }
         }
 
         // ------------------------------------------------------------------ hole 8: Caldera Run
@@ -184,16 +215,30 @@ namespace Gamebreak.MiniGolf.Editor.Art
             }
             Block(root, f, "Body_Gate", (s.ColumnEastX + s.GateLaneEndX) * 0.5f, (s.GateLaneZ0 + s.GateLaneZ1) * 0.5f, s.GateLaneEndX - s.ColumnEastX - 0.1f, s.GateLaneZ1 - s.GateLaneZ0 - 0.1f, -0.6f, s.GateLevel - 0.03f, s_Basalt);
 
-            // The caldera: a rim of big dark blocks round the whole hole, rising toward the north (the volcano side), so the course sits in a crater.
+            // The caldera (Graphics Pass 3B): a ring of chunky basalt crater blocks round the whole hole, rising toward the north (the volcano side), with columnar basalt
+            // clusters set into it, so the course sits inside a designed volcanic arena.
             Vector2 c = s.BowlCentre;
-            const int rim = 22; const float rimR = 8.0f;
+            var basalt = Gp3Materials.Ready ? Gp3Materials.RockBasalt : null;
+            var rr = new System.Random(808);
+            const int rim = 18;
             for (int i = 0; i < rim; i++)
             {
-                float a = 360f * i / rim, ra = a * Mathf.Deg2Rad;
+                float a = 360f * i / rim + (float)rr.NextDouble() * 6f, ra = a * Mathf.Deg2Rad;
                 float north = Mathf.Clamp01(0.5f + 0.5f * Mathf.Sin(ra));
-                float h = 0.9f + 2.6f * north + 0.4f * ((i * 7) % 3);
-                Block(root, f, "Rim", c.x + Mathf.Cos(ra) * rimR * 1.15f, c.y + Mathf.Sin(ra) * rimR, 2.6f, 1.6f, -0.6f, h, i % 2 == 0 ? s_BasaltDark : s_Basalt, -a + 90f);
+                float rad = 11.5f + (float)rr.NextDouble() * 1.4f;
+                d.Crag(i % 2 == 0 ? "HeroCrater_A" : "HeroCrater_B", f.L(c.x + Mathf.Cos(ra) * rad * 1.2f, c.y + Mathf.Sin(ra) * rad), -a + 90f + (float)rr.NextDouble() * 40f, 0.6f + 0.7f * north + (float)rr.NextDouble() * 0.2f, basalt, root, extraSink: 0.3f);
             }
+            for (int i = 0; i < 7; i++)
+            {
+                float ra = (i / 7f * 360f + 20f) * Mathf.Deg2Rad;
+                d.Crag(i % 2 == 0 ? "HeroBasalt_C" : "HeroBasalt_A", f.L(c.x + Mathf.Cos(ra) * 9.6f * 1.2f, c.y + Mathf.Sin(ra) * 9.6f), (float)rr.NextDouble() * 360f, 0.85f + (float)rr.NextDouble() * 0.35f, basalt, root, lods: false);
+            }
+            for (int i = 0; i < 12; i++)   // scree at the foot of the wall
+            {
+                float ra = (float)rr.NextDouble() * Mathf.PI * 2f;
+                d.Crag(i % 3 == 0 ? "HeroRock_B" : "HeroStone_A", f.L(c.x + Mathf.Cos(ra) * 7.4f * 1.2f, c.y + Mathf.Sin(ra) * 7.4f), (float)rr.NextDouble() * 360f, 0.6f + (float)rr.NextDouble() * 0.6f, basalt, root, lods: false);
+            }
+            Crust(d, root, 8, basalt, 81);
             // Lava seams: glowing patches on the crater floor outside the rails, and a glow so the climb and the bowl read.
             foreach (var (x, z, w, l) in new[] { (s.WestX - 1.6f, 3.0f, 1.0f, 3.2f), (s.WestX - 1.4f, 7.0f, 1.2f, 1.8f), (c.x + s.BowlRadius + 1.4f, c.y - 1.5f, 1.2f, 2.4f) })
                 Block(root, f, "LavaSeam", x, z, w, l, -0.55f, -0.38f, s_Lava);

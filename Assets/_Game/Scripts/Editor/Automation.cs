@@ -195,6 +195,18 @@ namespace Gamebreak.MiniGolf.Editor
                     shots.Add(($"{n}_i_ravine_below", t.TransformPoint(new Vector3(5.2f, -0.2f, -1.5f)), t.TransformPoint(new Vector3(5.2f, 1.6f, 4.6f))));
                 }
             }
+            // Graphics Pass 3B showcase views: each named hero asset from a 3/4 angle (the first instance in the scene), framed by its renderer bounds.
+            foreach (var (nm, dist) in new[] { ("HeroShipwreck", 1.6f), ("HeroTempleFacade", 1.7f), ("HeroSanctuary", 1.7f), ("HeroSummitGate", 2.3f), ("HeroMillHouse", 2.0f), ("HeroRuinArch", 2.2f), ("Waterwheel", 3.4f) })
+            {
+                var obj = GameObject.Find(nm);
+                if (!obj) continue;
+                var rs = obj.GetComponentsInChildren<Renderer>();
+                if (rs.Length == 0) continue;
+                var bb = rs[0].bounds; foreach (var r in rs) bb.Encapsulate(r.bounds);
+                var c = bb.center; float rad = bb.extents.magnitude * dist;
+                shots.Add(($"showcase_{nm}_a", c + new Vector3(-0.7f, 0.35f, -0.7f).normalized * rad, c));
+                shots.Add(($"showcase_{nm}_b", c + new Vector3(0.8f, 0.3f, 0.6f).normalized * rad, c));
+            }
             // Archipelago: both islands and the channel pier from the air.
             shots.Add(("archipelago_aerial", new Vector3(30f, 70f, -120f), new Vector3(32f, 0f, -38f)));
             shots.Add(("archipelago_from_start_island", new Vector3(14f, 3.2f, -22f), new Vector3(58f, 2f, -60f)));

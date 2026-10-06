@@ -452,6 +452,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             d.Model("HeroBoulders_1", f.L(-3.9f, 3.3f), f.Yaw(-50f), 0.65f, sink: 0.1f, colliders: true, outOfBounds: true, parent: root, seat: true, lods: true, yStretch: 1.45f, seatExtraSink: 0.12f);
             d.Model("HeroBoulders_1", f.L(5.6f, 4.4f), f.Yaw(80f), 0.7f, sink: 0.1f, colliders: true, outOfBounds: true, parent: root, seat: true, lods: true, yStretch: 1.45f, seatExtraSink: 0.12f);
             PlaceSeaArch(d, f, root);
+            PlaceShipwreck(d, f, root);
 
             // ---- Waterfall, plunge pool and mist.
             BuildWaterfall(d, f, root, wall);
@@ -565,6 +566,43 @@ namespace Gamebreak.MiniGolf.Editor.Art
             pos.y = seabed + 1.2f - 0.15f;
             // The arch is the fidelity standard for the level: LOD0 stays active out to a long distance (lodScale 0.45).
             d.Model("HeroSeaArch", pos, f.Yaw(90f), 1f, snap: false, shadows: false, parent: root, lods: true, lodScale: 0.45f);
+        }
+
+        /// <summary>
+        /// Graphics Pass 3B: a beached shipwreck on the sand east of Hole 1 (the hero landmark of the Starting Island), with a few rock-kit stacks in the shallows.
+        /// The keel is seated on the shore line found by scanning the terrain; the hull lies along the shore.
+        /// </summary>
+        static void PlaceShipwreck(Dresser d, HoleFrame f, Transform root)
+        {
+            if (!d.HasModel("HeroShipwreck")) return;
+            Vector3 best = Vector3.zero; bool found = false;
+            foreach (float z in new[] { -9f, -12f, 9f, -6f, 12f })
+            {
+                float prev = float.MaxValue;
+                for (float x = 5f; x < 26f && !found; x += 0.25f)
+                {
+                    var c = f.L(x, z);
+                    float g = d.Ground(c.x, c.z);
+                    if (g < 0.1f && g > -0.4f && prev - g > 0.01f) { best = new Vector3(c.x - 0.6f * 0f, Mathf.Max(g, -0.05f), c.z); found = true; }
+                    prev = g;
+                }
+                if (found) break;
+            }
+            if (!found)
+            {
+                var sb = new System.Text.StringBuilder("[Gamebreak] Shipwreck: no beach found east of Hole 1. Ground along x at z=-9: ");
+                for (float x = 3f; x < 24f; x += 1.5f) { var c = f.L(x, -9f); sb.Append($"{x:F1}:{d.Ground(c.x, c.z):F2} "); }
+                Debug.LogWarning(sb.ToString()); return;
+            }
+            // The ship's long axis (model X) runs along the shore (hole-local z); its open side faces the lane.
+            d.Model("HeroShipwreck", best + Vector3.up * 0.18f, f.Yaw(90f), 1f, snap: false, sink: 0f, parent: root, shadows: true, seat: false);
+            var rr = new System.Random(311);
+            for (int i = 0; i < 5; i++)
+            {
+                Vector3 off = Quaternion.Euler(0f, f.yaw, 0f) * new Vector3(2.5f + (float)rr.NextDouble() * 4f, 0f, -5f + (float)rr.NextDouble() * 10f);
+                var pos = best + off; pos.y = d.Ground(pos.x, pos.z);
+                d.Crag(i % 2 == 0 ? "HeroRock_B" : "HeroStone_C", pos, (float)rr.NextDouble() * 360f, 0.7f + (float)rr.NextDouble() * 0.7f, null, root, lods: false);
+            }
         }
 
         // ------------------------------------------------------------------ waterfall

@@ -229,6 +229,18 @@ namespace Gamebreak.MiniGolf
         [ContextMenu("Rebuild visual")]
         public void RebuildVisual() { m_Initialised = true; BuildVisual(); }
 
+        /// <summary>A chamfered decorative box for the wheel's look (no collider; the edges catch the light).</summary>
+        static GameObject VBox(string name, Transform parent, Vector3 pos, Quaternion rot, Vector3 size, Material mat, float chamfer = 0.012f)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = pos; go.transform.localRotation = rot;
+            go.AddComponent<MeshFilter>().sharedMesh = ChamferMesh.Box(size, Mathf.Min(chamfer, Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * 0.3f), 0.8f);
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = mat;
+            return go;
+        }
+
         void BuildVisual()
         {
             var old = transform.Find("WheelVisual");
@@ -239,7 +251,9 @@ namespace Gamebreak.MiniGolf
             Material wood = materials != null ? (materials.wood ? materials.wood : materials.wall) : null;
             float rimR = spec.pocketRadius + 0.11f, hw = spec.wheelHalfWidth, ballR = GolfTuning.Default.ballRadius;
 
-            ProvingKit.AxialCylinder("Axle", pivot, Vector3.zero, Quaternion.identity, 0.06f, hw * 2f + 0.2f, wood);
+            ProvingKit.AxialCylinder("Axle", pivot, Vector3.zero, Quaternion.identity, 0.07f, hw * 2f + 0.3f, wood);
+            for (int hubSide = -1; hubSide <= 1; hubSide += 2)
+                ProvingKit.AxialCylinder("Hub", pivot, Vector3.forward * (hubSide * hw), Quaternion.identity, 0.14f, 0.1f, wood);
             const int seg = 28;
             float chord = 2f * rimR * Mathf.Sin(Mathf.PI / seg) + 0.01f;
             for (int side = -1; side <= 1; side += 2)
@@ -248,13 +262,13 @@ namespace Gamebreak.MiniGolf
                 {
                     float a = 360f * k / seg;
                     Vector3 p = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad), 0f) * rimR + Vector3.forward * (side * hw);
-                    ProvingKit.Box("Rim", pivot, p, Quaternion.Euler(0f, 0f, a + 90f), new Vector3(chord, 0.05f, 0.05f), wood, false);
+                    VBox("Rim", pivot, p, Quaternion.Euler(0f, 0f, a + 90f), new Vector3(chord, 0.085f, 0.075f), wood, 0.014f);
                 }
                 for (int k = 0; k < spec.bucketCount * 2; k++)
                 {
                     float a = 360f * k / (spec.bucketCount * 2);
                     Vector3 p = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad), 0f) * (rimR * 0.5f) + Vector3.forward * (side * hw);
-                    ProvingKit.Box("Spoke", pivot, p, Quaternion.Euler(0f, 0f, a), new Vector3(rimR, 0.03f, 0.03f), wood, false);
+                    VBox("Spoke", pivot, p, Quaternion.Euler(0f, 0f, a), new Vector3(rimR, 0.055f, 0.045f), wood, 0.01f);
                 }
             }
             float bw = hw * 0.62f;
@@ -265,16 +279,16 @@ namespace Gamebreak.MiniGolf
                 Vector3 radial = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad), 0f);
                 Vector3 tang = new Vector3(-radial.y, radial.x, 0f);
                 float inner = spec.pocketRadius + ballR;               // radius of the tray floor's inner face
-                ProvingKit.Box("BucketFloor", pivot, radial * (inner + 0.012f), rot, new Vector3(0.024f, 0.16f, bw * 2f), wood, false);
+                VBox("BucketFloor", pivot, radial * (inner + 0.012f), rot, new Vector3(0.024f, 0.16f, bw * 2f), wood);
                 // A scoop: the wall on the leading side (the way the bucket travels) is left out so the ball can roll in;
                 // the trailing wall is the one the ball rests against while it is carried up.
                 float trail = -Direction;
-                ProvingKit.Box("BucketBack", pivot, radial * (inner - 0.01f) + tang * (trail * 0.08f), rot, new Vector3(0.09f, 0.02f, bw * 2f), wood, false);
+                VBox("BucketBack", pivot, radial * (inner - 0.01f) + tang * (trail * 0.08f), rot, new Vector3(0.09f, 0.02f, bw * 2f), wood);
                 for (int sgn = -1; sgn <= 1; sgn += 2)
-                    ProvingKit.Box("BucketCheek", pivot, radial * (inner - 0.005f) + Vector3.forward * (sgn * (bw - 0.01f)), rot, new Vector3(0.07f, 0.17f, 0.02f), wood, false);
+                    VBox("BucketCheek", pivot, radial * (inner - 0.005f) + Vector3.forward * (sgn * (bw - 0.01f)), rot, new Vector3(0.07f, 0.17f, 0.02f), wood);
                 for (int side = -1; side <= 1; side += 2)
-                    ProvingKit.Box("BucketArm", pivot, radial * (inner + 0.012f) + Vector3.forward * (side * (bw + (hw - bw) * 0.5f)), rot,
-                        new Vector3(0.04f, 0.04f, hw - bw), wood, false);
+                    VBox("BucketArm", pivot, radial * (inner + 0.012f) + Vector3.forward * (side * (bw + (hw - bw) * 0.5f)), rot,
+                        new Vector3(0.04f, 0.04f, hw - bw), wood);
             }
         }
     }

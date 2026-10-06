@@ -60,13 +60,13 @@ namespace Gamebreak.MiniGolf.Editor.Art
             s_Cloud = Mat("Summit_Cloud", new Color(0.97f, 0.95f, 0.95f), 0.1f, 0.35f);
             s_Gold = Mat("Summit_Gold", new Color(0.97f, 0.78f, 0.3f), 0.5f, 0.8f);
             s_Sun = Mat("Summit_Sun", new Color(1f, 0.62f, 0.25f), 0.2f, 2.5f);
+            if (Gp3Materials.Ready) { s_Stone = Gp3Materials.Limestone; s_StoneDark = Gp3Materials.Sandstone; }
         }
 
         static GameObject Block(Transform root, HoleFrame f, string name, float x, float z, float sizeX, float sizeZ, float y0, float y1, Material mat, float yawOffset = 0f)
         {
             if (y1 - y0 < 0.01f) return null;
-            var go = ProvingKit.Box(name, root, Vector3.zero, Quaternion.Euler(0f, f.yaw + yawOffset, 0f), new Vector3(sizeX, y1 - y0, sizeZ), mat, collider: false);
-            go.transform.position = f.L(x, z) + Vector3.up * ((y0 + y1) * 0.5f);   // f.L already includes the hole origin's height
+            var go = ChamferMesh.Block(name, root, f.L(x, z) + Vector3.up * ((y0 + y1) * 0.5f), Quaternion.Euler(0f, f.yaw + yawOffset, 0f), new Vector3(sizeX, y1 - y0, sizeZ), Mathf.Min(0.04f, Mathf.Min(sizeX, y1 - y0, sizeZ) * 0.2f), mat, 1.6f);
             return go;
         }
 
@@ -77,6 +77,14 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var sign = d.Place("SignSmall", d.Kit.Solid, pos, Quaternion.LookRotation((pos - start).WithY(0f)).eulerAngles.y, 1f, parent: root);
             TropicalWorld.AddSignText(sign.transform, new Vector3(0f, 0.65f + 0.225f, -0.032f), new Vector2(0.76f, 0.42f),
                 $"<size=46><b>HOLE {def.number}</b></size>\n{def.name}  ·  Par {def.par}", 34);
+        }
+
+        /// <summary>A hero model placed in hole space (x, z on the ground plane, y a hole-space height); faceLocalYaw 270 turns the front to face -x.</summary>
+        static GameObject HeroAt(Dresser d, Transform root, HoleFrame f, string model, float x, float z, float y, float faceLocalYaw, float scale = 1f)
+        {
+            if (!d.HasModel(model)) return null;
+            var pos = f.L(x, z); pos.y = f.origin.y + y;
+            return d.Model(model, pos, f.Yaw(faceLocalYaw), scale, snap: false, parent: root);
         }
 
         static void KeepOuts(Dresser d, HoleFrame f, HoleDefinition def)
@@ -132,25 +140,39 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Block(root, f, "Body_BridgeSpine", (s.LandingEndX + s.BridgeEndX) * 0.5f, (s.FinalZ0 + s.FinalZ1) * 0.5f, s.BridgeEndX - s.LandingEndX, 0.5f, -3.0f, s.SummitLevel - 0.1f, s_StoneDark);
             Block(root, f, "Body_Altar", (s.AltarWestX + s.AltarEastX) * 0.5f, (s.AltarZ0 + s.AltarZ1) * 0.5f, s.AltarEastX - s.AltarWestX - 0.1f, s.AltarZ1 - s.AltarZ0 - 0.1f, -3.0f, s.AltarHeight - 0.08f, s_Stone);
 
-            // The sanctuary above and behind the Altar: stepped tiers, pillars, an arch and a golden disc, so the destination is the highest thing in sight.
+            // The sanctuary (Graphics Pass 3B): a modelled sun-gate temple behind the Altar and a ceremonial gate over the Landing. Both stand wholly beyond the playable
+            // surfaces: the sanctuary's stair starts 0.25 m past the Altar's east rail, and the gate's piers stand outside the lane with the arch crown well above head height.
             float ax = (s.AltarWestX + s.AltarEastX) * 0.5f, az = (s.AltarZ0 + s.AltarZ1) * 0.5f, ay = s.AltarHeight;
-            // Everything stands beyond the Altar's east rail (0.2 m clear), never over the green: a ball resting at the back must not look buried in stone.
-            float t1x = s.AltarEastX + 0.2f + 1.6f;
-            Block(root, f, "Sanctuary_Tier1", t1x, az, 3.2f, 5.2f, -3.0f, ay + 1.2f, s_Stone);
-            Block(root, f, "Sanctuary_Tier2", t1x + 0.4f, az, 2.4f, 3.8f, ay + 1.2f, ay + 2.4f, s_Stone);
-            Block(root, f, "Sanctuary_Tier3", t1x + 0.8f, az, 1.6f, 2.4f, ay + 2.4f, ay + 3.4f, s_Stone);
-            var disc = ProvingKit.AxialCylinder("SanctuaryDisc", root, Vector3.zero, Quaternion.Euler(0f, f.yaw + 90f, 0f), 0.9f, 0.12f, s_Gold);
-            disc.transform.position = f.L(t1x - 0.88f, az) + Vector3.up * (ay + 2.0f);
-            foreach (float dz in new[] { -1.6f, 1.6f })
-            {
-                Block(root, f, "AltarPillar", s.AltarEastX + 0.3f, az + dz, 0.4f, 0.4f, ay, ay + 2.0f, s_Stone);
-                Block(root, f, "BridgePillar", s.LandingEndX, az + dz * 0.75f, 0.35f, 0.35f, s.SummitLevel, s.SummitLevel + 2.35f, s_Stone);
-            }
-            Block(root, f, "BridgeLintel", s.LandingEndX, az, 0.4f, 3.0f, s.SummitLevel + 2.35f, s.SummitLevel + 2.6f, s_Stone);   // the arch (above head height, so a standing player never has it in their face) that frames the bridge
+            HeroAt(d, root, f, "HeroSanctuary", s.AltarEastX + 0.25f + 1.65f, az, ay - 0.04f, 270f);
+            HeroAt(d, root, f, "HeroSummitGate", s.LandingEndX, az, s.SummitLevel - 0.03f, 270f);
 
             // The summit cliff: tall, exposed rock beyond the sanctuary and along the east side of the mountain.
-            Block(root, f, "SummitCliff", ax + 6.5f, az + 1.0f, 5.0f, 12f, -3.0f, ay + 6.5f, s_StoneDark);
-            Block(root, f, "WestCliff", s.Left - 2.6f, 12f, 3.0f, 14f, -3.0f, 3.2f, s_StoneDark);
+            // The summit massif (Graphics Pass 3B): the rock kit as layered cliffs behind the sanctuary and along the approach, spires rising out of the cloud sea.
+            var rockMat = Gp3Materials.Ready ? Dresser.RockVariant(Gp3Materials.RockLimestone, "Summit_Rock", 0.88f) : null;
+            var rr = new System.Random(905);
+            string[] cliffs = { "HeroCliff_A", "HeroCliff_B", "HeroCliff_C" };
+            for (int i = 0; i < 9; i++)   // the high backdrop behind the sanctuary (x beyond the stair and the pillars)
+            {
+                float zz = az - 9.5f + i * 2.35f + (float)(rr.NextDouble() - 0.5) * 0.8f, xx = s.AltarEastX + 9.6f + (float)rr.NextDouble() * 2.5f;
+                d.Crag(cliffs[i % 3], f.L(xx, zz), (float)rr.NextDouble() * 360f, 1.5f + (float)rr.NextDouble() * 0.9f, rockMat, root, lods: true, extraSink: 0.2f);
+            }
+            for (int i = 0; i < 6; i++)   // a second, taller rank further back so the mountain climbs
+                d.Crag(cliffs[(i + 1) % 3], f.L(s.AltarEastX + 14.5f + (float)rr.NextDouble() * 2f, az - 6f + i * 2.4f), (float)rr.NextDouble() * 360f, 2.3f + (float)rr.NextDouble() * 0.8f, rockMat, root, lods: true, extraSink: 0.3f);
+            for (int i = 0; i < 6; i++)   // the west wall along the climb and the Shrine Lane
+                d.Crag(cliffs[i % 3], f.L(s.Left - 5.6f - (float)rr.NextDouble() * 1.4f, 4.5f + i * 2.8f), (float)rr.NextDouble() * 360f, 1.0f + (float)rr.NextDouble() * 0.45f, rockMat, root, lods: true, extraSink: 0.2f);
+            for (int i = 0; i < 14; i++)  // boulders and stones at the feet of the cliffs
+            {
+                float a = (float)rr.NextDouble();
+                var pos = i % 2 == 0 ? f.L(s.Left - 2.2f - (float)rr.NextDouble() * 1.2f, 2f + a * 18f) : f.L(s.AltarEastX + 3.2f + (float)rr.NextDouble() * 1.5f, az - 7f + a * 14f);
+                d.Crag(i % 3 == 0 ? "HeroRock_A" : i % 3 == 1 ? "HeroRock_C" : "HeroStone_C", pos, (float)rr.NextDouble() * 360f, 0.9f + (float)rr.NextDouble() * 0.7f, rockMat, root, lods: false);
+            }
+            for (int i = 0; i < 7; i++)   // spires standing out of the cloud sea around the island
+            {
+                float ang = (i / 7f) * Mathf.PI * 2f + 0.4f, dist = 38f + (float)rr.NextDouble() * 14f;
+                var c = d.Island.centre; var sp = new Vector3(c.x + Mathf.Cos(ang) * dist, -1.2f, c.y + Mathf.Sin(ang) * dist);
+                if (TropicalCourse.Clusters().Exists(cl => cl.id != TropicalCourse.SummitCluster && Vector2.Distance(new Vector2(sp.x, sp.z), cl.centre) < cl.radius + 16f)) continue;
+                var go = d.Crag(i % 2 == 0 ? "HeroSpire_A" : "HeroSpire_B", sp, (float)rr.NextDouble() * 360f, 1.2f + (float)rr.NextDouble() * 0.8f, rockMat, root, lods: true, ground: false);
+            }
 
             // Water: a waterfall pouring into the chasm from the cliff face, a spill over its south end, and a cloud bank under the Sky Bridge.
             float chx = (s.OverlookEastX + s.ClimbWestX) * 0.5f;

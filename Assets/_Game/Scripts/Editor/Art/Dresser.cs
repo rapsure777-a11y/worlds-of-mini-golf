@@ -82,6 +82,35 @@ namespace Gamebreak.MiniGolf.Editor.Art
             return go;
         }
 
+        /// <summary>A saved variant of a triplanar rock material with its own moss/grass cap coverage and optional tint (cached by name under the kit's Materials folder).</summary>
+        public static Material RockVariant(Material src, string name, float topCoverage, Color? tint = null)
+        {
+            if (!src) return null;
+            string path = $"{TropicalKit.Root}/Materials/{name}.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (!m) { m = new Material(src); AssetDatabase.CreateAsset(m, path); }
+            else m.CopyPropertiesFromMaterial(src);
+            m.SetFloat("_TopCoverage", topCoverage);
+            if (tint.HasValue && m.HasProperty("_Tint")) m.SetColor("_Tint", tint.Value);
+            m.enableInstancing = true;
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        /// <summary>
+        /// A piece of the Graphics Pass 3B rock kit (HeroCliff_*, HeroRock_*, HeroStone_*, HeroSpire_*, HeroBasalt_*, HeroCrater_*), seated on the ground and re-skinned with
+        /// <paramref name="rockMaterial"/> (triplanar limestone / sandstone / basalt). Visual only.
+        /// </summary>
+        public GameObject Crag(string model, Vector3 pos, float yaw, float scale, Material rockMaterial, Transform parent, bool lods = true, float yStretch = 1f, float extraSink = 0.1f, bool shadows = true, bool ground = true)
+        {
+            if (!HasModel(model)) return null;
+            var go = Model(model, pos, yaw, scale, snap: ground, sink: 0.1f, parent: parent, seat: ground, lods: lods, yStretch: yStretch, seatExtraSink: extraSink, shadows: shadows);
+            if (rockMaterial)
+                foreach (var r in go.GetComponentsInChildren<MeshRenderer>())
+                    if (r.sharedMaterial == Hero.Rock) r.sharedMaterial = rockMaterial;
+            return go;
+        }
+
         /// <summary>Hero rock by size class: "small" / "medium" boulder clusters (scaled down) or "large" mesas. Cheap by default: LODs, no shadows for small.</summary>
         public GameObject Rock(string kind, Vector3 pos, float yaw, float scale, Transform parent, bool collider = false, bool outOfBounds = false, int variant = 0)
         {
