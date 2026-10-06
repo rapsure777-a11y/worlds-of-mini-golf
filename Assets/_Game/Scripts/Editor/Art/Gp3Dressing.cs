@@ -180,7 +180,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
         static void ReskinLava(Transform root)
         {
             if (!Gp3Materials.Ready || !Gp3Materials.Lava) return;
-            foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
+            foreach (var r in Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))   // the lava boxes live under the holes, not the dressing root
             {
                 var m = r.sharedMaterial;
                 if (m && (m.name == "Volcanic_Lava" || m.name == "Volcanic_LavaFall")) r.sharedMaterial = Gp3Materials.Lava;
@@ -193,12 +193,19 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var holder = new GameObject("CloudSea").transform; holder.SetParent(gp, false);
             var rnd = new System.Random(909);
             var mat = Gp3Materials.Cloud2 ? Gp3Materials.Cloud2 : d.Kit.Cloud;
+            var clusters = TropicalCourse.Clusters();
             for (int i = 0; i < 18; i++)
             {
-                float a = i / 18f * Mathf.PI * 2f + Dresser.Range(rnd, -0.2f, 0.2f), dist = Dresser.Range(rnd, 46f, 78f);
+                float a = i / 18f * Mathf.PI * 2f + Dresser.Range(rnd, -0.2f, 0.2f), dist = Dresser.Range(rnd, 56f, 80f);
                 var pos = new Vector3(d.Island.centre.x + Mathf.Cos(a) * dist, Dresser.Range(rnd, -1.5f, 1.2f), d.Island.centre.y + Mathf.Sin(a) * dist);
-                float s = Dresser.Range(rnd, 14f, 26f);
-                var go = Part(d, d.Kit[$"Cloud{rnd.Next(0, 4)}"], "SeaCloud", mat, pos, new Vector3(s, s * 0.35f, s), Quaternion.Euler(0f, Dresser.Range(rnd, 0f, 360f), 0f), holder);
+                float s = Dresser.Range(rnd, 0.8f, 1.3f);   // the kit cloud meshes are already 18-36 m across: this is a scale, not metres
+                float half = 18f * s;
+                // Never let a cloud sit on (or swallow) another island: keep clear of every cluster (the Summit's own included) by its radius plus the cloud's.
+                bool clear = true;
+                foreach (var c in clusters)
+                    if (Vector2.Distance(new Vector2(pos.x, pos.z), c.centre) < c.radius + half + 8f) { clear = false; break; }
+                if (!clear) continue;
+                var go = Part(d, d.Kit[$"Cloud{rnd.Next(0, 4)}"], "SeaCloud", mat, pos, new Vector3(s, s * 0.45f, s), Quaternion.Euler(0f, Dresser.Range(rnd, 0f, 360f), 0f), holder);
                 go.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
             }
         }

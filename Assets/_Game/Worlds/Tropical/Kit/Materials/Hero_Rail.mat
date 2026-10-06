@@ -26,43 +26,47 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: d9f3b452232be6541a8e08a52659cd90, type: 3}
-        m_Scale: {x: 0.7, y: 0.9}
+        m_Texture: {fileID: 2800000, guid: ae512a21a63d4a3419df91db6cebc8d9, type: 3}
+        m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: 668bdf21b3805d24a80525316007daac, type: 3}
+        m_Texture: {fileID: 2800000, guid: 7705b8f964932e44c9fb8ae148721d94, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MaskMap:
-        m_Texture: {fileID: 2800000, guid: 80fa52d80110a1747b49671ecdab5b1a, type: 3}
+        m_Texture: {fileID: 2800000, guid: e5440969a316e534292097c637722660, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _AlphaClip: 0
     - _AmbientBoost: 1
-    - _BumpScale: 1
+    - _BumpScale: 1.2
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailScale: 1
     - _DetailStrength: 0
-    - _OcclusionStrength: 0.8
+    - _OcclusionStrength: 0.85
     - _RimPower: 3
-    - _Smoothness: 0.5
-    - _Specular: 0.12
+    - _Smoothness: 0.18
+    - _Specular: 0.06
     - _Translucency: 0
     - _UseMaskMap: 1
     - _UseNormalMap: 1
     - _WindSpeed: 1.2
     - _WindStrength: 0
     m_Colors:
-    - _BaseColor: {r: 1.05, g: 0.95, b: 0.85, a: 1}
+    - _BaseColor: {r: 1.04, g: 0.98, b: 0.92, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _RimColor: {r: 1, g: 0.95, b: 0.85, a: 0.12}
+    - _RimColor: {r: 1, g: 0.95, b: 0.8, a: 0.08}
     - _TranslucencyColor: {r: 0.8, g: 1, b: 0.39999998, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

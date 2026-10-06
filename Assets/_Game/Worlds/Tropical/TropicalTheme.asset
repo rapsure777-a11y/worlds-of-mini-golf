@@ -16,13 +16,17 @@ MonoBehaviour:
   inspiration: 'Crash Bandicoot 4: It''s About Time (style reference only).'
   green: {fileID: 2100000, guid: 00ff2acbe73614c488558767c225f03d, type: 2}
   wall: {fileID: 2100000, guid: a5af6daa9ab188141bf8bb0f74f5b39a, type: 2}
-  cup: {fileID: 2100000, guid: 00a02ee572fdca84290c425bb3515e89, type: 2}
+  cup: {fileID: 2100000, guid: 0d59c46dc0bd28e49acfd2494824f5e9, type: 2}
   flag: {fileID: 2100000, guid: 49408e720db6ec443a4373ebe3a6ff16, type: 2}
   deck: {fileID: 2100000, guid: 69e61d9e429cebc4f8c5664d33016917, type: 2}
   tee: {fileID: 2100000, guid: fe9d30e398dfd0c42afe064e2857cd85, type: 2}
+  cupRim: {fileID: 2100000, guid: a34b7cae451ae194883e3dfa65518da5, type: 2}
   ball: {fileID: 2100000, guid: 3edb15d90867a2a4fa1b68c6572e8095, type: 2}
   putterShaft: {fileID: 2100000, guid: fd49e39cab3a55446a920ff9d4182ce9, type: 2}
-  putterHead: {fileID: 2100000, guid: 506ea77d9e2575545a82db173eea7b94, type: 2}
+  putterHead: {fileID: 2100000, guid: 5c33d84c149b24e459b3327bf8fb9c8e, type: 2}
+  putterBevel: {fileID: 2100000, guid: 517b4c6acf2cc29409db200b876a6cf9, type: 2}
+  putterInsert: {fileID: 2100000, guid: 95c56cbb28cb7b644b51ea9a85bd21ca, type: 2}
+  putterLine: {fileID: 2100000, guid: 31fc757b111a04c47bde414561207fa3, type: 2}
   putterGrip: {fileID: 2100000, guid: 253e84a519f00084f80de9a3cb13004c, type: 2}
   ground: {fileID: 2100000, guid: 1ad4671e1dd31fe41b221118eef0d0af, type: 2}
   water: {fileID: 2100000, guid: 329fa43f1ee237040bfa28e754e8ad55, type: 2}

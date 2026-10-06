@@ -190,7 +190,9 @@ namespace Gamebreak.MiniGolf
                 verts.Add(a); verts.Add(b); verts.Add(c); verts.Add(d);
                 // World-space UVs (metres), continuous along a rail: u runs along the rail, v up it; the top face uses the ground plane. Stone-block rails
                 // (Graphics Pass 3) need a pattern that does not restart every 10 cm cell. Geometry is unchanged.
-                Vector2 Uv(Vector3 p) => Mathf.Abs(normal.y) > 0.5f ? new Vector2(p.x, p.z) : Mathf.Abs(normal.x) > 0.5f ? new Vector2(p.z, p.y) : new Vector2(p.x, p.y);
+                // The projection follows the quad's real plane (some corner faces are declared with a different facing hint than their geometry).
+                Vector3 gn = Vector3.Cross(b - a, d - a).normalized;
+                Vector2 Uv(Vector3 p) => Mathf.Abs(gn.y) > 0.5f ? new Vector2(p.x, p.z) : Mathf.Abs(gn.x) > 0.5f ? new Vector2(p.z, p.y) : new Vector2(p.x, p.y);
                 uvs.Add(Uv(a)); uvs.Add(Uv(b)); uvs.Add(Uv(c)); uvs.Add(Uv(d));
                 AddTri(tris, verts, s, s + 1, s + 2, normal);
                 AddTri(tris, verts, s, s + 2, s + 3, normal);

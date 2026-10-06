@@ -162,12 +162,22 @@ namespace Gamebreak.MiniGolf
                     }
                 }
             }
+            // A post planted at a concave corner can land on (or inside) a neighbouring rectangle's rail: drop any that is not clear of every green.
+            posts.RemoveAll(p => OutsideDistance(rects, p.position) < 0.2f);
             if (allowed != null) posts.RemoveAll(p => !allowed(p.position));
             // Two sides meeting at a corner each plant a post there: keep one of any pair closer than 35 cm.
             for (int i = posts.Count - 1; i >= 0; i--)
                 for (int j = 0; j < i; j++)
                     if ((posts[i].position - posts[j].position).sqrMagnitude < 0.35f * 0.35f) { posts.RemoveAt(i); break; }
             return posts;
+        }
+
+        /// <summary>Chebyshev distance from p to the nearest green rectangle (negative inside).</summary>
+        static float OutsideDistance(List<Rect> rects, Vector2 p)
+        {
+            float best = float.MaxValue;
+            foreach (var r in rects) best = Mathf.Min(best, Mathf.Max(Mathf.Max(r.xMin - p.x, p.x - r.xMax), Mathf.Max(r.yMin - p.y, p.y - r.yMax)));
+            return best;
         }
 
         static void AddRun(List<Post> posts, Vector2 origin, Vector2 dir, Vector2 normal, float s0, float s1, float outset, float spacing, ref int run)

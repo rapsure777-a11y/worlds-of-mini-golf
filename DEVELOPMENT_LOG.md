@@ -211,3 +211,15 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - Branch `feature/graphics-pass-3-tropical-adventure`. Gameplay geometry untouched. See `Docs/GRAPHICS_PASS_3.md`.
 - New: procedural PBR textures (`ProceduralPbr`, `Gp3Art`), putter head and cup rim meshes (`GolfVisualMeshes`), `BiomeAtmosphere`, `ScatterPlanner`/`FencePlanner`, `Gp3Dressing` wired into `TropicalWorld.Build` via `Gp3.Run`. `StylizedLit` gained `_EmissionMap`. Rail UVs are world-space.
 - Not yet done: water tweaks, distant vistas, per-biome rock swaps, vines, banners, waterwheel and sun-wheel upgrades. Needs Local compile, scene rebuild, tests and headset review.
+
+## 2026-10-06: Graphics Pass 3A validation (Cloud `f143896`), local branch `validate/graphics-pass-3a`
+
+- Fetched `feature/graphics-pass-3-tropical-adventure` (tip verified, all eight reference PNGs present). Compiled clean on the first import; scene builds with 9 holes; no `Gp3.Run` step failed or was skipped.
+- Real problems found in the renders and fixed (Cloud could not see them):
+  - **Cloud sea scale:** `CloudSea` scaled the 18-36 m kit cloud meshes by 14-26x, giving clouds hundreds of metres wide that filled the view on most holes (flat grey sky, "inside a cloud" aerials). Now 0.8-1.3x, and a cloud is skipped if it would sit on any island cluster.
+  - **Lava re-skin** searched only the dressing root, so the gameplay lava boxes stayed flat orange; now scene-wide, all lava is the emissive material.
+  - **Rail UVs:** corner-post faces were projected by a facing hint that differs from their geometry (smeared stone). Projection now follows the real quad plane (`CourseGeometry.BuildWalls`; geometry unchanged).
+  - **Fence planner:** a post could land exactly on a neighbouring rail at concave corners (hole 2); posts within 0.2 m of any green are dropped.
+  - **Test fix:** the putter proxy test asserted a `Destroy()` in the same frame; it now waits one frame.
+- Tests 221/221 (203 baseline + 18 GP3). `HardSwing_ClampedToMaxBallSpeed` failed once in one full run and passed alone and in two reruns (timing-dependent swept test, like `Swing_StrikesBallAlongFace`). Both players build; desktop smoke PASS. Scene: 2886 mesh renderers, 3899k triangles (was 2983 / 3911k before the fixes). VR frame cost not yet measured.
+- Gameplay geometry untouched (only wall UVs and visual dressing). Not merged into `milestone-3-island-hopping`.

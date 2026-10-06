@@ -208,6 +208,7 @@ namespace Gamebreak.MiniGolf.Tests
                 putter.transform.rotation = Quaternion.LookRotation(Vector3.down, Vector3.left);
                 putter.transform.position = new Vector3(0f, 1f, 0f);
                 putter.Step(Time.time);
+                yield return null;   // Destroy() of the proxy renderer takes effect at the end of the frame
 
                 var head = putter.GetComponentsInChildren<Transform>().First(t => t.name == "Head");
                 var visual = putter.GetComponentsInChildren<Transform>().First(t => t.name == "HeadVisual");
