@@ -25,11 +25,11 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var gp = new GameObject("Gp3Dressing").transform;
             gp.SetParent(root, false);
             var biomes = new List<Biome>();
-            if (start != null) biomes.Add(new Biome { name = "Start", dresser = start, centre = start.Island.centre, radius = start.Island.radius * 0.92f, seed = 301, recipe = Recipe(16, Palms, 0.45f) });
-            if (jungle != null) biomes.Add(new Biome { name = "Jungle", dresser = jungle, centre = jungle.Island.centre, radius = jungle.Island.radius * 0.95f, seed = 302, recipe = Recipe(26, Palms, 0.5f, dense: true) });
-            if (temple != null) biomes.Add(new Biome { name = "Temple", dresser = temple, centre = temple.Island.centre, radius = temple.Island.radius * 0.9f, seed = 303, recipe = Recipe(10, Palms, 0.25f, flowers: true) });
-            if (volcanic != null) biomes.Add(new Biome { name = "Volcanic", dresser = volcanic, centre = volcanic.Island.centre, radius = volcanic.Island.radius * 0.85f, seed = 304, recipe = Sparse(6) });
-            if (summit != null) biomes.Add(new Biome { name = "Summit", dresser = summit, centre = summit.Island.centre, radius = summit.Island.radius * 0.8f, seed = 305, recipe = Recipe(7, new string[0], 0f, flowers: true) });
+            if (start != null) biomes.Add(new Biome { name = "Start", dresser = start, centre = start.Island.centre, radius = start.Island.radius * 0.92f, seed = 301, recipe = Recipe(22, Palms, 0.5f) });
+            if (jungle != null) biomes.Add(new Biome { name = "Jungle", dresser = jungle, centre = jungle.Island.centre, radius = jungle.Island.radius * 0.95f, seed = 302, recipe = Recipe(32, Palms, 0.55f, dense: true) });
+            if (temple != null) biomes.Add(new Biome { name = "Temple", dresser = temple, centre = temple.Island.centre, radius = temple.Island.radius * 0.9f, seed = 303, recipe = Recipe(26, Palms, 0.45f, flowers: true) });
+            if (volcanic != null) biomes.Add(new Biome { name = "Volcanic", dresser = volcanic, centre = volcanic.Island.centre, radius = volcanic.Island.radius * 0.85f, seed = 304, recipe = Recipe(11, Palms, 0.16f) });
+            if (summit != null) biomes.Add(new Biome { name = "Summit", dresser = summit, centre = summit.Island.centre, radius = summit.Island.radius * 0.8f, seed = 305, recipe = Recipe(14, Palms, 0.2f, flowers: true) });
 
             foreach (var b in biomes) Gp3.Run($"foliage {b.name}", () => Foliage(b, defs, frames, gp));
             for (int i = 0; i < defs.Count; i++)
@@ -287,11 +287,43 @@ namespace Gamebreak.MiniGolf.Editor.Art
         static void ReskinLava(Transform root)
         {
             if (!Gp3Materials.Ready || !Gp3Materials.Lava) return;
+            var cube = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+            var cache = new Dictionary<Vector3Int, Mesh>();
             foreach (var r in Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))   // the lava boxes live under the holes, not the dressing root
             {
                 var m = r.sharedMaterial;
-                if (m && (m.name == "Volcanic_Lava" || m.name == "Volcanic_LavaFall")) r.sharedMaterial = Gp3Materials.Lava;
+                if (!m || (m.name != "Volcanic_Lava" && m.name != "Volcanic_LavaFall")) continue;
+                var mf = r.GetComponent<MeshFilter>();
+                if (mf && mf.sharedMesh && mf.sharedMesh.name.StartsWith("Cube"))
+                {
+                    // A primitive cube maps the whole texture onto each face, however big the box is: re-map it in metres so the crack network keeps one scale everywhere.
+                    var sc = r.transform.lossyScale;
+                    var key = new Vector3Int(Mathf.RoundToInt(sc.x * 100f), Mathf.RoundToInt(sc.y * 100f), Mathf.RoundToInt(sc.z * 100f));
+                    if (!cache.TryGetValue(key, out var mesh)) cache[key] = mesh = MetreUvCube(cube, sc, 2.6f);
+                    mf.sharedMesh = mesh;
+                }
+                r.sharedMaterial = m.name == "Volcanic_LavaFall" && Gp3Materials.LavaFall ? Gp3Materials.LavaFall : Gp3Materials.Lava;
+                r.shadowCastingMode = ShadowCastingMode.Off;
             }
+            var holder = new GameObject("LavaFlow");
+            holder.AddComponent<LavaFlow>().Configure(Gp3Materials.Lava, new Color(0.85f, 0.26f, 0.05f), new Vector2(0.010f, 0.022f));   // the river creeps along its length
+            if (Gp3Materials.LavaFall) new GameObject("LavaFallFlow").AddComponent<LavaFlow>().Configure(Gp3Materials.LavaFall, new Color(1.3f, 0.42f, 0.08f), new Vector2(0f, 0.2f));   // the falls pour downward
+        }
+
+        /// <summary>A copy of the unit cube whose UVs are the vertex positions times <paramref name="scale"/> in metres over <paramref name="tile"/>, projected on the face's dominant axis.</summary>
+        static Mesh MetreUvCube(Mesh src, Vector3 scale, float tile)
+        {
+            var v = src.vertices; var n = src.normals;
+            var uv = new Vector2[v.Length];
+            for (int i = 0; i < v.Length; i++)
+            {
+                var p = Vector3.Scale(v[i], scale) / tile; var a = new Vector3(Mathf.Abs(n[i].x), Mathf.Abs(n[i].y), Mathf.Abs(n[i].z));
+                uv[i] = a.y >= a.x && a.y >= a.z ? new Vector2(p.x, p.z) : a.x >= a.z ? new Vector2(p.z, p.y) : new Vector2(p.x, p.y);
+            }
+            var m = Object.Instantiate(src);
+            m.name = "LavaCube";
+            m.uv = uv;
+            return m;
         }
 
         /// <summary>A sea of cloud far below the Summit island (decor, no collision): a few big flattened cloud meshes, ringed round it.</summary>

@@ -147,6 +147,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             float zb = s.UpperEndZ + 1.8f;
             var facade5 = HeroAt(d, root, f, "HeroTempleFacade", 0f, zb, t3 - 0.12f, 180f);
             d.Footing(facade5, root, s_StoneDark);
+            d.Grounded(facade5, root, Gp3Materials.Ready ? Dresser.RockVariant(Gp3Materials.RockSandstoneWarm, "Temple_Rock", 0.9f) : null, facade5 ? facade5.transform.forward : Vector3.zero, 11);
 
             Massif(d, root, f, 0f, zb + 9.5f, 12f, 7, 505, 1.25f);
 
@@ -174,12 +175,14 @@ namespace Gamebreak.MiniGolf.Editor.Art
             // sun-temple facade closes the view behind the final green.
             float wz = s.wheel.WheelZ;
             float gy = s.GreenHeight(r), gz = s.GreenEndZ(r);
-            if (d.HasModel("HeroMillHouse")) d.Model("HeroMillHouse", f.L(1.9f, wz + 0.2f), f.Yaw(270f), 0.92f, snap: true, sink: 0.04f, parent: root);
+            if (d.HasModel("HeroMillHouse")) d.Model("HeroMillHouse", f.L(2.7f, wz + 0.2f), f.Yaw(270f), 1.5f, snap: true, sink: 0.04f, parent: root, yStretch: 1.24f);
             var facade6 = HeroAt(d, root, f, "HeroTempleFacade", -0.5f, gz + 1.35f, gy - 0.1f, 180f, 0.58f);
             d.Footing(facade6, root, s_StoneDark);
+            d.Grounded(facade6, root, Gp3Materials.Ready ? Dresser.RockVariant(Gp3Materials.RockSandstoneWarm, "Temple_Rock", 0.9f) : null, facade6 ? facade6.transform.forward : Vector3.zero, 12);
             // The aqueduct arcade under the green: length along the course, top just below the surface.
             var arcade = HeroAt(d, root, f, "HeroArcade", 0f, (s.GreenStartZ(r) + gz) * 0.5f, gy - 1.12f, 90f);
             d.Footing(arcade, root, s_StoneDark, 0.05f, 0.4f);
+            d.Grounded(arcade, root, Gp3Materials.Ready ? Dresser.RockVariant(Gp3Materials.RockSandstoneWarm, "Temple_Rock", 0.9f) : null, Vector3.zero, 13);
             Massif(d, root, f, -0.5f, gz + 10.5f, 10f, 6, 606, 1.15f);
             foreach (var (x, z) in new[] { (s.RoadOuterX - 0.7f, 0.7f), (s.padRight + 0.5f, 0.7f), (-0.7f, 5.5f), (0.9f, 5.5f), (s.RoadOuterX - 0.7f, gz - 0.3f), (1.5f, gz - 0.3f) })
                 Pier(d, root, f, x, z);

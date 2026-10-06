@@ -352,30 +352,46 @@ namespace Gamebreak.MiniGolf.Editor.Art
         /// </summary>
         public static PbrSet Lava(int size = 512, int seed = 131)
         {
+            // Mostly MOLTEN surface (deep red -> orange -> yellow, flowing in streaks along v), with dark crust plates floating on it as breakup (about a fifth of the area),
+            // each plate rimmed by white-hot lava. Emission follows the molten fraction, so the whole river glows and the crust reads dark against it.
             var s = new PbrSet(size) { Glow = new float[size * size] };
-            float[] crust = { 0.09f, 0.035f, 0.03f }, crustHi = { 0.30f, 0.09f, 0.05f }, hot = { 1.0f, 0.42f, 0.06f }, core = { 1.0f, 0.86f, 0.30f };
+            float[] deep = { 0.62f, 0.07f, 0.01f }, orange = { 1.0f, 0.38f, 0.04f }, yellow = { 1.0f, 0.80f, 0.20f }, white = { 1.0f, 0.95f, 0.62f };
+            float[] crust = { 0.07f, 0.03f, 0.025f }, crustHi = { 0.22f, 0.08f, 0.05f };
             for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
             {
                 float u = x / (float)size, v = y / (float)size;
-                float wu = u + (Fbm(u, v, 5, 5, seed + 2, 3) - 0.5f) * 0.18f, wv = v + (Fbm(u, v, 5, 5, seed + 3, 3) - 0.5f) * 0.18f;
+                // Flow: noise stretched along v (few cells across u, many along v) and domain-warped, so streaks run the same way everywhere.
+                float flowA = Fbm(u, v, 3, 9, seed + 2, 4), flowB = Fbm(u, v, 5, 14, seed + 9, 3), flowC = Fbm(u, v, 2, 5, seed + 13, 3);
+                float wu = u + (flowC - 0.5f) * 0.22f, wv = v + (flowB - 0.5f) * 0.10f;
                 float f1, f2, id;
-                Worley(wu - (float)Math.Floor(wu), wv - (float)Math.Floor(wv), 7, seed + 11, out f1, out f2, out id);
+                Worley(wu - (float)Math.Floor(wu), wv - (float)Math.Floor(wv), 5, seed + 11, out f1, out f2, out id);
                 float edge = f2 - f1;
-                float widthMod = 0.5f + Fbm(u, v, 4, 4, seed + 7, 2);
-                float net = 1f - Smooth(0.02f * widthMod, 0.16f * widthMod, edge);
-                float broad = 1f - Smooth(0.0f, 0.40f * widthMod, edge);
-                float plate = Fbm(u, v, 16, 16, seed + 5, 4);
+                // Crust plates: about one cell in five, the rest is open lava; a plate fades to molten at its rim.
+                bool plateCell = id < 0.30f;
+                float plate = plateCell ? Smooth(0.03f, 0.14f, edge) : 0f;
+                float rim = plateCell ? 1f - Smooth(0.0f, 0.07f, edge - 0.03f) : 0f;
+                // Molten colour field: slow large-scale variation plus streaks.
+                float heat = Clamp01(-0.12f + flowA * 0.85f + (flowB - 0.5f) * 0.55f);
+                float vein = Smooth(0.58f, 0.92f, flowB) * 0.5f;
                 int i = s.Idx(x, y);
-                Mix(s, i, crust, crustHi, Clamp01(plate * 0.9f));
-                float heat = Clamp01(net * 1.1f + broad * 0.25f);
-                s.R[i] = Lerp(s.R[i], hot[0], heat); s.G[i] = Lerp(s.G[i], hot[1], heat); s.B[i] = Lerp(s.B[i], hot[2], heat);
-                float coreAmt = Smooth(0.72f, 1.0f, net);
-                s.R[i] = Lerp(s.R[i], core[0], coreAmt); s.G[i] = Lerp(s.G[i], core[1], coreAmt); s.B[i] = Lerp(s.B[i], core[2], coreAmt);
-                s.Height[i] = Clamp01(0.7f - heat * 0.35f + plate * 0.2f);
+                float[] c1 = deep, c2 = orange;
+                float t1 = Clamp01(heat * 1.15f);
+                float r = Lerp(c1[0], c2[0], t1), g = Lerp(c1[1], c2[1], t1), b = Lerp(c1[2], c2[2], t1);
+                float ty = Clamp01(Math.Max(vein * 0.8f, Smooth(0.62f, 0.98f, heat)));
+                r = Lerp(r, yellow[0], ty); g = Lerp(g, yellow[1], ty); b = Lerp(b, yellow[2], ty);
+                float tw = Smooth(0.82f, 1.0f, ty * Clamp01(heat + 0.2f));
+                r = Lerp(r, white[0], tw * 0.35f); g = Lerp(g, white[1], tw * 0.35f); b = Lerp(b, white[2], tw * 0.35f);
+                // Hot rim round each crust plate, then the dark crust itself.
+                r = Lerp(r, orange[0], rim * 0.8f); g = Lerp(g, orange[1] + 0.2f, rim * 0.8f); b = Lerp(b, orange[2], rim * 0.55f);
+                float cp = Fbm(u, v, 14, 14, seed + 5, 4);
+                float cr = Lerp(crust[0], crustHi[0], cp), cg = Lerp(crust[1], crustHi[1], cp), cb = Lerp(crust[2], crustHi[2], cp);
+                r = Lerp(r, cr, plate); g = Lerp(g, cg, plate); b = Lerp(b, cb, plate);
+                s.R[i] = r; s.G[i] = g; s.B[i] = b;
+                s.Height[i] = Clamp01(0.45f + plate * 0.4f + flowA * 0.1f);
                 s.Occlusion[i] = 1f;
-                s.Smooth[i] = 0.3f + heat * 0.3f;
-                s.Glow[i] = Clamp01(heat * 1.2f);
+                s.Smooth[i] = 0.35f + (1f - plate) * 0.25f;
+                s.Glow[i] = Clamp01((1f - plate) * (0.35f + heat * 0.85f));
             }
             return s;
         }

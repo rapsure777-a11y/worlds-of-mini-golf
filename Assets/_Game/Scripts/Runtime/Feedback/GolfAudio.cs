@@ -31,6 +31,12 @@ namespace Gamebreak.MiniGolf
             set { s_Sfx = Mathf.Clamp01(value); PlayerPrefs.SetFloat(SfxKey, s_Sfx); Changed?.Invoke(); }
         }
 
+        /// <summary>Master output ceiling: every sound (music and effects) plays at 90% of its set level at most. Andrew, after the headset audio cut out: "lower the max sound by 10%".</summary>
+        public const float MasterGain = 0.9f;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void ApplyMasterGain() => AudioListener.volume = MasterGain;
+
         /// <summary>Forget cached values and saved preferences, back to the defaults (tests).</summary>
         public static void ResetToDefaults()
         {

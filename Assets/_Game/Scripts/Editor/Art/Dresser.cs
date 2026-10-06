@@ -101,6 +101,40 @@ namespace Gamebreak.MiniGolf.Editor.Art
             return ChamferMesh.Block(model.name + "_Footing", parent, new Vector3(b.center.x, (top + bottom) * 0.5f, b.center.z), Quaternion.identity, size, 0.04f, mat, 1.6f);
         }
 
+        /// <summary>
+        /// Blends a built structure into the terrain: a ring of rock-kit stones and foliage tight round its footing (retaining-wall rubble, ferns and bushes growing in the cracks),
+        /// leaving the side that faces <paramref name="front"/> open (stairs, doors). Visual only.
+        /// </summary>
+        public void Grounded(GameObject model, Transform parent, Material rockMat, Vector3 front, int seed, float reach = 0.55f)
+        {
+            if (!model) return;
+            var rs = model.GetComponentsInChildren<Renderer>();
+            if (rs.Length == 0) return;
+            var b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
+            var rnd = new System.Random(seed);
+            front.y = 0f; if (front.sqrMagnitude > 0.01f) front.Normalize();
+            float perim = 2f * (b.size.x + b.size.z);
+            int count = Mathf.Clamp(Mathf.RoundToInt(perim / 1.15f), 4, 40);
+            string[] shrubs = { "LeafBush0", "LeafBush1", "Fern0", "FlowerShrub0", "BigLeaf0", "FlowerShrub2" };
+            for (int i = 0; i < count; i++)
+            {
+                float t = (i + (float)rnd.NextDouble() * 0.6f) / count * perim, x, z;
+                float w = b.size.x, dpt = b.size.z;
+                Vector2 outDir;
+                if (t < w) { x = b.min.x + t; z = b.min.z; outDir = new Vector2(0, -1); }
+                else if (t < w + dpt) { x = b.max.x; z = b.min.z + (t - w); outDir = new Vector2(1, 0); }
+                else if (t < 2 * w + dpt) { x = b.max.x - (t - w - dpt); z = b.max.z; outDir = new Vector2(0, 1); }
+                else { x = b.min.x; z = b.max.z - (t - 2 * w - dpt); outDir = new Vector2(-1, 0); }
+                if (front.sqrMagnitude > 0.01f && Vector2.Dot(outDir, new Vector2(front.x, front.z)) > 0.5f) continue;
+                var p = new Vector3(x + outDir.x * reach * (0.6f + (float)rnd.NextDouble()), 0f, z + outDir.y * reach * (0.6f + (float)rnd.NextDouble()));
+                if (!IsFree(new Vector2(p.x, p.z)) || Ground(p.x, p.z) < 0.15f) continue;
+                if (i % 2 == 0 && HasModel("HeroRock_C"))
+                    Crag(i % 4 == 0 ? "HeroRock_C" : (i % 3 == 0 ? "HeroRock_A" : "HeroStone_C"), p, (float)rnd.NextDouble() * 360f, 0.55f + (float)rnd.NextDouble() * 0.6f, rockMat, parent, lods: false, extraSink: 0.12f);
+                else
+                    Leaf(shrubs[rnd.Next(shrubs.Length)], p, (float)rnd.NextDouble() * 360f, 0.9f + (float)rnd.NextDouble() * 0.6f, parent: parent);
+            }
+        }
+
         /// <summary>A saved variant of a triplanar rock material with its own moss/grass cap coverage and optional tint (cached by name under the kit's Materials folder).</summary>
         public static Material RockVariant(Material src, string name, float topCoverage, Color? tint = null)
         {

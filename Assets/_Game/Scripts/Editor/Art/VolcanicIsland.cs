@@ -63,8 +63,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         static void LoadMaterials()
         {
-            s_Basalt = Mat("Volcanic_Basalt", new Color(0.33f, 0.3f, 0.32f));
-            s_BasaltDark = Mat("Volcanic_BasaltDark", new Color(0.2f, 0.19f, 0.21f));
+            s_Basalt = Mat("Volcanic_Basalt", new Color(0.2f, 0.19f, 0.21f));
+            s_BasaltDark = Mat("Volcanic_BasaltDark", new Color(0.1f, 0.095f, 0.11f));
             s_Lava = Mat("Volcanic_Lava", new Color(1f, 0.38f, 0.07f), 0.3f, 1.6f);
             s_LavaFall = Mat("Volcanic_LavaFall", new Color(1f, 0.55f, 0.12f), 0.3f, 2.0f);
             s_Ember = Mat("Volcanic_Ember", new Color(1f, 0.25f, 0.05f), 0.2f, 1.2f);

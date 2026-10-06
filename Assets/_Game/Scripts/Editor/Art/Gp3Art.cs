@@ -29,7 +29,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
     public static class Gp3Textures
     {
         /// <summary>Bump when a generator changes so the textures are rebuilt on the next scene build.</summary>
-        public const int Version = 1;
+        public const int Version = 2;
         const string Marker = HeroKit.TexDir + "/gp3_version.txt";
 
         static readonly (string name, Func<PbrSet> make, float normal)[] Sets =
@@ -95,6 +95,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
     {
         const string MatDir = TropicalKit.Root + "/Materials";
 
+        public static Material LavaFall;
         public static Material Sandstone, Limestone, LimestoneWet, Basalt, Lava, Rope, SunRelief, Banner, Gold, Brazier, Cloud2, Ember, WoodDark;
         public static Material CupLiner, CupRim, PutterBody, PutterBevel, PutterInsert, PutterLine;
         public static Material RockLimestone, RockBasalt, RockSandstoneWarm;
@@ -191,10 +192,12 @@ namespace Gamebreak.MiniGolf.Editor.Art
             Sandstone = Surface("Gp3_Sandstone", "sandstone", new Color(1.05f, 0.98f, 0.9f), 0.2f, 0.06f, 1.2f, new Vector2(1f, 1f), 0.12f);
             Limestone = Surface("Gp3_Limestone", "limestone", Color.white, 0.2f, 0.05f, 1.1f, new Vector2(0.5f, 0.5f));
             LimestoneWet = Surface("Gp3_LimestoneWet", "limestone_wet", Color.white, 0.55f, 0.18f, 1.1f, new Vector2(0.5f, 0.5f), 0.14f);
-            Basalt = Surface("Gp3_Basalt", "basalt", Color.white, 0.22f, 0.05f, 1.3f, new Vector2(0.5f, 0.5f), 0.06f);
+            Basalt = Surface("Gp3_Basalt", "basalt", new Color(0.62f, 0.62f, 0.68f), 0.18f, 0.04f, 1.4f, new Vector2(0.5f, 0.5f), 0.04f);
             Glow(Basalt, "basalt", new Color(2.4f, 0.8f, 0.2f));
-            Lava = Surface("Gp3_Lava", "lava", Color.white, 0.4f, 0.2f, 0.6f, new Vector2(0.25f, 0.25f), 0.0f, 0f);
-            Glow(Lava, "lava", new Color(1.9f, 0.75f, 0.2f));
+            Lava = Surface("Gp3_Lava", "lava", Color.white, 0.4f, 0.2f, 0.6f, Vector2.one, 0.0f, 0f);
+            Glow(Lava, "lava", new Color(0.85f, 0.26f, 0.05f));
+            LavaFall = Surface("Gp3_LavaFall", "lava", Color.white, 0.4f, 0.2f, 0.6f, Vector2.one, 0.0f, 0f);
+            Glow(LavaFall, "lava", new Color(1.3f, 0.42f, 0.08f));
             Rope = Surface("Gp3_Rope", "rope", new Color(1.05f, 1f, 0.92f), 0.12f, 0.03f, 1.2f, new Vector2(4f, 4f));
             SunRelief = Surface("Gp3_SunRelief", "sunrelief", Color.white, 0.25f, 0.08f, 1.4f, Vector2.one, 0.12f);
             Banner = Surface("Gp3_Banner", "cloth", new Color(0.78f, 0.09f, 0.07f), 0.15f, 0.04f, 0.8f, new Vector2(3f, 3f), 0.1f);
@@ -212,7 +215,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             var lawn = AssetDatabase.LoadAssetAtPath<Texture2D>($"{HeroKit.TexDir}/lawn_albedo.png");
             var lawnN = AssetDatabase.LoadAssetAtPath<Texture2D>($"{HeroKit.TexDir}/lawn_normal.png");
             RockLimestone = Rock("Gp3_RockLimestone", "limestone", Color.white, 0.5f, lawn, lawnN);
-            RockBasalt = Rock("Gp3_RockBasalt", "basalt", new Color(1.65f, 1.6f, 1.7f), 1f, null, null);   // _TopCoverage is a normal.y threshold: 1 = no cap at all
+            RockBasalt = Rock("Gp3_RockBasalt", "basalt", new Color(0.78f, 0.78f, 0.84f), 1f, null, null);   // _TopCoverage is a normal.y threshold: 1 = no cap at all
             RockSandstoneWarm = Rock("Gp3_RockSandstone", "sandstone", Color.white, 0.35f, lawn, lawnN);
 
             // --- golf realism (URP Lit for real metal response; the cup liner and ball use the stylized shader with their own maps)

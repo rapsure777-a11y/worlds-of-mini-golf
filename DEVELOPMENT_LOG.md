@@ -232,3 +232,13 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - **Per island:** Temple (Hole 5 sun-temple facade with stair, columns, arch doorway, sun relief, carved piers; Hole 6 mill house, aqueduct arcade, brazier piers, sandstone massif; wheel gets a thicker bevelled rim, hubs, heavier spokes), Summit (modelled sanctuary and ceremonial gate with voussoir arch, limestone cliff massif, cloud-sea spires), Volcano (basalt column clusters, chunky crater ring round the Hole 8 caldera, crust slabs on the lava), Starting Island (beached shipwreck with ribs, broken planking, mast and rope), Jungle (ruin pieces and canyon cliffs).
 - **Gameplay geometry untouched.** All new geometry is collider-free dressing. `TropicalScene_Hole9Masonry_StaysClearOfTheGreen` now checks real mesh vertices (gate piers stand outside the lane, arch above head height).
 - **Numbers:** tests 221/221; scene 3020 mesh renderers (2439 static-batched), 213 unique meshes, 4.05M triangles (3.19M shadow-casting) vs 3.9M / 3.0M before 3B; desktop smoke 1.7 ms/frame. VR frame time not yet measured.
+
+## 2026-10-06 (later): 3B round 2 from headset feedback
+
+- **Par:** Hole 8 Caldera Run is par 3 (scorecard and tests only, geometry untouched).
+- **Green borders "transparent/inverted":** the new chamfered stone blocks were wound backwards (`ChamferMesh.Order` reversed the clockwise ordering). Fixed in the mesh generator, with a new test that checks every triangle's winding and normal point outward. This affected every chamfered block (rails, temples, sanctuary, volcanic blocks).
+- **Rails:** the old rail strip is hidden (kept only as skirts at open edges); two stone courses plus coping and posts replace it.
+- **Lava:** regenerated as mostly molten (deep red, orange, yellow) with dark crust plates as breakup, mapped in metres so the scale is uniform; slow drift and breathing glow (`LavaFlow`); the falls have their own material pouring downward.
+- **Basalt:** darker, rougher, less washed out. **Summit:** the grass splat is replaced with bare mountain rock ground, scattered rocks, scree and hardy plants. **Temples:** rock and foliage rubble ring (`Dresser.Grounded`) on top of the footings. **Mill house:** adult scale (1.5x, 1.24x taller). **Trees:** more clusters on every island (the Hole 1 and 2 recipe).
+- **Audio:** master gain 0.9 (`GolfAudio.MasterGain`), "lower the max sound by 10%".
+- Tests 222/222 (new chamfer winding test); both players built.

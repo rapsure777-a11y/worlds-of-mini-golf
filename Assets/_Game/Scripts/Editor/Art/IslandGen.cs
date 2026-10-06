@@ -185,6 +185,8 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
         /// <summary>When true, terrain vertex colours carry TerrainSplat weights instead of palette UVs.</summary>
         public bool splat;
+        [Tooltip("0..1: how much of the flat ground outside the holes is painted as bare rock (a mountain top, not a lawn).")]
+        public float rockBias = 0f;
 
         /// <summary>
         /// Splat weights for Gamebreak/TerrainSplat: R sand, G lawn, B rock, A path. Soft, noisy transitions;
@@ -203,6 +205,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             float path = Mathf.Clamp01((pathW - 0.35f + (jitter - 0.5f) * 0.3f) / 0.3f);
             float rock = Mathf.Clamp01((0.86f - n.y) / 0.12f + (Noise.Fbm(x * 0.2f, z * 0.2f, seed + 31, 2) - 0.5f) * 0.6f);
             rock *= 1f - hole;
+            if (rockBias > 0f) rock = Mathf.Max(rock, rockBias * Mathf.Clamp01(0.6f + (Noise.Fbm(x * 0.13f, z * 0.13f, seed + 47, 3) - 0.5f) * 1.6f) * (1f - 0.35f * hole));
             // Pool basins: sandy bed under the water, no rock or path.
             float pool = 0f;
             foreach (var b in basins) pool = Mathf.Max(pool, 1f - Mathf.Clamp01(Vector2.Distance(new Vector2(x, z), b.c) / (b.r * 1.2f)));

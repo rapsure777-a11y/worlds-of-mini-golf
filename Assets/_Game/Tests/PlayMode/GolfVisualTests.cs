@@ -153,6 +153,30 @@ namespace Gamebreak.MiniGolf.Tests
             finally { Object.DestroyImmediate(parent); Object.DestroyImmediate(tuning); }
         }
 
+        // ------------------------------------------------------------------ chamfered architecture blocks
+
+        [Test]
+        public void ChamferMesh_FacesPointOutward_AndWindClockwiseFromOutside()
+        {
+            foreach (var (size, chamfer) in new[] { (new Vector3(1f, 0.5f, 2f), 0.05f), (new Vector3(0.3f, 0.03f, 0.5f), 0.011f), (new Vector3(2f, 2f, 2f), 0f) })
+            {
+                var m = ChamferMesh.Build(size, chamfer, 1.5f);
+                var v = m.vertices; var n = m.normals; var t = m.triangles;
+                Assert.Greater(t.Length, 0);
+                for (int i = 0; i < t.Length; i += 3)
+                {
+                    Vector3 a = v[t[i]], b = v[t[i + 1]], c = v[t[i + 2]];
+                    Vector3 centroid = (a + b + c) / 3f;
+                    // Unity front faces are clockwise as seen from the front: the geometric normal cross(b - a, c - a) must then point away from the block's centre,
+                    // and the stored vertex normal must agree with it (an inverted mesh renders hollow, "transparent", with inside-out lighting).
+                    Vector3 geo = Vector3.Cross(b - a, c - a).normalized;
+                    Assert.Greater(Vector3.Dot(geo, centroid), 0f, $"triangle {i / 3} of {size} faces inward (wrong winding)");
+                    Assert.Greater(Vector3.Dot(geo, n[t[i]]), 0.99f, "vertex normal disagrees with the face");
+                }
+                Object.DestroyImmediate(m);
+            }
+        }
+
         // ------------------------------------------------------------------ rails: continuous UVs, unchanged geometry
 
         [Test]

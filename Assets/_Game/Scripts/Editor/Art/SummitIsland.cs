@@ -15,7 +15,9 @@ namespace Gamebreak.MiniGolf.Editor.Art
         public static IslandGen CreateIsland()
         {
             var c = TropicalCourse.SummitCentre;
-            var g = new IslandGen { centre = c, radius = 24f, seed = 53, hillHeight = 4.5f, extent = 34f, splat = true, skipDeepSea = true };
+            var g = new IslandGen { centre = c, radius = 24f, seed = 53, hillHeight = 4.5f, extent = 34f, splat = false, skipDeepSea = true };
+            LoadMaterials();
+            g.terrainMaterial = Mat("Summit_Ground", new Color(0.30f, 0.29f, 0.28f), 0.05f);   // bare mountain rock all round the course (the lawn splat made it a grassy platform)
             g.mounds.Add((c + new Vector2(8f, 14f), 11f, 8.0f));     // the summit cliff behind the sanctuary
             g.mounds.Add((c + new Vector2(-14f, 4f), 8f, 3.5f));
             return g;
@@ -145,6 +147,7 @@ namespace Gamebreak.MiniGolf.Editor.Art
             float ax = (s.AltarWestX + s.AltarEastX) * 0.5f, az = (s.AltarZ0 + s.AltarZ1) * 0.5f, ay = s.AltarHeight;
             var sanctuary = HeroAt(d, root, f, "HeroSanctuary", s.AltarEastX + 0.25f + 1.65f, az, ay - 0.04f, 270f);
             d.Footing(sanctuary, root, s_StoneDark, 0.1f, 0.5f);
+            d.Grounded(sanctuary, root, Gp3Materials.Ready ? Dresser.RockVariant(Gp3Materials.RockLimestone, "Summit_Rock", 0.88f) : null, sanctuary ? sanctuary.transform.forward : Vector3.zero, 14, 0.7f);
             HeroAt(d, root, f, "HeroSummitGate", s.LandingEndX, az, s.SummitLevel - 0.03f, 270f);
 
             // The summit cliff: tall, exposed rock beyond the sanctuary and along the east side of the mountain.
@@ -166,6 +169,28 @@ namespace Gamebreak.MiniGolf.Editor.Art
                 float a = (float)rr.NextDouble();
                 var pos = i % 2 == 0 ? f.L(s.Left - 2.2f - (float)rr.NextDouble() * 1.2f, 2f + a * 18f) : f.L(s.AltarEastX + 3.2f + (float)rr.NextDouble() * 1.5f, az - 7f + a * 14f);
                 d.Crag(i % 3 == 0 ? "HeroRock_A" : i % 3 == 1 ? "HeroRock_C" : "HeroStone_C", pos, (float)rr.NextDouble() * 360f, 0.9f + (float)rr.NextDouble() * 0.7f, rockMat, root, lods: false);
+            }
+            // The ground round the summit course: bare rock, scree, ledges and hardy plants instead of lawn, so the platform is built into a mountain (kept clear of every green).
+            bool Clear9(float lx, float lz, float margin)
+            {
+                foreach (var a in def.layout.areas) if (lx > a.xMin - margin && lx < a.xMax + margin && lz > a.yMin - margin && lz < a.yMax + margin) return false;
+                foreach (var a in def.extraAreas) if (lx > a.xMin - margin && lx < a.xMax + margin && lz > a.yMin - margin && lz < a.yMax + margin) return false;
+                return lx < s.AltarEastX - 0.2f || lx > s.AltarEastX + 3.6f;   // keep the sanctuary footprint free
+            }
+            string[] ground = { "HeroRock_A", "HeroRock_C", "HeroStone_C", "HeroRock_B", "HeroStone_A", "HeroCliff_C" };
+            string[] plants = { "Fern0", "LeafBush2", "GrassClump1", "FlowerShrub2", "BigLeaf0" };
+            int placedRocks = 0, tries = 0;
+            while (placedRocks < 70 && tries++ < 900)
+            {
+                float lx = Mathf.Lerp(s.Left - 8.5f, s.AltarEastX + 8f, (float)rr.NextDouble()), lz = Mathf.Lerp(-4f, 24f, (float)rr.NextDouble());
+                if (!Clear9(lx, lz, 1.6f)) continue;
+                var wp = f.L(lx, lz);
+                if (d.Ground(wp.x, wp.z) < 0.3f) continue;
+                bool big = rr.NextDouble() < 0.15;
+                if (big) d.Crag("HeroCliff_C", wp, (float)rr.NextDouble() * 360f, 0.45f + (float)rr.NextDouble() * 0.35f, rockMat, root, lods: true, extraSink: 0.25f);
+                else d.Crag(ground[rr.Next(ground.Length - 1)], wp, (float)rr.NextDouble() * 360f, 0.6f + (float)rr.NextDouble() * 1.0f, rockMat, root, lods: false);
+                placedRocks++;
+                if (rr.NextDouble() < 0.5) d.Leaf(plants[rr.Next(plants.Length)], wp + new Vector3(0.5f, 0f, 0.3f), (float)rr.NextDouble() * 360f, 0.8f + (float)rr.NextDouble() * 0.5f, parent: root);
             }
             for (int i = 0; i < 7; i++)   // spires standing out of the cloud sea around the island
             {

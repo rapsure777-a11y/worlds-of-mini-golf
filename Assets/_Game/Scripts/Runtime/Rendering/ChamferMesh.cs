@@ -100,7 +100,7 @@ namespace Gamebreak.MiniGolf
             return mesh;
         }
 
-        /// <summary>Orders a convex polygon counter-clockwise as seen from outside (normal <paramref name="outward"/>), Unity's clockwise-front winding handled by the caller's triangle order.</summary>
+        /// <summary>Orders a convex polygon clockwise as seen from outside (normal <paramref name="outward"/>): Unity front faces are clockwise, and cross(p1-p0, p2-p0) then points outward.</summary>
         static Vector3[] Order(List<Vector3> pts, Vector3 outward)
         {
             var centre = Vector3.zero; foreach (var p in pts) centre += p; centre /= pts.Count;
@@ -113,8 +113,6 @@ namespace Gamebreak.MiniGolf
                 float aq = Mathf.Atan2(Vector3.Dot(q - centre, v), Vector3.Dot(q - centre, u));
                 return ap.CompareTo(aq);
             });
-            // Counter-clockwise about +n is a front face for the right-handed cross; Unity front faces are clockwise when viewed from the front, so reverse.
-            pts.Reverse();
             return pts.ToArray();
         }
 

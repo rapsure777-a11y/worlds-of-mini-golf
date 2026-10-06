@@ -269,7 +269,7 @@ namespace Gamebreak.MiniGolf
         public static LavaFallsSpec Hole7Spec() => new LavaFallsSpec();
 
         /// <summary>
-        /// Hole 8, "Caldera Run" (par 4): a crater route that builds toward a large roulette bowl, entered through a ground-level gate, with an optional launch-ramp
+        /// Hole 8, "Caldera Run" (par 3): a crater route that builds toward a large roulette bowl, entered through a ground-level gate, with an optional launch-ramp
         /// shortcut that jumps straight into the same bowl. Built by <see cref="CalderaRunSpec"/>. Local axes: x across the tee lane, z along it.
         /// </summary>
         static HoleDefinition Hole08()
@@ -279,7 +279,7 @@ namespace Gamebreak.MiniGolf
             {
                 number = 8,
                 name = "Caldera Run",
-                par = 4,
+                par = 3,
                 layout = spec.BuildLayout(),
                 tee = spec.Tee,
                 origin = new Vector3(129f, Hole8Height, 40f),

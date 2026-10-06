@@ -287,7 +287,7 @@ namespace Gamebreak.MiniGolf.Tests
         {
             var holes = TropicalCourse.Holes();
             var expected = new (int n, string name, int par)[] { (1, "Beach Warm-up", 2), (2, "Palm Corner", 3), (3, "Jungle Crossing", 4), (4, "Tiki Twister", 3),
-                (5, "The Sun Stair", 3), (6, "The Waterwheel Mill", 3), (7, "Lava Falls", 4), (8, "Caldera Run", 4) };
+                (5, "The Sun Stair", 3), (6, "The Waterwheel Mill", 3), (7, "Lava Falls", 4), (8, "Caldera Run", 3) };
             foreach (var (n, name, par) in expected)
             {
                 var h = holes.Find(x => x.number == n);

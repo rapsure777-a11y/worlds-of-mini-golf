@@ -735,12 +735,12 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         [Test]
-        public void Hole8_Definition_IsAParFourWithTheJumpAndAGate()
+        public void Hole8_Definition_IsAParThreeWithTheJumpAndAGate()
         {
             var d = Def(8);
             Assert.IsNotNull(d);
             Assert.AreEqual("Caldera Run", d.name);
-            Assert.AreEqual(4, d.par);
+            Assert.AreEqual(3, d.par);
             Assert.AreEqual(TropicalCourse.VolcanicCluster, d.cluster);
             var s = TropicalCourse.Hole8Spec();
             Assert.AreEqual("", s.Validate());
