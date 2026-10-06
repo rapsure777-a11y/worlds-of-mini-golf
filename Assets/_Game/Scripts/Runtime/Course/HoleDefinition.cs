@@ -187,7 +187,7 @@ namespace Gamebreak.MiniGolf
         public const float Hole6Height = 2.2f;
 
         /// <summary>
-        /// Hole 5, "The Sun Stair" (par 4): a ziggurat of three terraces on the Temple Island, built by <see cref="SunStairSpec"/> (one rectangle-union
+        /// Hole 5, "The Sun Stair" (par 3): a ziggurat of three terraces on the Temple Island, built by <see cref="SunStairSpec"/> (one rectangle-union
         /// green with a height function, angled <see cref="BankWall"/> kickers and rails, and a launch jump that can skip the second ramp).
         /// Local axes: x across the stair, z up it.
         /// </summary>
@@ -198,7 +198,7 @@ namespace Gamebreak.MiniGolf
             {
                 number = 5,
                 name = "The Sun Stair",
-                par = 4,
+                par = 3,
                 layout = spec.BuildLayout(),
                 tee = spec.Tee,
                 origin = new Vector3(118f, Hole5Height, -46f),

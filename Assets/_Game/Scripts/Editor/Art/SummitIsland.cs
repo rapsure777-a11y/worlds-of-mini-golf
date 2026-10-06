@@ -134,17 +134,19 @@ namespace Gamebreak.MiniGolf.Editor.Art
 
             // The sanctuary above and behind the Altar: stepped tiers, pillars, an arch and a golden disc, so the destination is the highest thing in sight.
             float ax = (s.AltarWestX + s.AltarEastX) * 0.5f, az = (s.AltarZ0 + s.AltarZ1) * 0.5f, ay = s.AltarHeight;
-            Block(root, f, "Sanctuary_Tier1", ax + 2.2f, az, 3.2f, 5.2f, -3.0f, ay + 1.2f, s_Stone);
-            Block(root, f, "Sanctuary_Tier2", ax + 2.6f, az, 2.4f, 3.8f, ay + 1.2f, ay + 2.4f, s_Stone);
-            Block(root, f, "Sanctuary_Tier3", ax + 3.0f, az, 1.6f, 2.4f, ay + 2.4f, ay + 3.4f, s_Stone);
+            // Everything stands beyond the Altar's east rail (0.2 m clear), never over the green: a ball resting at the back must not look buried in stone.
+            float t1x = s.AltarEastX + 0.2f + 1.6f;
+            Block(root, f, "Sanctuary_Tier1", t1x, az, 3.2f, 5.2f, -3.0f, ay + 1.2f, s_Stone);
+            Block(root, f, "Sanctuary_Tier2", t1x + 0.4f, az, 2.4f, 3.8f, ay + 1.2f, ay + 2.4f, s_Stone);
+            Block(root, f, "Sanctuary_Tier3", t1x + 0.8f, az, 1.6f, 2.4f, ay + 2.4f, ay + 3.4f, s_Stone);
             var disc = ProvingKit.AxialCylinder("SanctuaryDisc", root, Vector3.zero, Quaternion.Euler(0f, f.yaw + 90f, 0f), 0.9f, 0.12f, s_Gold);
-            disc.transform.position = f.L(ax + 2.1f, az) + Vector3.up * (ay + 2.0f);
+            disc.transform.position = f.L(t1x - 0.88f, az) + Vector3.up * (ay + 2.0f);
             foreach (float dz in new[] { -1.6f, 1.6f })
             {
                 Block(root, f, "AltarPillar", s.AltarEastX + 0.3f, az + dz, 0.4f, 0.4f, ay, ay + 2.0f, s_Stone);
-                Block(root, f, "BridgePillar", s.LandingEndX, az + dz * 0.75f, 0.35f, 0.35f, s.SummitLevel, s.SummitLevel + 1.7f, s_Stone);
+                Block(root, f, "BridgePillar", s.LandingEndX, az + dz * 0.75f, 0.35f, 0.35f, s.SummitLevel, s.SummitLevel + 2.35f, s_Stone);
             }
-            Block(root, f, "BridgeLintel", s.LandingEndX, az, 0.4f, 3.0f, s.SummitLevel + 1.7f, s.SummitLevel + 1.95f, s_Stone);   // the arch that frames the bridge
+            Block(root, f, "BridgeLintel", s.LandingEndX, az, 0.4f, 3.0f, s.SummitLevel + 2.35f, s.SummitLevel + 2.6f, s_Stone);   // the arch (above head height, so a standing player never has it in their face) that frames the bridge
 
             // The summit cliff: tall, exposed rock beyond the sanctuary and along the east side of the mountain.
             Block(root, f, "SummitCliff", ax + 6.5f, az + 1.0f, 5.0f, 12f, -3.0f, ay + 6.5f, s_StoneDark);

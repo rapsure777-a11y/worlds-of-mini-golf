@@ -287,7 +287,7 @@ namespace Gamebreak.MiniGolf.Tests
         {
             var holes = TropicalCourse.Holes();
             var expected = new (int n, string name, int par)[] { (1, "Beach Warm-up", 2), (2, "Palm Corner", 3), (3, "Jungle Crossing", 4), (4, "Tiki Twister", 3),
-                (5, "The Sun Stair", 4), (6, "The Waterwheel Mill", 3), (7, "Lava Falls", 4), (8, "Caldera Run", 4) };
+                (5, "The Sun Stair", 3), (6, "The Waterwheel Mill", 3), (7, "Lava Falls", 4), (8, "Caldera Run", 4) };
             foreach (var (n, name, par) in expected)
             {
                 var h = holes.Find(x => x.number == n);
@@ -473,6 +473,31 @@ namespace Gamebreak.MiniGolf.Tests
             Assert.GreaterOrEqual(onAltar + holed, 2, "a firm straight putt crosses the bridge");
             Assert.GreaterOrEqual(short_, 1, "a soft putt stops on the bridge: it can be struck again");
             Assert.GreaterOrEqual(onAltar, 1, "a good putt usually leaves a real final putt rather than a hole out");
+        }
+
+        [UnityTest]
+        public IEnumerator Hole9_Finale_NoPuttLeavesTheBallOutOfPlay()
+        {
+            var s = TropicalCourse.Hole9Spec();
+            float zc = (s.FinalZ0 + s.FinalZ1) * 0.5f;
+            var log = new System.Text.StringBuilder("[Test] hole 9 finale escape sweep (from x, strike m/s, yaw deg -> rest)\n");
+            int escaped = 0;
+            foreach (float x0 in new[] { 0.8f, 1.5f, 3.0f, 4.5f, 5.6f })
+            foreach (float v in new[] { 2.0f, 3.1f, 4.0f, 5.5f, 8.0f })
+            foreach (float yaw in new[] { -4f, 0f, 4f })
+            {
+                using var b = new HoleBed(9);
+                var t = new Tally();
+                yield return Steps(5);
+                Vector3 cup = b.hole.Cup.transform.position, from = b.Surface(x0, zc);
+                Vector3 dir = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+                yield return Putt(b, t, from, dir * v);
+                Vector3 p = b.ball.Position;
+                if (!(b.ball.InPlay || b.hole.IsComplete)) escaped++;   // a hard putt may rebound far back down the course or fall (penalty); it must always be playable
+                log.AppendLine($"  {x0:F1}, {v:F1}, {yaw:F0} -> ({p.x:F2}, {p.y:F2}, {p.z:F2}) strokes {b.hole.Strokes} holed {b.hole.IsComplete} inPlay {b.ball.InPlay}");
+            }
+            Debug.Log(log.ToString());
+            Assert.AreEqual(0, escaped, "every ball stays in play or is returned (never lost behind the back wall)");
         }
 
         [UnityTest]

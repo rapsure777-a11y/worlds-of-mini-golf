@@ -403,6 +403,39 @@ namespace Gamebreak.MiniGolf.Tests
         }
 
         /// <summary>
+        /// Hole 9's sanctuary masonry must not stand over or inside the green (Andrew: a ball resting at the back of the Altar looked buried in
+        /// the stone wall, the rail invisible) and nothing may hang in a standing player's face over the lane (the arch is above head height).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TropicalScene_Hole9Masonry_StaysClearOfTheGreen()
+        {
+            SceneManager.LoadScene("TropicalAdventure");
+            yield return null;
+            var def = System.Linq.Enumerable.First(TropicalCourse.Holes(), h => h.number == 9);
+            Assert.AreEqual(0f, def.yaw, "this test assumes an unrotated hole");
+            Transform dressing = null;
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)) if (t.name == "Hole09_Dressing") dressing = t;
+            Assert.IsNotNull(dressing, "hole 9 dressing");
+            var s = TropicalCourse.Hole9Spec();
+            int bad = 0; var report = new System.Text.StringBuilder();
+            foreach (var r in dressing.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (r.name.StartsWith("Body_") || r.name.Contains("Glow") || r.name.Contains("Cloud") || r.name.Contains("Water") || r.name.Contains("Waterfall") || r.name.Contains("Cliff") || r.name.Contains("Sun") || r.name.Contains("Sign") || r.name.Contains("Torch")) continue;
+                var b = r.bounds;
+                foreach (var a in def.layout.areas)
+                {
+                    var rect = new Rect(def.origin.x + a.xMin, def.origin.z + a.yMin, a.width, a.height);
+                    float top = def.origin.y + s.AltarHeight;
+                    bool overXZ = b.min.x < rect.xMax && b.max.x > rect.xMin && b.min.z < rect.yMax && b.max.z > rect.yMin;
+                    // Over the green and low enough to be in a standing player's way (the lintel's underside is above 2.3 m over the lane).
+                    if (overXZ && b.min.y < def.origin.y + s.SummitLevel + 2.3f && b.max.y > def.origin.y)
+                    { bad++; report.AppendLine($"{r.name} overlaps green area {a}"); }
+                }
+            }
+            Assert.AreEqual(0, bad, "hole 9 dressing over the green:\n" + report);
+        }
+
+        /// <summary>
         /// Course surfaces must not use vertex wind sway: green and rail meshes have no wind weights, so any
         /// sway moves the whole visible surface while the collider stays still.
         /// </summary>

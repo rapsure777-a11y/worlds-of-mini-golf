@@ -204,7 +204,7 @@ namespace Gamebreak.MiniGolf.Tests
             var d = Def(5);
             Assert.IsNotNull(d);
             Assert.AreEqual("The Sun Stair", d.name);
-            Assert.AreEqual(4, d.par);
+            Assert.AreEqual(3, d.par);
             Assert.IsNotNull(d.buildExtras, "walls and kickers come from the build hook");
             Assert.IsTrue(d.layout.cup.HasValue);
             Assert.AreEqual(0, d.layout.deckAreas.Count);
