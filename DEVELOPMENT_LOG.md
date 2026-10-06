@@ -200,3 +200,9 @@ Feedback from Andrew's first Jungle Island headset session. All fixes below are 
 - One test fix: `Hole9_ShrineLane_AGoodPuttThreadsTheGate...` asserted the ball passes the gate by 0.2 m with a 2.1 m/s putt; it rested at +0.19 m (it did pass the gate), so the putt is 2.4 m/s. No gameplay change.
 - Full suite **201/201** (24 Holes9Tests + my Hole 8 ring test). Measured: hero jump from Terrace 1 needs 4.0 m/s (3.6 and below fall in the pit, +1; 4.0-5.4 land on the Overlook); Waterfall Climb from its foot: 3.4 m/s rests part-way up, 4.0+ reaches the top; Sky Bridge putts 2.8-3.6 m/s reach the Altar (3.2 holes); tee putts 2.4-3.8 m/s rest on the approach.
 - Headset pending for Hole 9. Graphics Pass 3 not started.
+
+## 2026-10-05 (very late): Hole 9 headset feedback; Hole 5 par 3
+
+- Andrew played Hole 9: loves the design; at the Altar the ball looked like it went through the back wall and could not be hit, with "invisible rails". Cause: `Sanctuary_Tier1` started at x 6.6 while the Altar runs to 7.0, so the stone covered the Altar's last 0.4 m and its east rail. Fixed in `SummitIsland.DressHole9` (stone now 0.2 m behind the rail, arch above head height). Tests: finale sweep (75 putts stay in play), `TropicalScene_Hole9Masonry_StaysClearOfTheGreen`.
+- Hole 5 The Sun Stair is par 3 (Andrew). Hole 8 ring 1.5 cm approved ("perfect").
+- Tests 203/203; both players built.
